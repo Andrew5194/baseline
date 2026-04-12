@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AML - Master Your Time, Amplify Your Impact",
-  description: "Transform how you work with intelligent productivity tools. Focus on what matters most, track your progress, and reclaim hours every week with smart workflows.",
+  title: "Baseline - Measure Your Rate of Progress",
+  description: "The quantitative productivity platform for knowledge workers. Baseline measures whether you're actually getting better at your work — not just what you did, but how fast you're improving.",
 };
 
 export default function RootLayout({
