@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'AML Contact Form <onboarding@resend.dev>', // Resend's verified sender
+        from: 'Baseline Contact Form <onboarding@resend.dev>', // Resend's verified sender
         to: toEmail,
         reply_to: email,
         subject: `New Contact Form Submission from ${name}`,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
 
             <p style="color: #6b7280; font-size: 14px;">
-              This message was sent from the AML contact form.
+              This message was sent from the Baseline contact form.
               <br />
               Reply directly to this email to respond to ${name}.
             </p>

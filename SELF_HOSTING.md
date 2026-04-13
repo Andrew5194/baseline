@@ -1,6 +1,6 @@
-# Self-Hosting AML
+# Self-Hosting Baseline
 
-This guide will help you deploy AML (Automate My Life) on your own infrastructure using Docker.
+This guide will help you deploy Baseline on your own infrastructure using Docker.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ docker compose up -d --build
 This will start:
 - PostgreSQL database (port 5432)
 - Redis cache (port 6379)
-- AML web application (port 3000)
+- Baseline web application (port 3000)
 
 ### 4. Access Your Instance
 
@@ -330,8 +330,8 @@ docker-compose logs -f
 
 - Documentation: https://github.com/Andrew5194/automate-my-life
 - Issues: https://github.com/Andrew5194/automate-my-life/issues
-- Contact: Use the contact form on your AML instance
+- Contact: Use the contact form on your Baseline instance
 
 ## License
 
-This project is open source under the MIT License. See LICENSE file for details.
+This project is open source under the GPL v3 License. See LICENSE file for details.

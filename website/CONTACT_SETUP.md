@@ -47,13 +47,13 @@ For production use, verify your domain in Resend:
 In `src/app/api/contact/route.ts`, change:
 
 ```typescript
-from: 'AML Contact Form <onboarding@resend.dev>',
+from: 'Baseline Contact Form <onboarding@resend.dev>',
 ```
 
 to:
 
 ```typescript
-from: 'AML Contact Form <contact@yourdomain.com>',
+from: 'Baseline Contact Form <contact@yourdomain.com>',
 ```
 
 ## Testing
@@ -74,7 +74,7 @@ from: 'AML Contact Form <contact@yourdomain.com>',
 ## Email Format
 
 You'll receive emails with:
-- **From**: AML Contact Form
+- **From**: Baseline Contact Form
 - **Reply-To**: User's email (so you can reply directly)
 - **Subject**: New Contact Form Submission from [User Name]
 - **Body**: Formatted HTML with name, email, company (optional), and message

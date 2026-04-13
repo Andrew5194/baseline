@@ -13,7 +13,7 @@ This document explains how to set up the automated Docker image builds that push
 
 1. Go to https://hub.docker.com/settings/security
 2. Click "New Access Token"
-3. Name it: `github-actions-aml`
+3. Name it: `github-actions-baseline`
 4. Permissions: `Read & Write`
 5. Click "Generate"
 6. **Copy the token immediately** (you won't be able to see it again)
