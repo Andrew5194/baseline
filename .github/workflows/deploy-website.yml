@@ -9,7 +9,7 @@ on:
     paths: [ 'website/**' ]
 
 jobs:
-  deploy:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -35,10 +35,17 @@ jobs:
       run: npm run build
       working-directory: ./website
 
-    - name: Deploy to Vercel (Production)
+  deploy-production:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Vercel
       uses: amondnet/vercel-action@v25
-      if: github.ref == 'refs/heads/main'
-      working-directory: ./website
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
@@ -46,10 +53,17 @@ jobs:
         vercel-args: '--prod'
         github-comment: false
 
-    - name: Deploy to Vercel (Preview)
+  deploy-preview:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Vercel
       uses: amondnet/vercel-action@v25
-      if: github.event_name == 'pull_request'
-      working-directory: ./website
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
