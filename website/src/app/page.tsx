@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import GitHubHeatmap from './components/GitHubHeatmap';
 import HeroVisualization from './components/HeroVisualization';
+import DataFlowDiagram from './components/DataFlowDiagram';
 import { ThemeToggle } from './components/ThemeToggle';
 import Link from 'next/link';
 
@@ -112,27 +113,45 @@ export default function Home() {
             Tracking productivity shouldn&apos;t be this hard
           </h2>
           <p className="text-neutral-500 dark:text-neutral-400 max-w-2xl mb-16 leading-relaxed">
-            Most productivity tools make you do the work of tracking your work. You end up
-            managing spreadsheets, toggling timers, and stitching together data across a dozen apps
-            just to answer simple questions about how you spend your time.
+            Existing productivity tools shift the burden of measurement onto the individual.
+            The result is fragmented data, inconsistent tracking, and no reliable way to
+            evaluate performance over time.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6 mb-16">
             {[
               {
-                label: 'Scattered data',
-                problem: 'Your work lives across GitHub, calendars, task boards, and chat. Getting a complete picture means manually pulling from all of them.',
+                label: 'Fragmented tooling',
+                problem: 'Meaningful work output is distributed across version control, project management, communication platforms, and calendars — with no unified view.',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                  </svg>
+                ),
               },
               {
-                label: 'Manual effort',
-                problem: 'Time tracking tools require you to start and stop timers, tag categories, and fill in what you did. Most people give up after a week.',
+                label: 'High-friction tracking',
+                problem: 'Traditional time tracking demands constant manual input: starting timers, categorizing tasks, and logging entries. Adherence drops off within days.',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
               },
               {
-                label: 'No trends',
-                problem: 'Even when you do track everything, you get raw data — not insights. Spotting patterns across weeks or months is left as an exercise for you.',
+                label: 'Data without insight',
+                problem: 'Even with complete data capture, most tools surface raw activity logs — not the trajectory analysis needed to identify trends over weeks and months.',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                  </svg>
+                ),
               },
             ].map((item, i) => (
               <div key={i} className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                <div className="w-9 h-9 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 dark:text-neutral-400 mb-4">
+                  {item.icon}
+                </div>
                 <p className="text-sm font-semibold text-neutral-900 dark:text-white mb-2">{item.label}</p>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">{item.problem}</p>
               </div>
@@ -141,13 +160,13 @@ export default function Home() {
 
           {/* How Baseline is different */}
           <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-3">How Baseline works</p>
-          <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6 tracking-tight">
+          <h3 className="text-3xl font-bold text-neutral-900 dark:text-white mb-6 tracking-tight">
             Automatic tracking. Calculated metrics. Trends over time.
           </h3>
           <p className="text-neutral-500 dark:text-neutral-400 max-w-2xl mb-12 leading-relaxed">
-            Baseline connects to the tools you already use, automatically tracks what you&apos;re
-            working on and how long you spend on it, and turns that into metrics and trends
-            you can actually learn from — without any manual input.
+            Baseline integrates with your existing development and project management tools,
+            captures activity passively, and derives quantitative metrics and trend
+            analysis — with minimal configuration required.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -155,23 +174,45 @@ export default function Home() {
               {
                 title: 'Connect your tools',
                 description: 'Link GitHub, your calendar, and your project boards. Baseline pulls your activity automatically — no timers, no manual entry, no behavior changes.',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.678-5.504a4.5 4.5 0 00-6.364-6.364L4.5 8.737m8.058-2.874L10.5 8.737" />
+                  </svg>
+                ),
               },
               {
                 title: 'See your metrics',
                 description: 'Baseline calculates the metrics that matter — time spent, output, cycle time, focus hours — so you don\'t have to build your own dashboards.',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+                  </svg>
+                ),
               },
               {
                 title: 'Track your trends',
                 description: 'See how your productivity changes week over week, month over month. Spot patterns, identify what\'s working, and understand where your time actually goes.',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.941" />
+                  </svg>
+                ),
               },
             ].map((item, i) => (
               <div key={i} className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
-                <div className="text-xs font-mono text-neutral-400 dark:text-neutral-600 mb-4">0{i + 1}</div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    {item.icon}
+                  </div>
+                  <div className="text-xs font-mono text-neutral-400 dark:text-neutral-600">0{i + 1}</div>
+                </div>
                 <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-2">{item.title}</h3>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">{item.description}</p>
               </div>
             ))}
           </div>
+
+          <DataFlowDiagram />
         </div>
       </section>
 
