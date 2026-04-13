@@ -191,7 +191,13 @@ export default function DataFlowDiagram() {
                   transition: 'opacity 0.6s ease-out 0.7s, transform 0.6s ease-out 0.7s',
                 }}
               >
-                <div className={`absolute -inset-4 rounded-2xl bg-emerald-400/10 dark:bg-emerald-500/10 blur-lg ${pulsing ? 'animate-[pulse_3s_ease-in-out_infinite]' : 'opacity-0'} transition-opacity duration-700`} />
+                <div
+                  className="absolute -inset-4 rounded-2xl bg-emerald-400/10 dark:bg-emerald-500/10 blur-lg transition-opacity duration-[2s] ease-in"
+                  style={{
+                    opacity: visible ? 1 : 0,
+                    animation: pulsing ? 'pulse 3s ease-in-out infinite' : 'none',
+                  }}
+                />
 
                 <div className="relative w-[88px] h-[88px] rounded-2xl border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-neutral-900 flex flex-col items-center justify-center gap-1 shadow-[0_0_12px_rgba(16,185,129,0.1)] dark:shadow-[0_0_16px_rgba(16,185,129,0.2)]">
                   <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none">
