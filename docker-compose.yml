@@ -38,7 +38,7 @@ services:
     networks:
       - aml-network
 
-  # AML Web Application
+  # Baseline Web Application
   web:
     build:
       context: ./website

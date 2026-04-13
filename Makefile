@@ -51,9 +51,9 @@ docker-build: ## Build Docker images
 	docker-compose build
 
 docker-start: ## Start all services
-	@echo "🚀 Starting AML services..."
+	@echo "🚀 Starting Baseline services..."
 	docker-compose up -d
-	@echo "✓ AML is starting..."
+	@echo "✓ Baseline is starting..."
 	@echo "  Web:      http://localhost:3000"
 	@echo "  Postgres: localhost:5432"
 	@echo "  Redis:    localhost:6379"
@@ -101,12 +101,12 @@ docker-restore: ## Restore database (specify file with FILE=path/to/backup.sql)
 	@echo "✓ Database restored"
 
 docker-update: ## Update to latest version
-	@echo "Updating AML..."
+	@echo "Updating Baseline..."
 	git pull origin main
 	docker-compose down
 	docker-compose build --no-cache
 	docker-compose up -d
-	@echo "✓ AML updated and restarted"
+	@echo "✓ Baseline updated and restarted"
 
 docker-shell-web: ## Open shell in web container
 	docker-compose exec web sh
@@ -122,7 +122,7 @@ docker-health: ## Check application health
 
 # Help command
 help:
-	@echo "AML - Makefile Commands"
+	@echo "Baseline - Makefile Commands"
 	@echo ""
 	@echo "=== Local Development ==="
 	@echo "  make dev              - Start development server on port 3000"

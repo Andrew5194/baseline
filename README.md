@@ -1,91 +1,94 @@
-# AML - Automate My Life ⚡
+# Baseline
 
-A productivity platform designed to help you take control of your time, amplify your impact, and focus on what truly matters.
+The quantitative productivity analytics platform for knowledge workers. Connect your tools, establish your baseline, and measure your rate of progress.
 
-**Open source, self-hostable, and ready to transform your workflow.**
+## Features
 
-## 📁 Project Structure
-
-```
-automate-my-life/
-├── website/              # AML productivity platform (Next.js)
-├── .github/              # GitHub Actions & workflows
-├── docker-compose.yml    # Self-hosting configuration
-├── SELF_HOSTING.md       # Self-hosting guide
-└── scripts/              # Productivity automation scripts (coming soon)
-```
-
-## 🚀 Features
-
-- **Productivity Dashboard**: Modern Next.js platform with real-time activity tracking
-- **GitHub Integration**: Track development progress and contributions
-- **Smart Analytics**: Visual insights into your work patterns and productivity
+- **Productivity Dashboard**: Real-time activity tracking with interactive trend charts and rolling averages
+- **GitHub Integration**: Contribution heatmaps, commit drill-downs, streak tracking, and pattern analysis
+- **Quantitative Analytics**: Consistency scores, deep work days, day-of-week patterns, and monthly trends
 - **Self-Hostable**: Full Docker deployment with PostgreSQL and Redis
-- **Open Source**: MIT licensed, community-driven development
+- **Contact Form**: Built-in contact page powered by Resend
 
-## 🚀 Getting Started
+## Tech Stack
 
-### Option 1: Self-Hosting with Docker (Recommended)
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4
+- **APIs**: GitHub GraphQL & REST
+- **Infrastructure**: Docker, PostgreSQL, Redis
+- **Email**: Resend
+- **Deployment**: Vercel or Docker self-hosting
 
-Deploy AML using Docker with all services included:
+## Getting Started
+
+### Local Development
 
 ```bash
-# Clone the repository
 git clone https://github.com/Andrew5194/automate-my-life.git
 cd automate-my-life
 
-# Initial setup
-make docker-install
-
-# Edit .env with your configuration
-nano .env
-
-# Build and start services
-make docker-build
-make docker-start
-
-# Access at http://localhost:3000
-```
-
-See [SELF_HOSTING.md](SELF_HOSTING.md) for detailed instructions.
-
-**Quick Commands:**
-- `make docker-start` - Start all services
-- `make docker-stop` - Stop all services
-- `make docker-logs` - View logs
-- `make docker-backup` - Backup database
-- `make help` - See all commands
-
-The Docker image is automatically built and published to [Docker Hub](https://hub.docker.com/r/andrew5194/automate-my-life) via GitHub Actions.
-
-### Option 2: Local Development
-
-For development and testing without Docker.
-
-```bash
-# Clone the repository
-git clone https://github.com/Andrew5194/automate-my-life.git
-cd automate-my-life
-
-# Install dependencies
 make install
-
-# Start development server
 make dev
 
 # Access at http://localhost:3000
 ```
 
-## 🤝 Contributing
+### Environment Setup
 
-Contributions are welcome! This is an open-source project built for the community.
+Create `website/.env.local`:
+
+```bash
+NEXT_PUBLIC_GITHUB_USERNAME=your-username
+GITHUB_TOKEN=your-github-token        # Optional, enables higher API rate limits
+RESEND_API_KEY=re_your_api_key_here    # Optional, enables contact form
+CONTACT_EMAIL=you@example.com          # Optional, contact form recipient
+```
+
+### Self-Hosting with Docker
+
+```bash
+make docker-install   # Creates .env from template
+nano .env             # Edit with your configuration
+make docker-build
+make docker-start     # Starts web app, PostgreSQL, and Redis
+```
+
+See [SELF_HOSTING.md](SELF_HOSTING.md) for full deployment guide including Nginx, SSL, backups, and monitoring.
+
+### Quick Commands
+
+| Command | Description |
+|---|---|
+| `make dev` | Start development server |
+| `make build` | Production build |
+| `make docker-start` | Start all Docker services |
+| `make docker-stop` | Stop all services |
+| `make docker-logs` | View logs |
+| `make docker-backup` | Backup database |
+| `make help` | See all commands |
+
+## Project Structure
+
+```
+├── website/                # Next.js web platform
+│   └── src/app/
+│       ├── api/            # API routes (GitHub, contact)
+│       ├── components/     # React components
+│       ├── lib/            # Analytics and API utilities
+│       └── page.tsx        # Landing page
+├── docker-compose.yml      # Self-hosting configuration
+├── Makefile                # Dev and deployment commands
+└── SELF_HOSTING.md         # Deployment guide
+```
+
+## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Test locally with `make dev`
+4. Submit a Pull Request
 
-## 📄 License
+## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+GPL v3 - see [LICENSE](LICENSE) file for details.
