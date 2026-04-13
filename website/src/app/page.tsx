@@ -364,8 +364,8 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-neutral-200 dark:border-neutral-800 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-neutral-400 dark:text-neutral-500">&copy; {new Date().getFullYear()} Baseline. All rights reserved.</p>
-            <p className="text-xs text-neutral-400 dark:text-neutral-500">AGPL-3.0 License</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">&copy; {new Date().getFullYear()} Baseline Labs. All rights reserved.</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">GPL-3.0 License</p>
           </div>
         </div>
       </footer>
