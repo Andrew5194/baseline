@@ -22,7 +22,18 @@ export default function SignIn() {
       });
       const { csrfToken } = await csrfRes.json();
 
-      await fetch(`${apiUrl}/api/auth/callback/credentials`, {
+      // Clear any pre-existing session so the subsequent session check only
+      // reflects the current login attempt (defends against a stale session
+      // cookie making any password "succeed").
+      await fetch(`${apiUrl}/api/auth/signout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ csrfToken, redirect: 'false' }),
+        credentials: 'include',
+      });
+      document.cookie = 'baseline-session=; path=/; max-age=0';
+
+      const callbackRes = await fetch(`${apiUrl}/api/auth/callback/credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ email, password, csrfToken, redirect: 'false' }),
@@ -30,13 +41,26 @@ export default function SignIn() {
         redirect: 'manual',
       });
 
-      // Check if session cookie was set by verifying with the session endpoint
+      // NextAuth v5 with redirect:false returns JSON with either `url` (success)
+      // or an error signaled by `url` pointing at /api/auth/error or an empty url.
+      const callbackData = await callbackRes.json().catch(() => ({} as { url?: string | null }));
+      const callbackUrl = callbackData.url ?? '';
+      const signInFailed = !callbackUrl || callbackUrl.includes('/api/auth/error');
+
+      if (signInFailed) {
+        setError('Invalid email or password');
+        return;
+      }
+
+      // Secondary verification: confirm the freshly-issued session matches the
+      // email that was just submitted. Guards against any residual session.
       const sessionRes = await fetch(`${apiUrl}/api/auth/session`, {
         credentials: 'include',
+        cache: 'no-store',
       });
       const session = await sessionRes.json();
 
-      if (session?.user) {
+      if (session?.user?.email?.toLowerCase() === email.toLowerCase()) {
         document.cookie = `baseline-session=true; path=/; max-age=${60 * 60 * 24 * 30}`;
         window.location.href = '/';
       } else {
