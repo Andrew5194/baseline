@@ -336,8 +336,7 @@ export default function Home() {
                 <span className="text-sm font-semibold text-neutral-900 dark:text-white">Baseline</span>
               </div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                Next-gen productivity analytics.<br />
-                Source-available. Self-hostable.
+                Next-gen productivity analytics.
               </p>
             </div>
             <div>
