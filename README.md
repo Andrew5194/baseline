@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Andrew5194/automate-my-life/actions/workflows/docker-build.yml"><img src="https://github.com/Andrew5194/automate-my-life/actions/workflows/docker-build.yml/badge.svg" alt="Build and Push Docker Image" /></a>
-  <a href="https://github.com/Andrew5194/automate-my-life"><img src="https://visitor-badge.laobi.icu/badge?page_id=Andrew5194.automate-my-life" alt="Visitors" /></a>
+  <a href="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml"><img src="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml/badge.svg" alt="Build and Push Docker Image" /></a>
+  <a href="https://github.com/Andrew5194/baseline"><img src="https://visitor-badge.laobi.icu/badge?page_id=Andrew5194.baseline" alt="Visitors" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue?logo=gnu&logoColor=white" alt="License: GPL v3" /></a>
 </p>
 
@@ -33,11 +33,11 @@ Baseline integrates with your existing development and project management tools,
 
 ## Features
 
-- 📈 Real-time productivity dashboard with interactive trend charts and rolling averages
-- 🐙 GitHub contribution heatmaps, commit drill-downs, streak tracking, and pattern analysis
-- 🔢 Consistency scores, deep work days, day-of-week patterns, and monthly trends
-- 🐳 Self-hostable with Docker, PostgreSQL, and Redis
-- 📬 Built-in contact form powered by Resend
+- Real-time productivity dashboard with interactive trend charts and rolling averages
+- GitHub contribution heatmaps, commit drill-downs, streak tracking, and pattern analysis
+- Consistency scores, deep work days, day-of-week patterns, and monthly trends
+- Self-hostable with Docker, PostgreSQL, and Redis
+- Built-in contact form powered by Resend
 
 ## Tech Stack
 
@@ -49,15 +49,20 @@ Baseline integrates with your existing development and project management tools,
 | APIs | GitHub GraphQL & REST |
 | Infrastructure | Docker, PostgreSQL, Redis |
 | Email | Resend |
-| Deployment | Vercel or Docker self-hosting |
 
 ## Getting Started
 
-### Local Development
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 18 or higher
+- npm
+- Git
+
+### Installation
 
 ```bash
-git clone https://github.com/Andrew5194/automate-my-life.git
-cd automate-my-life
+git clone https://github.com/Andrew5194/baseline.git
+cd baseline
 
 make install
 make dev
@@ -65,27 +70,16 @@ make dev
 # Access at http://localhost:3000
 ```
 
-### Environment Setup
+### Environment Variables
 
-Create `website/.env.local`:
+Create `website/.env.local` and add the variables you need:
 
-```bash
-NEXT_PUBLIC_GITHUB_USERNAME=your-username
-GITHUB_TOKEN=your-github-token        # Optional, enables higher API rate limits
-RESEND_API_KEY=re_your_api_key_here    # Optional, enables contact form
-CONTACT_EMAIL=you@example.com          # Optional, contact form recipient
-```
-
-### Self-Hosting with Docker
-
-```bash
-make docker-install   # Creates .env from template
-nano .env             # Edit with your configuration
-make docker-build
-make docker-start     # Starts web app, PostgreSQL, and Redis
-```
-
-See [SELF_HOSTING.md](SELF_HOSTING.md) for full deployment guide including Nginx, SSL, backups, and monitoring.
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_GITHUB_USERNAME` | Yes | Your GitHub username |
+| `GITHUB_TOKEN` | No | GitHub personal access token. Scopes: `read:user` for contribution calendar, `repo` for repository activity drill-downs. Without a token the API is limited to 60 requests/hour; with one you get 5,000/hour. |
+| `RESEND_API_KEY` | No | Enables the contact form. Sign up at [resend.com](https://resend.com), create an API key in the dashboard (starts with `re_`). Free tier: 100 emails/day. |
+| `CONTACT_EMAIL` | No | Email address that receives contact form submissions. Only needed if `RESEND_API_KEY` is set. |
 
 ### Quick Commands
 
@@ -109,8 +103,7 @@ See [SELF_HOSTING.md](SELF_HOSTING.md) for full deployment guide including Nginx
 │       ├── lib/            # Analytics and API utilities
 │       └── page.tsx        # Landing page
 ├── docker-compose.yml      # Self-hosting configuration
-├── Makefile                # Dev and deployment commands
-└── SELF_HOSTING.md         # Deployment guide
+└── Makefile                # Dev and deployment commands
 ```
 
 ## Contributing
