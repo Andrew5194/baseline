@@ -22,27 +22,19 @@ export default function SignIn() {
       });
       const { csrfToken } = await csrfRes.json();
 
-      const callbackRes = await fetch(`${apiUrl}/api/auth/callback/credentials`, {
+      await fetch(`${apiUrl}/api/auth/callback/credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email, password, csrfToken, redirect: 'false' }),
+        body: new URLSearchParams({ email, password, csrfToken }),
         credentials: 'include',
-        redirect: 'manual',
+        redirect: 'follow',
       });
 
-      // NextAuth v5 with redirect:false returns JSON with either `url` (success)
-      // or an error signaled by `url` pointing at /api/auth/error or an empty url.
-      const callbackData = await callbackRes.json().catch(() => ({} as { url?: string | null }));
-      const callbackUrl = callbackData.url ?? '';
-      const signInFailed = !callbackUrl || callbackUrl.includes('/api/auth/error');
-
-      if (signInFailed) {
-        setError('Invalid email or password');
-        return;
-      }
-
-      // Secondary verification: confirm the freshly-issued session matches the
-      // email that was just submitted. Guards against any residual session.
+      // NextAuth v5 beta returns a 302 from the credentials callback whether
+      // the attempt succeeded or failed, so we can't derive the result from
+      // the response directly. Instead we check the session: authorize() only
+      // sets a session cookie on success, so if session.user.email matches
+      // the submitted email, this attempt succeeded.
       const sessionRes = await fetch(`${apiUrl}/api/auth/session`, {
         credentials: 'include',
         cache: 'no-store',
