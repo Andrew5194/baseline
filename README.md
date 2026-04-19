@@ -153,5 +153,4 @@ Baseline is source-available under the [Elastic License 2.0](LICENSE) (ELv2).
 - Circumvent any license key functionality
 - Remove or obscure licensing/copyright notices
 
-For commercial licensing inquiries (e.g., offering Baseline as a hosted
-service), contact andrew.yang5194@gmail.com.
+For commercial licensing inquiries, contact andrew.yang5194@gmail.com.

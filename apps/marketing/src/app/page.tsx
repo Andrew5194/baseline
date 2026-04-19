@@ -49,7 +49,7 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
             <a
-              href="https://github.com/Andrew5194/automate-my-life"
+              href="https://github.com/Andrew5194/baseline"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
@@ -59,7 +59,7 @@ export default function Home() {
               </svg>
             </a>
             <a
-              href="https://github.com/Andrew5194/automate-my-life"
+              href="https://github.com/Andrew5194/baseline"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-medium px-4 py-2 rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
@@ -85,7 +85,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <a
-                href="https://github.com/Andrew5194/automate-my-life"
+                href="https://github.com/Andrew5194/baseline"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-medium px-6 py-3 rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors text-sm"
@@ -304,11 +304,11 @@ export default function Home() {
             Start measuring what matters
           </h2>
           <p className="text-neutral-500 dark:text-neutral-400 mb-8">
-            Free and open source. Clone the repo and run it in minutes.
+            Free to self-host. Clone the repo and run it in minutes.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href="https://github.com/Andrew5194/automate-my-life"
+              href="https://github.com/Andrew5194/baseline"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-medium px-6 py-3 rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors text-sm"
@@ -336,8 +336,7 @@ export default function Home() {
                 <span className="text-sm font-semibold text-neutral-900 dark:text-white">Baseline</span>
               </div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                Next-gen productivity analytics.<br />
-                Open source. Self-hostable.
+                Next-gen productivity analytics.
               </p>
             </div>
             <div>
@@ -351,9 +350,9 @@ export default function Home() {
             <div>
               <p className="text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wider mb-4">Developers</p>
               <ul className="space-y-2.5 text-sm text-neutral-500 dark:text-neutral-400">
-                <li><a href="https://github.com/Andrew5194/automate-my-life" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors">GitHub</a></li>
-                <li><a href="https://github.com/Andrew5194/automate-my-life" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Contribute</a></li>
-                <li><a href="https://github.com/Andrew5194/automate-my-life/issues" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Issues</a></li>
+                <li><a href="https://github.com/Andrew5194/baseline" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors">GitHub</a></li>
+                <li><a href="https://github.com/Andrew5194/baseline" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Contribute</a></li>
+                <li><a href="https://github.com/Andrew5194/baseline/issues" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Issues</a></li>
               </ul>
             </div>
             <div>
