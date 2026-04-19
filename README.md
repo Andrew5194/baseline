@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml"><img src="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml/badge.svg" alt="Build and Push Docker Image" /></a>
   <a href="https://github.com/Andrew5194/baseline"><img src="https://visitor-badge.laobi.icu/badge?page_id=Andrew5194.baseline" alt="Visitors" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue?logo=gnu&logoColor=white" alt="License: GPL v3" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue?logo=gnu&logoColor=white" alt="License: AGPL v3" /></a>
 </p>
 
 ---
@@ -135,11 +135,18 @@ pnpm-workspace.yaml       Workspace definitions
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Test locally with `pnpm dev`
-4. Submit a Pull Request
+Contributions are welcome. Before submitting, please read
+[CONTRIBUTING.md](CONTRIBUTING.md) and sign the appropriate CLA
+([individual](CLA.md) or [entity](CLA-entity.md)).
 
 ## License
 
-GPL v3 — see [LICENSE](LICENSE) file for details.
+Baseline is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+
+- You may **self-host, modify, and redistribute** Baseline freely.
+- If you run a modified version as a network service, you must make your
+  modified source code available to users of that service.
+- Commercial licensing is available for organizations that cannot comply with
+  AGPL's source-disclosure requirements.
+
+For commercial licensing inquiries, contact andrew.yang5194@gmail.com.
