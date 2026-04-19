@@ -1,5 +1,0 @@
-{
-  "buildCommand": "pnpm --filter @baseline/marketing build",
-  "outputDirectory": "apps/marketing/.next",
-  "installCommand": "pnpm install --frozen-lockfile"
-}
