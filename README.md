@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml"><img src="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml/badge.svg" alt="Build and Push Docker Image" /></a>
   <a href="https://github.com/Andrew5194/baseline"><img src="https://visitor-badge.laobi.icu/badge?page_id=Andrew5194.baseline" alt="Visitors" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue?logo=gnu&logoColor=white" alt="License: AGPL v3" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Elastic%20v2-0077CC" alt="License: Elastic License 2.0" /></a>
 </p>
 
 ---
@@ -141,12 +141,17 @@ Contributions are welcome. Before submitting, please read
 
 ## License
 
-Baseline is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+Baseline is source-available under the [Elastic License 2.0](LICENSE) (ELv2).
 
-- You may **self-host, modify, and redistribute** Baseline freely.
-- If you run a modified version as a network service, you must make your
-  modified source code available to users of that service.
-- Commercial licensing is available for organizations that cannot comply with
-  AGPL's source-disclosure requirements.
+**You may:**
+- Self-host Baseline for any purpose, including commercial internal use
+- Modify the source code freely
+- View, copy, and redistribute the source
 
-For commercial licensing inquiries, contact andrew.yang5194@gmail.com.
+**You may not:**
+- Offer Baseline as a hosted or managed service to third parties
+- Circumvent any license key functionality
+- Remove or obscure licensing/copyright notices
+
+For commercial licensing inquiries (e.g., offering Baseline as a hosted
+service), contact andrew.yang5194@gmail.com.
