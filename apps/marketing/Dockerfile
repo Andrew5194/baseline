@@ -1,28 +1,34 @@
 # Multi-stage build for optimized production image
 FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@10.23.0 --activate
 
 # Install dependencies only when needed
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json ./
-# Install ALL dependencies including devDependencies for build
-RUN npm ci
+# Copy workspace config and lockfile from repo root
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY apps/marketing/package.json ./apps/marketing/package.json
+
+# Install dependencies for apps/marketing only
+RUN pnpm install --frozen-lockfile --filter @baseline/marketing...
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app/apps/marketing/node_modules ./apps/marketing/node_modules
+COPY apps/marketing ./apps/marketing
+COPY pnpm-workspace.yaml package.json turbo.json ./
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # Build the application
-RUN npm run build
+RUN pnpm --filter @baseline/marketing build
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -34,10 +40,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Copy necessary files from the standalone output
+COPY --from=builder /app/apps/marketing/public ./public
+COPY --from=builder /app/apps/marketing/.next/standalone ./
+COPY --from=builder /app/apps/marketing/.next/static ./.next/static
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app

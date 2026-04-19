@@ -1,3 +1,12 @@
+# Dependencies
+**/node_modules/
+
+# Build artifacts
+**/.next/
+**/out/
+**/dist/
+**/.turbo/
+
 # Environment files
 .env
 .env.local
@@ -19,3 +28,10 @@
 
 # Claude Code
 .claude/settings.local.json
+
+# TypeScript
+*.tsbuildinfo
+
+# Debug logs
+npm-debug.log*
+pnpm-debug.log*

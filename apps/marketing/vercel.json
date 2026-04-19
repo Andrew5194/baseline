@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm --filter @baseline/marketing build",
+  "outputDirectory": "apps/marketing/.next",
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile"
+}

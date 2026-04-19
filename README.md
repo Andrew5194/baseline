@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="website/public/baseline-logo.svg" alt="" width="28" height="28" style="vertical-align: middle;" />
+  <img src="apps/marketing/public/baseline-logo.svg" alt="" width="28" height="28" style="vertical-align: middle;" />
   Baseline
 </h1>
 
@@ -47,6 +47,7 @@ Baseline integrates with your existing development and project management tools,
 | Language | TypeScript |
 | Styling | Tailwind CSS v4 |
 | APIs | GitHub GraphQL & REST |
+| Monorepo | Turborepo + pnpm workspaces |
 | Infrastructure | Docker, PostgreSQL, Redis |
 | Email | Resend |
 
@@ -54,8 +55,8 @@ Baseline integrates with your existing development and project management tools,
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 18 or higher
-- npm
+- [Node.js](https://nodejs.org/) 20 or higher
+- [pnpm](https://pnpm.io/) 10+
 - Git
 
 ### Installation
@@ -64,15 +65,21 @@ Baseline integrates with your existing development and project management tools,
 git clone https://github.com/Andrew5194/baseline.git
 cd baseline
 
-make install
-make dev
-
-# Access at http://localhost:3000
+make install    # pnpm install
+make dev        # starts all apps via Turborepo
 ```
+
+Apps start on these ports:
+
+| App | Port | Description |
+|---|---|---|
+| `apps/marketing` | 3000 | Public landing page |
+| `apps/api` | 3001 | HTTP API server |
+| `apps/web` | 3002 | Product dashboard |
 
 ### Environment Variables
 
-Create `website/.env.local` and add the variables you need:
+Create `apps/marketing/.env.local` and add the variables you need:
 
 | Variable | Required | Description |
 |---|---|---|
@@ -85,8 +92,10 @@ Create `website/.env.local` and add the variables you need:
 
 | Command | Description |
 |---|---|
-| `make dev` | Start development server |
-| `make build` | Production build |
+| `make dev` | Start all apps (marketing, api, web) |
+| `make build` | Production build across all workspaces |
+| `make lint` | Lint all workspaces |
+| `make type-check` | Type-check all workspaces |
 | `make docker-start` | Start all Docker services |
 | `make docker-stop` | Stop all services |
 | `make docker-logs` | View logs |
@@ -96,14 +105,22 @@ Create `website/.env.local` and add the variables you need:
 ## Project Structure
 
 ```
-├── website/                # Next.js web platform
-│   └── src/app/
-│       ├── api/            # API routes (GitHub, contact)
-│       ├── components/     # React components
-│       ├── lib/            # Analytics and API utilities
-│       └── page.tsx        # Landing page
-├── docker-compose.yml      # Self-hosting configuration
-└── Makefile                # Dev and deployment commands
+apps/
+  marketing/              Public website (landing page, contact, GitHub heatmap)
+  web/                    Product dashboard (placeholder)
+  api/                    HTTP API server
+packages/
+  db/                     Database schema and client
+  events/                 Canonical event model
+  metrics/                Derived metric calculations
+  api-client/             OpenAPI spec and generated types
+  ui/                     Shared components
+  integrations/
+    github/               GitHub API client
+docker-compose.yml        Self-hosting configuration
+Makefile                  Dev and deployment commands
+turbo.json                Turborepo pipeline config
+pnpm-workspace.yaml       Workspace definitions
 ```
 
 ## Contributing
