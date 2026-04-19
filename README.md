@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml"><img src="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml/badge.svg" alt="Build and Push Docker Image" /></a>
   <a href="https://github.com/Andrew5194/baseline"><img src="https://visitor-badge.laobi.icu/badge?page_id=Andrew5194.baseline" alt="Visitors" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue?logo=gnu&logoColor=white" alt="License: GPL v3" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Elastic%20v2-0077CC" alt="License: Elastic License 2.0" /></a>
 </p>
 
 ---
@@ -135,11 +135,23 @@ pnpm-workspace.yaml       Workspace definitions
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Test locally with `pnpm dev`
-4. Submit a Pull Request
+Contributions are welcome. Before submitting, please read
+[CONTRIBUTING.md](CONTRIBUTING.md) and sign the appropriate CLA
+([individual](CLA.md) or [entity](CLA-entity.md)).
 
 ## License
 
-GPL v3 — see [LICENSE](LICENSE) file for details.
+Baseline is source-available under the [Elastic License 2.0](LICENSE) (ELv2).
+
+**You may:**
+- Self-host Baseline for any purpose, including commercial internal use
+- Modify the source code freely
+- View, copy, and redistribute the source
+
+**You may not:**
+- Offer Baseline as a hosted or managed service to third parties
+- Circumvent any license key functionality
+- Remove or obscure licensing/copyright notices
+
+For commercial licensing inquiries (e.g., offering Baseline as a hosted
+service), contact andrew.yang5194@gmail.com.
