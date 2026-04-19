@@ -5,14 +5,14 @@ on:
     branches:
       - main
     paths:
-      - 'website/**'
+      - 'apps/marketing/**'
       - 'docker-compose.yml'
       - '.github/workflows/docker-build.yml'
   pull_request:
     branches:
       - main
     paths:
-      - 'website/**'
+      - 'apps/marketing/**'
       - 'docker-compose.yml'
   release:
     types: [published]
@@ -55,8 +55,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./website
-          file: ./website/Dockerfile
+          context: .
+          file: ./apps/marketing/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

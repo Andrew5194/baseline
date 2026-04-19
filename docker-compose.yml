@@ -38,11 +38,11 @@ services:
     networks:
       - aml-network
 
-  # Baseline Web Application
+  # Baseline Marketing Website
   web:
     build:
-      context: ./website
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/marketing/Dockerfile
     container_name: aml-web
     restart: unless-stopped
     depends_on:
