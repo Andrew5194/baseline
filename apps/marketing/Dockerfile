@@ -21,7 +21,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/marketing/node_modules ./apps/marketing/node_modules
 COPY apps/marketing ./apps/marketing
-COPY pnpm-workspace.yaml package.json turbo.json ./
+COPY pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
