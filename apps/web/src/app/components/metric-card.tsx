@@ -5,15 +5,25 @@ interface MetricCardProps {
   value: number | null;
   delta: number | null;
   unit: string;
+  window?: string;
   active?: boolean;
   onClick?: () => void;
 }
 
-export function MetricCard({ label, value, delta, unit, active, onClick }: MetricCardProps) {
-  const formattedValue = value === null ? '—' : `${value}`;
+function formatValue(value: number | null, unit: string): string {
+  if (value === null) return '—';
+  if (unit === 'hours') return value.toFixed(1);
+  if (unit === 'days' || unit === 'ratio') return value.toFixed(1);
+  if (unit === 'score') return `${Math.round(value)}`;
+  return `${value}`;
+}
+
+export function MetricCard({ label, value, delta, unit, window, active, onClick }: MetricCardProps) {
+  const formattedValue = formatValue(value, unit);
   const deltaColor = delta === null ? '' : delta >= 0 ? 'text-emerald-600' : 'text-red-500';
-  const deltaText =
-    delta === null ? '' : `${delta >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(delta * 100))}%`;
+  const deltaPct = delta === null ? '' : `${Math.abs(Math.round(delta * 100))}%`;
+  const deltaArrow = delta === null ? '' : delta >= 0 ? '▲' : '▼';
+  const windowLabel = window ? ` vs prior ${window}` : '';
 
   return (
     <button
@@ -29,9 +39,13 @@ export function MetricCard({ label, value, delta, unit, active, onClick }: Metri
         <p className="text-2xl font-semibold tracking-tight">{formattedValue}</p>
         <p className="text-xs text-neutral-400">{unit}</p>
       </div>
-      {deltaText && (
-        <p className={`text-xs mt-1 ${deltaColor}`}>{deltaText}</p>
-      )}
+      {delta !== null ? (
+        <p className={`text-xs mt-1 ${deltaColor}`}>
+          {deltaArrow} {deltaPct} vs prior {window || '30d'}
+        </p>
+      ) : window ? (
+        <p className="text-xs mt-1 text-neutral-400">—  vs prior {window}</p>
+      ) : null}
     </button>
   );
 }

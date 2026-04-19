@@ -60,7 +60,7 @@ export function TrendChart({ data, unit }: TrendChartProps) {
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             }}
             formatter={(value: number) => [`${value} ${unit}`, '']}
-            labelFormatter={(label: string) => new Date(label).toLocaleDateString()}
+            labelFormatter={(label: string) => new Date(label + 'T00:00:00').toLocaleDateString()}
           />
           <Area
             type="monotone"
