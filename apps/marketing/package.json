@@ -2,6 +2,7 @@
   "name": "@baseline/marketing",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.23.0",
   "scripts": {
     "dev": "next dev --turbopack -p 3000",
     "build": "next build",
