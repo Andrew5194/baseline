@@ -1,4 +1,5 @@
 export { db, getDb } from './client';
+export { runMigrations } from './migrate';
 export {
   users,
   accounts,

@@ -33,92 +33,102 @@ Baseline integrates with your existing development and project management tools,
 
 ## Features
 
-- Real-time productivity dashboard with interactive trend charts and rolling averages
-- GitHub contribution heatmaps, commit drill-downs, streak tracking, and pattern analysis
-- Consistency scores, deep work days, day-of-week patterns, and monthly trends
-- Self-hostable with Docker, PostgreSQL, and Redis
-- Built-in contact form powered by Resend
+- **Productivity dashboard** — consistency score, focus hours, cycle time, and active days with trend comparisons across 7d/30d/90d windows
+- **GitHub integration** — OAuth connect, automatic ingestion of commits, PRs, and reviews
+- **Activity heatmap & patterns** — contribution grid, day-of-week and hour-of-day distributions, drill-down into individual days
+- **12 computed metrics** — output, velocity, and calibration categories derived from your real activity
+- **Self-hostable** — single `docker compose up` with PostgreSQL and Redis included
 
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS v4 |
-| APIs | GitHub GraphQL & REST |
-| Monorepo | Turborepo + pnpm workspaces |
-| Infrastructure | Docker, PostgreSQL, Redis |
-| Email | Resend |
 
 ## Getting Started
 
-### Prerequisites
+### Docker Compose (recommended)
 
-- [Node.js](https://nodejs.org/) 20 or higher
-- [pnpm](https://pnpm.io/) 10+
-- Git
+#### Configure
 
-### Installation
+Copy `.env.example` to `.env` at the project root and fill in your credentials:
+
+| Variable | Required | Description |
+|---|---|---|
+| `AUTH_SECRET` | Yes | Random string for signing auth tokens |
+| `GITHUB_CLIENT_ID` | For OAuth | GitHub OAuth app client ID |
+| `GITHUB_CLIENT_SECRET` | For OAuth | GitHub OAuth app client secret |
+| `GITHUB_USERNAME` | For marketing | GitHub username for the landing page heatmap |
+| `GITHUB_TOKEN` | No | GitHub PAT for higher API rate limits (60/hr without, 5000/hr with) |
+| `RESEND_API_KEY` | No | Enables the contact form ([resend.com](https://resend.com)) |
+| `CONTACT_EMAIL` | No | Recipient for contact form submissions |
+
+#### Run
+
+```bash
+docker compose up
+```
+
+That's it. The database is created automatically on first boot. Three services start:
+
+| Service | URL | Description |
+|---|---|---|
+| Marketing | http://localhost:3000 | Public landing page |
+| API | http://localhost:3001 | Backend server |
+| Dashboard | http://localhost:3002 | Product dashboard |
+
+Sign up at http://localhost:3002/sign-up, then connect GitHub from the Sources page. Database, Redis, and inter-service URLs are all handled automatically.
+
+### Build from Source
+
+Requires Node.js 20+, pnpm 10+, and a local PostgreSQL instance.
 
 ```bash
 git clone https://github.com/Andrew5194/baseline.git
 cd baseline
+pnpm install
 
-make install    # pnpm install
-make dev        # starts all apps via Turborepo
+# Configure each app
+cat > apps/api/.env.local << 'EOF'
+DATABASE_URL=postgresql://user:pass@localhost:5432/baseline
+AUTH_SECRET=your-random-secret
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+API_URL=http://localhost:3001
+WEB_URL=http://localhost:3002
+EOF
+
+cat > apps/web/.env.local << 'EOF'
+NEXT_PUBLIC_API_URL=http://localhost:3001
+EOF
+
+cat > apps/marketing/.env.local << 'EOF'
+NEXT_PUBLIC_GITHUB_USERNAME=your-github-username
+GITHUB_TOKEN=your-github-pat
+RESEND_API_KEY=your-resend-api-key
+CONTACT_EMAIL=you@example.com
+EOF
+
+# Create tables
+pnpm --filter @baseline/db migrate
+
+# Start all apps
+pnpm dev
 ```
 
-Apps start on these ports:
-
-| App | Port | Description |
-|---|---|---|
-| `apps/marketing` | 3000 | Public landing page |
-| `apps/api` | 3001 | HTTP API server |
-| `apps/web` | 3002 | Product dashboard |
-
-### Environment Variables
-
-Create `apps/marketing/.env.local` and add the variables you need:
-
-| Variable | Required | Description |
-|---|---|---|
-| `NEXT_PUBLIC_GITHUB_USERNAME` | Yes | Your GitHub username |
-| `GITHUB_TOKEN` | No | GitHub personal access token. Scopes: `read:user` for contribution calendar, `repo` for repository activity drill-downs. Without a token the API is limited to 60 requests/hour; with one you get 5,000/hour. |
-| `RESEND_API_KEY` | No | Enables the contact form. Sign up at [resend.com](https://resend.com), create an API key in the dashboard (starts with `re_`). Free tier: 100 emails/day. |
-| `CONTACT_EMAIL` | No | Email address that receives contact form submissions. Only needed if `RESEND_API_KEY` is set. |
-
-### Quick Commands
-
-| Command | Description |
-|---|---|
-| `make dev` | Start all apps (marketing, api, web) |
-| `make build` | Production build across all workspaces |
-| `make lint` | Lint all workspaces |
-| `make type-check` | Type-check all workspaces |
-| `make docker-start` | Start all Docker services |
-| `make docker-stop` | Stop all services |
-| `make docker-logs` | View logs |
-| `make docker-backup` | Backup database |
-| `make help` | See all commands |
+Apps start on the same ports: marketing (3000), API (3001), dashboard (3002).
 
 ## Project Structure
 
 ```
 apps/
   marketing/              Public website (landing page, contact, GitHub heatmap)
-  web/                    Product dashboard (placeholder)
+  web/                    Product dashboard (metrics, heatmap, activity feed)
   api/                    HTTP API server
 packages/
-  db/                     Database schema and client
-  events/                 Canonical event model
-  metrics/                Derived metric calculations
-  api-client/             OpenAPI spec and generated types
+  db/                     Drizzle schema, migrations, and typed client
+  events/                 Canonical event types
+  metrics/                12 derived metric functions (pure, no DB)
+  api-client/             OpenAPI 3.1 spec and generated types
   ui/                     Shared components
   integrations/
-    github/               GitHub API client
+    github/               GitHub OAuth, GraphQL client, event normalizer
 docker-compose.yml        Self-hosting configuration
-Makefile                  Dev and deployment commands
 turbo.json                Turborepo pipeline config
 pnpm-workspace.yaml       Workspace definitions
 ```
@@ -127,7 +137,7 @@ pnpm-workspace.yaml       Workspace definitions
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Test locally with `make dev`
+3. Test locally with `pnpm dev`
 4. Submit a Pull Request
 
 ## License
