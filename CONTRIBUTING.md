@@ -5,11 +5,11 @@ practical requirements for submitting contributions.
 
 ## License
 
-Baseline is source-available under the [Elastic License 2.0](LICENSE). Any
-Contributions you submit will be distributed under this license. The CLA also
-permits the Licensor to relicense Your Contributions under alternative terms
-(for example, commercial licenses offered to organizations that want to
-operate Baseline as a hosted service).
+Baseline is open source under the [GNU Affero General Public License v3.0](LICENSE).
+Any Contributions you submit will be distributed under this license. The CLA
+also permits the Licensor to relicense Your Contributions under alternative
+terms — in particular, commercial licenses offered to organizations that
+cannot comply with AGPL's source-disclosure requirements.
 
 ## Contributor License Agreement
 

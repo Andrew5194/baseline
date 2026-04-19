@@ -304,7 +304,7 @@ export default function Home() {
             Start measuring what matters
           </h2>
           <p className="text-neutral-500 dark:text-neutral-400 mb-8">
-            Free to self-host. Clone the repo and run it in minutes.
+            Free and open source. Clone the repo and run it in minutes.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
@@ -364,7 +364,7 @@ export default function Home() {
           </div>
           <div className="border-t border-neutral-200 dark:border-neutral-800 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-xs text-neutral-400 dark:text-neutral-500">&copy; {new Date().getFullYear()} Baseline Labs. All rights reserved.</p>
-            <p className="text-xs text-neutral-400 dark:text-neutral-500">Elastic License 2.0</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">AGPL-3.0 License</p>
           </div>
         </div>
       </footer>
