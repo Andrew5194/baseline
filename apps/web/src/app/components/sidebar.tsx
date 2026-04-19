@@ -45,10 +45,18 @@ export function Sidebar() {
 
       <div className="px-3 py-4 border-t border-neutral-200 dark:border-neutral-800">
         <button
-          onClick={() => {
-            document.cookie = 'baseline-session=; path=/; max-age=0';
-            document.cookie = 'authjs.session-token=; path=/; max-age=0';
-            document.cookie = '__Secure-authjs.session-token=; path=/; max-age=0';
+          onClick={async () => {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const csrfRes = await fetch(`${apiUrl}/api/auth/csrf`, {
+              credentials: 'include',
+            });
+            const { csrfToken } = await csrfRes.json();
+            await fetch(`${apiUrl}/api/auth/signout`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ csrfToken, redirect: 'false' }),
+              credentials: 'include',
+            });
             window.location.href = '/sign-in';
           }}
           className="w-full text-left px-3 py-2 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"

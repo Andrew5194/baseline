@@ -25,19 +25,23 @@ export default function SignIn() {
       await fetch(`${apiUrl}/api/auth/callback/credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ email, password, csrfToken, redirect: 'false' }),
+        body: new URLSearchParams({ email, password, csrfToken }),
         credentials: 'include',
-        redirect: 'manual',
+        redirect: 'follow',
       });
 
-      // Check if session cookie was set by verifying with the session endpoint
+      // NextAuth v5 beta returns a 302 from the credentials callback whether
+      // the attempt succeeded or failed, so we can't derive the result from
+      // the response directly. Instead we check the session: authorize() only
+      // sets a session cookie on success, so if session.user.email matches
+      // the submitted email, this attempt succeeded.
       const sessionRes = await fetch(`${apiUrl}/api/auth/session`, {
         credentials: 'include',
+        cache: 'no-store',
       });
       const session = await sessionRes.json();
 
-      if (session?.user) {
-        document.cookie = `baseline-session=true; path=/; max-age=${60 * 60 * 24 * 30}`;
+      if (session?.user?.email?.toLowerCase() === email.toLowerCase()) {
         window.location.href = '/';
       } else {
         setError('Invalid email or password');
