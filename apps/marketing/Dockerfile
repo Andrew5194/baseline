@@ -17,6 +17,8 @@ COPY --from=deps /app/ ./
 COPY apps/marketing ./apps/marketing
 COPY pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 
+ARG NEXT_PUBLIC_GITHUB_USERNAME
+ENV NEXT_PUBLIC_GITHUB_USERNAME=${NEXT_PUBLIC_GITHUB_USERNAME}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 

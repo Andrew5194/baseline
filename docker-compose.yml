@@ -75,6 +75,8 @@ services:
     build:
       context: .
       dockerfile: apps/marketing/Dockerfile
+      args:
+        NEXT_PUBLIC_GITHUB_USERNAME: ${GITHUB_USERNAME:-}
     container_name: baseline-marketing
     restart: unless-stopped
     environment:
