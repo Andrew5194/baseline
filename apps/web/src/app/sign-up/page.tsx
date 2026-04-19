@@ -39,7 +39,6 @@ export default function SignUp() {
           redirect: 'follow',
         });
 
-        document.cookie = `baseline-session=true; path=/; max-age=${60 * 60 * 24 * 30}`;
         window.location.href = '/';
       } else {
         const data = await res.json();

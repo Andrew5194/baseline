@@ -66,6 +66,7 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - AUTH_SECRET=${AUTH_SECRET:-change-me}
     ports:
       - "3002:3002"
     networks:

@@ -31,7 +31,6 @@ export default function SignIn() {
         body: new URLSearchParams({ csrfToken, redirect: 'false' }),
         credentials: 'include',
       });
-      document.cookie = 'baseline-session=; path=/; max-age=0';
 
       const callbackRes = await fetch(`${apiUrl}/api/auth/callback/credentials`, {
         method: 'POST',
@@ -61,7 +60,6 @@ export default function SignIn() {
       const session = await sessionRes.json();
 
       if (session?.user?.email?.toLowerCase() === email.toLowerCase()) {
-        document.cookie = `baseline-session=true; path=/; max-age=${60 * 60 * 24 * 30}`;
         window.location.href = '/';
       } else {
         setError('Invalid email or password');
