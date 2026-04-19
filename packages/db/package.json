@@ -5,10 +5,19 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "seed": "tsx src/seed.ts",
     "type-check": "tsc --noEmit",
     "lint": "echo 'no lint configured'"
   },
   "devDependencies": {
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
   }
 }

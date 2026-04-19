@@ -1,0 +1,337 @@
+openapi: 3.1.0
+info:
+  title: Baseline API
+  version: 1.0.0
+  description: Productivity analytics API
+
+paths:
+  /v1/healthz:
+    get:
+      operationId: getHealthz
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /v1/integrations:
+    get:
+      operationId: listIntegrations
+      summary: List user integrations
+      responses:
+        "200":
+          description: List of integrations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Integration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      operationId: createIntegration
+      summary: Start an integration connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider:
+                  type: string
+                  enum: [github, gcal]
+              required: [provider]
+      responses:
+        "201":
+          description: Integration created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Integration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/integrations/{id}:
+    delete:
+      operationId: deleteIntegration
+      summary: Disconnect an integration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Integration disconnected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Integration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/integrations/{id}/sync:
+    post:
+      operationId: syncIntegration
+      summary: Trigger a manual sync
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Sync triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  events_count:
+                    type: integer
+                required: [status, events_count]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/events:
+    get:
+      operationId: listEvents
+      summary: List events with cursor pagination
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Paginated list of events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Event"
+                  next_cursor:
+                    type: string
+                    nullable: true
+                required: [data, next_cursor]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/metrics/overview:
+    get:
+      operationId: getMetricsOverview
+      summary: Get all metrics for a time window
+      parameters:
+        - name: window
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["7d", "30d", "90d"]
+      responses:
+        "200":
+          description: Metrics overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsOverview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/metrics/timeseries:
+    get:
+      operationId: getMetricsTimeseries
+      summary: Get a single metric as a time series
+      parameters:
+        - name: metric
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [focus_hours, cycle_time, throughput]
+        - name: window
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["7d", "30d", "90d"]
+        - name: bucket
+          in: query
+          schema:
+            type: string
+            enum: [day, week]
+            default: day
+      responses:
+        "200":
+          description: Time series data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsTimeseries"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  schemas:
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        status:
+          type: string
+        external_account_id:
+          type: string
+          nullable: true
+        connected_at:
+          type: string
+          format: date-time
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, provider, status, connected_at]
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          type: string
+        source_id:
+          type: string
+        event_type:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+          nullable: true
+        payload:
+          type: object
+          nullable: true
+      required: [id, source, source_id, event_type, occurred_at]
+
+    MetricValue:
+      type: object
+      properties:
+        value:
+          type: number
+          nullable: true
+        delta:
+          type: number
+          nullable: true
+        unit:
+          type: string
+      required: [value, delta, unit]
+
+    MetricsOverview:
+      type: object
+      properties:
+        window:
+          type: string
+        metrics:
+          type: object
+          properties:
+            focus_hours:
+              $ref: "#/components/schemas/MetricValue"
+            cycle_time:
+              $ref: "#/components/schemas/MetricValue"
+            throughput:
+              $ref: "#/components/schemas/MetricValue"
+          required: [focus_hours, cycle_time, throughput]
+      required: [window, metrics]
+
+    MetricsTimeseries:
+      type: object
+      properties:
+        metric:
+          type: string
+        window:
+          type: string
+        bucket:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              value:
+                type: number
+            required: [date, value]
+      required: [metric, window, bucket, data]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+      required: [error, code]
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
