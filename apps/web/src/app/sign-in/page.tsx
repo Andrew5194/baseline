@@ -22,16 +22,6 @@ export default function SignIn() {
       });
       const { csrfToken } = await csrfRes.json();
 
-      // Clear any pre-existing session so the subsequent session check only
-      // reflects the current login attempt (defends against a stale session
-      // cookie making any password "succeed").
-      await fetch(`${apiUrl}/api/auth/signout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ csrfToken, redirect: 'false' }),
-        credentials: 'include',
-      });
-
       const callbackRes = await fetch(`${apiUrl}/api/auth/callback/credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
