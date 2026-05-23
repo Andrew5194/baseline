@@ -1,0 +1,41 @@
+name: CLA Assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  CLAAssistant:
+    runs-on: ubuntu-latest
+    steps:
+      - name: CLA Assistant
+        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the Baseline CLA and I hereby sign it') || github.event_name == 'pull_request_target'
+        uses: contributor-assistant/github-action@v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-signatures: 'signatures/cla.json'
+          path-to-document: 'https://github.com/Andrew5194/baseline/blob/main/CLA.md'
+          branch: 'main'
+          allowlist: dependabot[bot],renovate[bot]
+          remote-organization-name: ''
+          remote-repository-name: ''
+          custom-notsigned-prcomment: |
+            Thank you for your contribution to Baseline! Before we can merge this PR, we need you to sign the Contributor License Agreement.
+
+            Please read the [Baseline Individual CLA](https://github.com/Andrew5194/baseline/blob/main/CLA.md) and, if you agree, post the following comment exactly:
+
+            > **I have read the Baseline CLA and I hereby sign it**
+
+            You only need to sign once — future PRs from the same GitHub account are auto-recognized.
+          custom-pr-sign-comment: 'I have read the Baseline CLA and I hereby sign it'
+          custom-allsigned-prcomment: 'All contributors have signed the CLA. Thanks!'
+          lock-pullrequest-aftermerge: false
