@@ -8,9 +8,6 @@ license terms below. This agreement is for your protection as a Contributor as
 well as the protection of the Licensor and users of the Licensed Work. It does
 not change your rights to use your own Contributions for any other purpose.
 
-If you are contributing on behalf of a legal entity (e.g., your employer), use
-the [Entity CLA](CLA-entity.md) instead.
-
 You accept and agree to the following terms and conditions for Your
 Contributions (present and future) that you submit to the Licensor. Except for
 the license granted herein to the Licensor and recipients of software
@@ -72,9 +69,8 @@ litigation is filed.
 You represent that you are legally entitled to grant the above license. If
 your employer(s) has rights to intellectual property that you create that
 includes your Contributions, you represent that you have received permission to
-make Contributions on behalf of that employer, that your employer has waived
-such rights for your Contributions to the Licensor, or that your employer has
-executed a separate Entity CLA with the Licensor.
+make Contributions on behalf of that employer or that your employer has waived
+such rights for your Contributions to the Licensor.
 
 ## 5. Representations of Originality
 
@@ -113,20 +109,15 @@ become aware that would make these representations inaccurate in any respect.
 
 ## How to Sign
 
-Contributions are accepted only from Contributors who have signed this
-Agreement. You sign by including the following statement in the body of your
-first pull request:
+Signing is handled automatically through GitHub. When you open your first pull
+request, the CLA Assistant bot will comment with instructions. To sign, post
+the following comment exactly on the pull request:
 
-```
-I have read and agree to the terms of the Baseline Individual Contributor
-License Agreement as of the date of this pull request.
+> **I have read the Baseline CLA and I hereby sign it**
 
-Signed: [Your Full Legal Name]
-Email:  [Your Email Address]
-```
-
-Alternatively, you may sign and return a copy of this Agreement by email to
-andrew.yang5194@gmail.com.
+Your signature is recorded against your GitHub username in
+[`signatures/cla.json`](signatures/cla.json), so you only need to sign once —
+future pull requests from the same GitHub account are recognized automatically.
 
 ---
 

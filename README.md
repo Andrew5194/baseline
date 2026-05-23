@@ -136,8 +136,7 @@ pnpm-workspace.yaml       Workspace definitions
 ## Contributing
 
 Contributions are welcome. Before submitting, please read
-[CONTRIBUTING.md](CONTRIBUTING.md) and sign the appropriate CLA
-([individual](CLA.md) or [entity](CLA-entity.md)).
+[CONTRIBUTING.md](CONTRIBUTING.md) and sign the [CLA](CLA.md).
 
 ## License
 
@@ -150,4 +149,4 @@ Baseline is open source under the [GNU Affero General Public License v3.0](LICEN
 - A **commercial license** is available for organizations that cannot comply
   with AGPL's source-disclosure requirements.
 
-For commercial licensing inquiries, contact andrew.yang5194@gmail.com.
+For commercial licensing inquiries, [get in touch via the Baseline contact page](https://baseline-labs.vercel.app/contact).

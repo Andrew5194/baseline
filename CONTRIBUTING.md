@@ -13,28 +13,18 @@ cannot comply with AGPL's source-disclosure requirements.
 
 ## Contributor License Agreement
 
-Before we can accept your contribution, you must sign a Contributor License
-Agreement:
-
-- **Contributing as an individual?** Sign the [Individual CLA](CLA.md).
-- **Contributing on behalf of your employer?** Your employer must sign the
-  [Entity CLA](CLA-entity.md).
+Before we can accept your contribution, you must sign the
+[Contributor License Agreement](CLA.md).
 
 ### How to sign
 
-For the Individual CLA, include the following as a comment on your first pull
-request:
+When you open your first pull request, the CLA Assistant bot will comment with
+sign-off instructions. Reply on the PR with the exact comment:
 
-```
-I have read and agree to the terms of the Baseline Individual Contributor
-License Agreement as of the date of this pull request.
+> **I have read the Baseline CLA and I hereby sign it**
 
-Signed: [Your Full Legal Name]
-Email:  [Your Email Address]
-```
-
-For the Entity CLA, your employer should fill out and email the completed form
-to andrew.yang5194@gmail.com before any employees submit contributions.
+Your signature is recorded against your GitHub username — you only need to
+sign once.
 
 ## Development workflow
 
@@ -52,4 +42,4 @@ obvious from the diff.
 
 ## Questions
 
-Open an issue or reach out at andrew.yang5194@gmail.com.
+Open an issue or [reach out via the Baseline contact page](https://baseline-labs.vercel.app/contact).
