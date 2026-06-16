@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { DayDetailsModal } from './day-details-modal';
+import { CalendarHeatmap, HeatmapLegend } from './calendar-heatmap';
 
 interface HeatmapDay {
   date: string;
@@ -22,23 +23,6 @@ interface ContributionHeatmapProps {
 }
 
 type Tab = 'metrics' | 'heatmap' | 'patterns';
-
-function getLevel(count: number, max: number): number {
-  if (count === 0) return 0;
-  const ratio = count / max;
-  if (ratio <= 0.25) return 1;
-  if (ratio <= 0.5) return 2;
-  if (ratio <= 0.75) return 3;
-  return 4;
-}
-
-const levelColors = [
-  'bg-neutral-100 dark:bg-neutral-800',
-  'bg-emerald-200 dark:bg-emerald-900',
-  'bg-emerald-400 dark:bg-emerald-700',
-  'bg-emerald-500',
-  'bg-emerald-600 dark:bg-emerald-400',
-];
 
 export function ContributionHeatmap({ data, events, overviewMetrics, window }: ContributionHeatmapProps) {
   const [hoveredDay, setHoveredDay] = useState<HeatmapDay | null>(null);
@@ -271,47 +255,15 @@ export function ContributionHeatmap({ data, events, overviewMetrics, window }: C
             <div className="flex flex-col lg:flex-row gap-6">
               <div className="min-w-0 flex-1">
                 <div className="overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-[3px] w-fit">
-                    {weeks.map((week, wi) => (
-                      <div key={wi} className="flex flex-col gap-[3px]">
-                        {Array.from({ length: 7 }, (_, ri) => {
-                          const day = week[ri] ?? null;
-                          if (!day) {
-                            return <div key={`${wi}-${ri}`} className="w-[11px] h-[11px]" />;
-                          }
-                          const level = getLevel(day.value, maxCount);
-                          return (
-                            <div
-                              key={`${wi}-${ri}`}
-                              className={`w-[11px] h-[11px] rounded-[2px] cursor-pointer transition-all duration-150 hover:ring-2 hover:ring-emerald-400/60 hover:scale-110 ${levelColors[level]}`}
-                              onMouseEnter={() => setHoveredDay(day)}
-                              onMouseLeave={() => setHoveredDay(null)}
-                              onClick={() => day.value > 0 && setSelectedDay(day)}
-                            />
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
+                  <CalendarHeatmap
+                    weeks={weeks}
+                    maxCount={maxCount}
+                    onHover={setHoveredDay}
+                    onSelect={setSelectedDay}
+                  />
                 </div>
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex items-center gap-2 text-[10px] text-neutral-400 dark:text-neutral-500">
-                    <span>Less</span>
-                    <div className="flex gap-1">
-                      {levelColors.map((cls, i) => (
-                        <div key={i} className={`w-[11px] h-[11px] rounded-[2px] ${cls}`} />
-                      ))}
-                    </div>
-                    <span>More</span>
-                  </div>
-                  {hoveredDay && (
-                    <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                      {new Date(hoveredDay.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                      {' — '}
-                      <span className="font-semibold text-neutral-900 dark:text-white">{hoveredDay.value}</span>
-                      {' contributions'}
-                    </div>
-                  )}
+                <div className="mt-3">
+                  <HeatmapLegend />
                 </div>
               </div>
 

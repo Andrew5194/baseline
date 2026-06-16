@@ -1,0 +1,92 @@
+// Preset activity categories offered when adding a time entry. Users may also
+// type their own; both flow through the same string-based category field.
+export const PRESET_CATEGORIES = [
+  'Deep Work',
+  'Meetings',
+  'Code Review',
+  'Learning',
+  'Admin',
+  'Break',
+];
+
+// Common life routines, surfaced as one-click presets for recurring allocations.
+export const ROUTINE_PRESETS: Array<{ category: string; hours: number }> = [
+  { category: 'Sleep', hours: 8 },
+  { category: 'Breakfast', hours: 0.5 },
+  { category: 'Lunch', hours: 1 },
+  { category: 'Dinner', hours: 1 },
+];
+
+// Hand-picked, spread across the hue wheel so adjacent categories stay distinct.
+const PRESET_COLORS: Record<string, string> = {
+  'Deep Work': '#10b981', // emerald (green)
+  Meetings: '#6366f1', // indigo
+  'Code Review': '#a855f7', // purple
+  Learning: '#f59e0b', // amber (orange)
+  Admin: '#64748b', // slate
+  Break: '#f43f5e', // rose
+};
+
+// The unallocated remainder — a faint translucent track so it recedes behind the
+// colored segments on both light and dark backgrounds.
+export const FREE_COLOR = 'rgba(148, 163, 184, 0.22)'; // slate-400 @ ~22%
+
+function hslToHex(h: number, s: number, l: number): string {
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(255 * c)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+// Deterministic default for a single category not covered by a preset or override.
+function hashColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return hslToHex(h % 360, 62, 55);
+}
+
+/**
+ * Resolve the color for a category: user override → preset → deterministic hash.
+ * Used as a per-item fallback when the full category set isn't available.
+ */
+export function colorForCategory(name: string, overrides?: Record<string, string>): string {
+  if (overrides?.[name]) return overrides[name];
+  if (PRESET_COLORS[name]) return PRESET_COLORS[name];
+  return hashColor(name);
+}
+
+/**
+ * Build a stable color map for a known set of categories. Presets and user
+ * overrides keep their fixed colors; the remaining ("custom") categories get
+ * hues evenly spaced around the wheel so they stay visually distinct — the
+ * spacing tightens as the number of categories grows. Users can still override
+ * any of them if two end up too close.
+ */
+export function buildColorMap(
+  categories: string[],
+  overrides: Record<string, string> = {},
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  const dynamic: string[] = [];
+
+  for (const c of [...new Set(categories)]) {
+    if (overrides[c]) map[c] = overrides[c];
+    else if (PRESET_COLORS[c]) map[c] = PRESET_COLORS[c];
+    else dynamic.push(c);
+  }
+
+  // Spread the unknowns evenly; sort first so colors are stable across renders.
+  dynamic.sort();
+  const n = dynamic.length;
+  dynamic.forEach((c, i) => {
+    const hue = Math.round((i * 360) / Math.max(n, 1) + 200) % 360; // start in the blues
+    map[c] = hslToHex(hue, 62, 55);
+  });
+
+  return map;
+}

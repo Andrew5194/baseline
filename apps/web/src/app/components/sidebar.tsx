@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { API_URL } from '../../lib/api';
+import { Logo } from './logo';
 
 const nav = [
   { href: '/', label: 'Overview' },
+  { href: '/activity', label: 'Activity' },
   { href: '/trends', label: 'Trends' },
   { href: '/sources', label: 'Sources' },
   { href: '/settings', label: 'Settings' },
@@ -17,11 +19,7 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-60 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 flex flex-col">
       <div className="px-5 h-16 flex items-center gap-2.5 border-b border-neutral-200 dark:border-neutral-800">
-        <svg className="w-6 h-6" viewBox="0 0 28 28" fill="none">
-          <rect width="28" height="28" rx="8" className="fill-neutral-900 dark:fill-white" />
-          <path d="M7 17h14" className="stroke-white/60 dark:stroke-neutral-900/40" strokeWidth="1" strokeLinecap="round" />
-          <path d="M7 17 L12 14 L16.5 16 L21 8.5" className="stroke-white dark:stroke-neutral-900" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <Logo className="w-6 h-6" />
         <span className="text-base font-semibold tracking-tight">Baseline</span>
       </div>
 

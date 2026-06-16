@@ -5,6 +5,7 @@ import GitHubHeatmap from './components/GitHubHeatmap';
 import HeroVisualization from './components/HeroVisualization';
 import DataFlowDiagram from './components/DataFlowDiagram';
 import { ThemeToggle } from './components/ThemeToggle';
+import { Logo } from './components/Logo';
 import Link from 'next/link';
 
 export default function Home() {
@@ -33,11 +34,7 @@ export default function Home() {
       <nav className={`fixed top-0 w-full z-50 transition-all duration-200 ${scrolled ? 'bg-white/80 dark:bg-neutral-950/80 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800' : 'border-b border-transparent'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none">
-              <rect width="28" height="28" rx="8" className="fill-neutral-900 dark:fill-white" />
-              <path d="M7 17h14" className="stroke-white/60 dark:stroke-neutral-900/40" strokeWidth="1" strokeLinecap="round" />
-              <path d="M7 17 L12 14 L16.5 16 L21 8.5" className="stroke-white dark:stroke-neutral-900" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Logo className="w-7 h-7" />
             <span className="text-lg font-semibold text-neutral-900 dark:text-white tracking-tight">Baseline</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
@@ -328,11 +325,7 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-14">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <svg className="w-6 h-6" viewBox="0 0 28 28" fill="none">
-                  <rect width="28" height="28" rx="8" className="fill-neutral-900 dark:fill-white" />
-                  <path d="M7 17h14" className="stroke-white/60 dark:stroke-neutral-900/40" strokeWidth="1" strokeLinecap="round" />
-                  <path d="M7 17 L12 14 L16.5 16 L21 8.5" className="stroke-white dark:stroke-neutral-900" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <Logo className="w-6 h-6" />
                 <span className="text-sm font-semibold text-neutral-900 dark:text-white">Baseline</span>
               </div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">

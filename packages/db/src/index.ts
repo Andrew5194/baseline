@@ -7,5 +7,7 @@ export {
   verificationTokens,
   integrations,
   events,
+  recurringAllocations,
+  categoryColors,
 } from './schema';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { API_URL } from '../../lib/api';
+import { Logo } from '../components/logo';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -60,11 +61,7 @@ export default function SignIn() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-2">
           <div className="flex justify-center mb-4">
-            <svg className="w-10 h-10" viewBox="0 0 28 28" fill="none">
-              <rect width="28" height="28" rx="8" className="fill-neutral-900 dark:fill-white" />
-              <path d="M7 17h14" className="stroke-white/60 dark:stroke-neutral-900/40" strokeWidth="1" strokeLinecap="round" />
-              <path d="M7 17 L12 14 L16.5 16 L21 8.5" className="stroke-white dark:stroke-neutral-900" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Logo className="w-10 h-10" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Sign in to Baseline</h1>
           <p className="text-sm text-neutral-500">
