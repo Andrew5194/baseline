@@ -81,8 +81,6 @@ Sign up at http://localhost:3002/sign-up, then connect GitHub from the Sources p
 For developing without Docker. Requires Node.js 20+, pnpm 10+, and a local PostgreSQL instance.
 
 ```bash
-git clone https://github.com/Andrew5194/baseline.git
-cd baseline
 make install     # install dependencies
 make migrate     # create database tables
 make dev         # start all apps
