@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="apps/marketing/public/baseline-logo.svg" alt="" width="28" height="28" style="vertical-align: middle;" />
+  <img src="apps/marketing/public/baseline-logo.svg" alt="" width="32" height="32" style="vertical-align: middle;" />
   Baseline
 </h1>
 
