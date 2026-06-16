@@ -39,6 +39,18 @@ export const authConfig: NextAuthConfig = {
       },
     }),
   ],
+  // Accept the forwarded host behind the proxy.
+  trustHost: true,
+  // Fixed, non-Secure cookie name: behind the proxy Auth.js can't tell the scheme,
+  // so its default `__Secure-` prefix is unpredictable. A stable name lets the web
+  // middleware match it on both localhost and the proxy; Secure is omitted so the
+  // cookie also survives plain-HTTP localhost (the proxy's TLS covers transport).
+  cookies: {
+    sessionToken: {
+      name: 'authjs.session-token',
+      options: { httpOnly: true, sameSite: 'lax', path: '/', secure: false },
+    },
+  },
   session: {
     strategy: 'jwt',
   },

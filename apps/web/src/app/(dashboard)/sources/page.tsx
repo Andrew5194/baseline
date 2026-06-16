@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiFetch } from '../../../lib/api';
+import { apiFetch, API_URL } from '../../../lib/api';
 
 interface Integration {
   id: string;
@@ -75,8 +75,7 @@ export default function Sources() {
   const github = integrations.find((i) => i.provider === 'github' && i.status === 'connected');
 
   function handleConnect() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    window.location.href = `${apiUrl}/v1/integrations/github/authorize`;
+    window.location.href = `${API_URL}/v1/integrations/github/authorize`;
   }
 
   async function handleDisconnect(id: string) {

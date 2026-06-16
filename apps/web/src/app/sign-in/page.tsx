@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { API_URL } from '../../lib/api';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -14,20 +15,21 @@ export default function SignIn() {
     setError('');
     setLoading(true);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
     try {
-      const csrfRes = await fetch(`${apiUrl}/api/auth/csrf`, {
+      const csrfRes = await fetch(`${API_URL}/api/auth/csrf`, {
         credentials: 'include',
       });
       const { csrfToken } = await csrfRes.json();
 
-      await fetch(`${apiUrl}/api/auth/callback/credentials`, {
+      await fetch(`${API_URL}/api/auth/callback/credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ email, password, csrfToken }),
         credentials: 'include',
-        redirect: 'follow',
+        // Don't follow the callback's 302 (it points at AUTH_URL, which may be a
+        // different origin behind the proxy). The Set-Cookie still applies; we
+        // derive success from the session check below.
+        redirect: 'manual',
       });
 
       // NextAuth v5 beta returns a 302 from the credentials callback whether
@@ -35,7 +37,7 @@ export default function SignIn() {
       // the response directly. Instead we check the session: authorize() only
       // sets a session cookie on success, so if session.user.email matches
       // the submitted email, this attempt succeeded.
-      const sessionRes = await fetch(`${apiUrl}/api/auth/session`, {
+      const sessionRes = await fetch(`${API_URL}/api/auth/session`, {
         credentials: 'include',
         cache: 'no-store',
       });

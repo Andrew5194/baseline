@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { API_URL } from '../../lib/api';
 
 export default function SignUp() {
   const [email, setEmail] = useState('');
@@ -14,10 +15,8 @@ export default function SignUp() {
     setError('');
     setLoading(true);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
     try {
-      const res = await fetch(`${apiUrl}/v1/auth/signup`, {
+      const res = await fetch(`${API_URL}/v1/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -26,17 +25,17 @@ export default function SignUp() {
 
       if (res.ok) {
         // Fetch CSRF token then auto sign in
-        const csrfRes = await fetch(`${apiUrl}/api/auth/csrf`, {
+        const csrfRes = await fetch(`${API_URL}/api/auth/csrf`, {
           credentials: 'include',
         });
         const { csrfToken } = await csrfRes.json();
 
-        await fetch(`${apiUrl}/api/auth/callback/credentials`, {
+        await fetch(`${API_URL}/api/auth/callback/credentials`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({ email, password, csrfToken, redirect: 'false' }),
           credentials: 'include',
-          redirect: 'follow',
+          redirect: 'manual',
         });
 
         window.location.href = '/';
