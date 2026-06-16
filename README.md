@@ -35,7 +35,7 @@ cp .env.example .env
 
 Then, fill in the following environment variables:
 
-> **Note:** Create an OAuth app at [https://github.com/settings/developers](https://github.com/settings/developers) to generate `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. and set its callback URL to `<your-url>/v1/integrations/github/callback`
+> **Note:** Create an OAuth app at [https://github.com/settings/developers](https://github.com/settings/developers) to generate `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` and set the callback URL accordingly if you are deploying Baseline locally or remotely: `<your-url>/v1/integrations/github/callback`
 
 ```bash
 # === Required ===
@@ -51,23 +51,23 @@ CONTACT_EMAIL=          # contact-form recipient
 WEB_URL=                # auto-detected; set only to pin a fixed public origin
 ```
 
-Everything else — database URL, inter-service URLs, ports — is configured automatically. Advanced overrides (`API_INTERNAL_URL`, `NEXT_PUBLIC_API_URL` for split-origin deployments) are documented in `.env.example`.
+Everything else is configured automatically. Advanced overrides (`API_INTERNAL_URL`, `NEXT_PUBLIC_API_URL` for split-origin deployments) are documented in `.env.example`.
 
 ### Docker Compose (recommended)
 
 If running on a local environment, execute the following:
 
-```bash
+```
 make local
 ```
 
 If running on a remote environment (such as a Cloud Developer Environment), execute the following:
 
-```bash
+```
 make remote
 ```
 
-That's it — this builds and starts the whole stack. The database is created automatically on first boot. Follow logs with `make logs` and stop with `make down`. Two URLs are exposed:
+This builds and starts the Docker containers. The database is created automatically on first boot. Follow logs with `make logs` and stop with `make down`. Two URLs are exposed:
 
 | Service | URL | Description |
 |---|---|---|
