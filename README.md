@@ -15,14 +15,6 @@
 
 ---
 
-## The Problem
-
-Tracking productivity shouldn't be this hard. Existing tools shift the burden of measurement onto the individual — the result is fragmented data, inconsistent tracking, and no reliable way to evaluate performance over time.
-
-- **Fragmented tooling** — Meaningful work output is distributed across version control, project management, communication platforms, and calendars with no unified view.
-- **High-friction tracking** — Traditional time tracking demands constant manual input. Adherence drops off within days.
-- **Data without insight** — Most tools surface raw activity logs, not the trajectory analysis needed to identify trends over weeks and months.
-
 ## How Baseline Works
 
 Baseline integrates with your existing development and project management tools, captures activity passively, and derives quantitative metrics and trend analysis — with minimal configuration required.
@@ -31,87 +23,74 @@ Baseline integrates with your existing development and project management tools,
 2. **See your metrics** — Baseline calculates the metrics that matter: output, cycle time, focus hours, and consistency scores.
 3. **Track your trends** — See how your productivity changes week over week, month over month. Spot patterns, identify what's working, and understand where your time goes.
 
-## Features
-
-- **Productivity dashboard** — consistency score, focus hours, cycle time, and active days with trend comparisons across 7d/30d/90d windows
-- **GitHub integration** — OAuth connect, automatic ingestion of commits, PRs, and reviews
-- **Activity heatmap & patterns** — contribution grid, day-of-week and hour-of-day distributions, drill-down into individual days
-- **12 computed metrics** — output, velocity, and calibration categories derived from your real activity
-- **Self-hostable** — single `docker compose up` with PostgreSQL and Redis included
-
-
 ## Getting Started
+
+#### Configuration
+
+All configuration lives in a single `.env` file at the project root. Copy the `.env.example` to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Then, fill in the following environment variables:
+
+> **Note:** Create an OAuth app at [https://github.com/settings/developers](https://github.com/settings/developers) to generate `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. and set its callback URL to `<your-url>/v1/integrations/github/callback`
+
+```bash
+# === Required ===
+AUTH_SECRET=            # signing key for login sessions — generate: openssl rand -base64 32
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+# === Optional ===
+GITHUB_USERNAME=        # username for the marketing landing-page heatmap
+GITHUB_TOKEN=           # PAT for higher GitHub API limits (5000/hr vs 60/hr)
+RESEND_API_KEY=         # enables the contact form (resend.com)
+CONTACT_EMAIL=          # contact-form recipient
+WEB_URL=                # auto-detected; set only to pin a fixed public origin
+```
+
+Everything else — database URL, inter-service URLs, ports — is configured automatically. Advanced overrides (`API_INTERNAL_URL`, `NEXT_PUBLIC_API_URL` for split-origin deployments) are documented in `.env.example`.
 
 ### Docker Compose (recommended)
 
-#### Configure
-
-Copy `.env.example` to `.env` at the project root and fill in your credentials:
-
-| Variable | Required | Description |
-|---|---|---|
-| `AUTH_SECRET` | Yes | Random string for signing auth tokens |
-| `GITHUB_CLIENT_ID` | For OAuth | GitHub OAuth app client ID |
-| `GITHUB_CLIENT_SECRET` | For OAuth | GitHub OAuth app client secret |
-| `GITHUB_USERNAME` | For marketing | GitHub username for the landing page heatmap |
-| `GITHUB_TOKEN` | No | GitHub PAT for higher API rate limits (60/hr without, 5000/hr with) |
-| `RESEND_API_KEY` | No | Enables the contact form ([resend.com](https://resend.com)) |
-| `CONTACT_EMAIL` | No | Recipient for contact form submissions |
-
-#### Run
+If running on a local environment, execute the following:
 
 ```bash
-docker compose up
+make local
 ```
 
-That's it. The database is created automatically on first boot. Three services start:
+If running on a remote environment (such as a Cloud Developer Environment), execute the following:
+
+```bash
+make remote
+```
+
+That's it — this builds and starts the whole stack. The database is created automatically on first boot. Follow logs with `make logs` and stop with `make down`. Two URLs are exposed:
 
 | Service | URL | Description |
 |---|---|---|
+| Dashboard | http://localhost:3002 | Product dashboard — your entry point |
 | Marketing | http://localhost:3000 | Public landing page |
-| API | http://localhost:3001 | Backend server |
-| Dashboard | http://localhost:3002 | Product dashboard |
 
-Sign up at http://localhost:3002/sign-up, then connect GitHub from the Sources page. Database, Redis, and inter-service URLs are all handled automatically.
+Sign up at http://localhost:3002/sign-up, then connect GitHub from the Sources page. The API, database, and Redis run internally (the dashboard proxies API calls), so there are no other URLs to manage.
 
-### Build from Source
+### Building from Source
 
-Requires Node.js 20+, pnpm 10+, and a local PostgreSQL instance.
+For developing without Docker. Requires Node.js 20+, pnpm 10+, and a local PostgreSQL instance.
 
 ```bash
 git clone https://github.com/Andrew5194/baseline.git
 cd baseline
-pnpm install
-
-# Configure each app
-cat > apps/api/.env.local << 'EOF'
-DATABASE_URL=postgresql://user:pass@localhost:5432/baseline
-AUTH_SECRET=your-random-secret
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
-API_URL=http://localhost:3001
-WEB_URL=http://localhost:3002
-EOF
-
-cat > apps/web/.env.local << 'EOF'
-NEXT_PUBLIC_API_URL=http://localhost:3001
-EOF
-
-cat > apps/marketing/.env.local << 'EOF'
-NEXT_PUBLIC_GITHUB_USERNAME=your-github-username
-GITHUB_TOKEN=your-github-pat
-RESEND_API_KEY=your-resend-api-key
-CONTACT_EMAIL=you@example.com
-EOF
-
-# Create tables
-pnpm --filter @baseline/db migrate
-
-# Start all apps
-pnpm dev
+make install     # install dependencies
+make migrate     # create database tables
+make dev         # start all apps
 ```
 
-Apps start on the same ports: marketing (3000), API (3001), dashboard (3002).
+Each app reads its own `.env.local` (Next.js loads env from the app directory), so add one per app you run using the variables from `.env.example`.
+
+Apps will start on marketing (3000), API (3001), dashboard (3002).
 
 ## Project Structure
 

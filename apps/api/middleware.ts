@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// Only used in the optional separate-origin mode (NEXT_PUBLIC_API_URL set). The
+// default single-origin setup proxies server-side, so no preflight reaches here.
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3002',

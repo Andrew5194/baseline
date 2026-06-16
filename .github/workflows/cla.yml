@@ -24,7 +24,7 @@ jobs:
         with:
           path-to-signatures: 'signatures/cla.json'
           path-to-document: 'https://github.com/Andrew5194/baseline/blob/main/CLA.md'
-          branch: 'main'
+          branch: 'cla-signatures'
           allowlist: dependabot[bot],renovate[bot]
           remote-organization-name: ''
           remote-repository-name: ''

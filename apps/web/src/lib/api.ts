@@ -1,4 +1,9 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+/**
+ * Base URL for API calls from the browser. Empty by default → requests are
+ * same-origin and Next.js rewrites forward them to the API (see next.config.ts).
+ * Set `NEXT_PUBLIC_API_URL` only to target the API on a separate origin.
+ */
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {

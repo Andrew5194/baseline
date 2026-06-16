@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { API_URL } from '../../lib/api';
 
 const nav = [
   { href: '/', label: 'Overview' },
@@ -46,12 +47,11 @@ export function Sidebar() {
       <div className="px-3 py-4 border-t border-neutral-200 dark:border-neutral-800">
         <button
           onClick={async () => {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            const csrfRes = await fetch(`${apiUrl}/api/auth/csrf`, {
+            const csrfRes = await fetch(`${API_URL}/api/auth/csrf`, {
               credentials: 'include',
             });
             const { csrfToken } = await csrfRes.json();
-            await fetch(`${apiUrl}/api/auth/signout`, {
+            await fetch(`${API_URL}/api/auth/signout`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
               body: new URLSearchParams({ csrfToken, redirect: 'false' }),
