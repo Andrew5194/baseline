@@ -18,6 +18,11 @@ export { linesChangedV1, avgPrSizeV1, avgFilesChangedV1 } from './code-volume';
 // Review metrics
 export { reviewCountV1, reviewRatioV1 } from './reviews';
 
+// Time allocation
+export { hoursByCategoryV1 } from './time-allocation';
+export { recurringToEvents } from './recurring-allocations';
+export type { RecurringAllocationInput } from './recurring-allocations';
+
 // Utilities
 export { computeDelta } from './delta';
 export type { EventInput, MetricResult, TimeseriesPoint } from './types';

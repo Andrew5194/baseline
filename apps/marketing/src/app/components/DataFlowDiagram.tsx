@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { Logo } from './Logo';
 
 export default function DataFlowDiagram() {
   const [visible, setVisible] = useState(false);
@@ -200,11 +201,7 @@ export default function DataFlowDiagram() {
                 />
 
                 <div className="relative w-[88px] h-[88px] rounded-2xl border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-neutral-900 flex flex-col items-center justify-center gap-1 shadow-[0_0_12px_rgba(16,185,129,0.1)] dark:shadow-[0_0_16px_rgba(16,185,129,0.2)]">
-                  <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none">
-                    <rect width="28" height="28" rx="8" className="fill-emerald-500" />
-                    <path d="M7 17h14" className="stroke-white/50" strokeWidth="1" strokeLinecap="round" />
-                    <path d="M7 17 L12 14 L16.5 16 L21 8.5" className="stroke-white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <Logo className="w-7 h-7" />
                   <span className="text-[9px] font-semibold text-neutral-900 dark:text-white tracking-tight">Baseline</span>
                 </div>
               </div>

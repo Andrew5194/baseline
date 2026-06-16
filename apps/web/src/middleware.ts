@@ -87,8 +87,10 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Gate page navigations only — /api/auth/* and /v1/* are proxied to the API,
   // which does its own auth. The github paths re-enter solely for header injection.
+  // The `.*\\.` clause excludes any static asset with a file extension (icon.svg,
+  // baseline-logo.svg, favicon.ico, …) so they aren't redirected to /sign-in.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/auth|v1).*)',
+    '/((?!_next/static|_next/image|api/auth|v1|.*\\.).*)',
     '/v1/integrations/github/:path*',
   ],
 };

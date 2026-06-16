@@ -1,0 +1,74 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db, events, recurringAllocations } from '@baseline/db';
+import { eq, and, gte, lt, gt } from 'drizzle-orm';
+import { hoursByCategoryV1, recurringToEvents } from '@baseline/metrics';
+import type { EventInput } from '@baseline/metrics';
+import { getCurrentUserId } from '../../../../../lib/user';
+import { periodBounds, periodBuckets, isPeriod } from '../../../../../lib/period';
+
+// GET /v1/metrics/time-allocation/timeseries?period=week|month|year
+// Buckets spanning the whole period: daily for week/month (each ~24h), monthly
+// totals for year. Recurring routines are projected across the full period, so
+// future days/months show the standing routine; one-off work only appears up to
+// today.
+export async function GET(request: NextRequest) {
+  const userId = await getCurrentUserId();
+  const periodParam = request.nextUrl.searchParams.get('period') || 'week';
+  if (!isPeriod(periodParam)) {
+    return NextResponse.json({ error: 'Invalid period', code: 'INVALID_PERIOD' }, { status: 400 });
+  }
+
+  const now = new Date();
+  const { start, end, granularity } = periodBounds(periodParam, now);
+
+  const rows = await db
+    .select({
+      occurredAt: events.occurredAt,
+      durationMs: events.durationMs,
+      source: events.source,
+      payload: events.payload,
+    })
+    .from(events)
+    .where(
+      and(
+        eq(events.userId, userId),
+        gt(events.durationMs, 0),
+        gte(events.occurredAt, start),
+        lt(events.occurredAt, end),
+      ),
+    );
+
+  const ei: EventInput[] = rows.map((r) => ({
+    eventType: '',
+    occurredAt: r.occurredAt,
+    payload: r.payload as Record<string, unknown> | null,
+    durationMs: r.durationMs,
+    source: r.source,
+  }));
+
+  const recurring = await db
+    .select({
+      category: recurringAllocations.category,
+      durationMs: recurringAllocations.durationMs,
+      daysMask: recurringAllocations.daysMask,
+    })
+    .from(recurringAllocations)
+    .where(eq(recurringAllocations.userId, userId));
+  ei.push(...recurringToEvents(recurring, start, end));
+
+  const seen = new Set<string>();
+  // Daily buckets sum to a day's hours; monthly (year) buckets sum to the month's
+  // total hours by category.
+  const data = periodBuckets(periodParam, start, end).map((b) => {
+    const byCategory = hoursByCategoryV1(ei, b.start, b.end);
+    Object.keys(byCategory).forEach((c) => seen.add(c));
+    return { date: b.start.toISOString().split('T')[0], by_category: byCategory };
+  });
+
+  return NextResponse.json({
+    period: periodParam,
+    granularity,
+    categories: [...seen].sort(),
+    data,
+  });
+}

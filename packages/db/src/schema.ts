@@ -114,3 +114,41 @@ export const events = pgTable(
     index('events_user_source_occurred_idx').on(table.userId, table.source, table.occurredAt),
   ],
 );
+
+// ── Recurring allocations ────────────────────────────────────────────────────
+// A standing daily routine (sleep, meals, etc.). Not stored as events — these are
+// templates expanded across the displayed window when computing time allocation.
+
+export const recurringAllocations = pgTable(
+  'recurring_allocations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    category: text('category').notNull(),
+    durationMs: bigint('duration_ms', { mode: 'number' }).notNull(),
+    // Bitmask of weekdays the allocation applies to: bit i (0=Sun … 6=Sat).
+    // 127 = every day.
+    daysMask: integer('days_mask').notNull().default(127),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('recurring_allocations_user_idx').on(table.userId)],
+);
+
+// ── Category colors ──────────────────────────────────────────────────────────
+// Per-user color override for a category. Falls back to a deterministic default
+// when absent, so users only persist the ones they deliberately changed.
+
+export const categoryColors = pgTable(
+  'category_colors',
+  {
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    category: text('category').notNull(),
+    color: text('color').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.category] })],
+);
