@@ -285,7 +285,7 @@ export default function Home() {
             GitHub integration
           </h2>
           <p className="text-neutral-500 dark:text-neutral-400 mb-12 max-w-lg">
-            Contribution heatmaps, rolling averages, and trend analysis from real data. This is Baseline with one integration connected.
+            A consistency score, the metrics that matter, and a clickable daily breakdown — from real GitHub data. This is Baseline with one integration connected.
           </p>
 
           <GitHubHeatmap
