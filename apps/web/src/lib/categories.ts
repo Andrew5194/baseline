@@ -43,6 +43,38 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+function hexToHsl(hex: string): [number, number, number] {
+  const m = hex.replace('#', '');
+  const n = m.length === 3 ? m.split('').map((c) => c + c).join('') : m;
+  const r = parseInt(n.slice(0, 2), 16) / 255;
+  const g = parseInt(n.slice(2, 4), 16) / 255;
+  const b = parseInt(n.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let h = 0;
+  let s = 0;
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return [h, s * 100, l * 100];
+}
+
+// Shift a hex color's lightness by `deltaL` (in HSL lightness points), keeping hue
+// and saturation — for tasteful, true-to-color gradient stops. Non-hex inputs pass
+// through unchanged.
+export function adjustLightness(hex: string, deltaL: number): string {
+  if (!hex.startsWith('#')) return hex;
+  const [h, s, l] = hexToHsl(hex);
+  return hslToHex(h, s, Math.max(0, Math.min(100, l + deltaL)));
+}
+
 // Deterministic default for a single category not covered by a preset or override.
 function hashColor(name: string): string {
   let h = 0;

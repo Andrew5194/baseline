@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PeriodSelector, type Period } from '../components/period-selector';
+import { PeriodSelector, periodRangeLabel, type Period } from '../components/period-selector';
 import { BudgetDonut, type BudgetCategory } from '../components/budget-donut';
 import { DailyAllocationBars } from '../components/daily-allocation-bars';
 import { AddTimeEntryForm } from '../components/add-time-entry-form';
@@ -107,9 +107,12 @@ export default function Overview() {
     loadColors();
   }
 
-  // Each bar is stacked by category and filled to its capacity with a "Free"
-  // remainder: 24h for a day, the month's total hours (24 × days) for the year view.
-  const isYear = period === 'year';
+  // The chart's scale follows the FETCHED data's granularity (daily.granularity),
+  // not `period`. Otherwise a period switch flips the scale synchronously while the
+  // previous period's data is still loading, briefly rendering e.g. year totals on a
+  // 24h axis (bars shoot off the top) until the refetch lands.
+  const granularity = daily?.granularity ?? 'day';
+  const isYear = granularity === 'month';
   const capacityFor = (iso: string) => {
     if (!isYear) return DAY_HOURS;
     const [y, m] = iso.split('-').map(Number);
@@ -132,7 +135,6 @@ export default function Overview() {
   const yMax = isYear ? DAY_HOURS * 31 : DAY_HOURS;
   // Key of the bucket containing today, used to emphasize today's bar. For the
   // year view (monthly buckets) that's the 1st of the current month.
-  const granularity = daily?.granularity ?? 'day';
   const now = new Date();
   const todayKey =
     granularity === 'month'
@@ -177,7 +179,7 @@ export default function Overview() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">How your time is allocated</p>
+          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period)}</p>
         </div>
         <div className="flex items-center gap-3">
           <PeriodSelector value={period} onChange={setPeriod} />
@@ -234,21 +236,22 @@ export default function Overview() {
             budget={budget.budget}
             colorOf={colorOf}
             onRecolor={recolor}
+            recurringCategories={recurringCats}
           />
         ) : (
-          <div className="h-[200px] bg-neutral-100 dark:bg-neutral-800/40 rounded-lg animate-pulse" />
+          <div className="h-[200px] bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
         )}
       </div>
 
       {/* Allocation over the period — each bar reads as a 24h day */}
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
         <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-5">
-          {period === 'year' ? 'Monthly allocation' : 'Daily allocation'}
+          {isYear ? 'Monthly allocation' : 'Daily allocation'}
         </p>
         {daily ? (
-          <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} />
+          <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} />
         ) : (
-          <div className="h-64 bg-neutral-100 dark:bg-neutral-800/40 rounded-lg animate-pulse" />
+          <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
         )}
       </div>
 
@@ -260,7 +263,7 @@ export default function Overview() {
         {!entries ? (
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-10 bg-neutral-100 dark:bg-neutral-800/40 rounded-lg animate-pulse" />
+              <div key={i} className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
             ))}
           </div>
         ) : entries.data.length === 0 ? (

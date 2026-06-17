@@ -13,8 +13,10 @@ interface EventItem {
 }
 
 interface DayDetailsModalProps {
-  date: string;
-  contributionCount: number;
+  since: string; // ISO date, inclusive
+  until: string; // ISO date, exclusive
+  title: string; // header label (a day or a month)
+  initialCategory?: string; // tab to open on ('commits' | 'prs' | 'reviews')
   onClose: () => void;
 }
 
@@ -60,7 +62,7 @@ function eventRepo(payload: Record<string, unknown> | null): string | null {
   return repo || null;
 }
 
-export function DayDetailsModal({ date, contributionCount, onClose }: DayDetailsModalProps) {
+export function DayDetailsModal({ since, until, title, initialCategory = 'commits', onClose }: DayDetailsModalProps) {
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventItem[]>([]);
 
@@ -68,11 +70,8 @@ export function DayDetailsModal({ date, contributionCount, onClose }: DayDetails
     async function fetchEvents() {
       try {
         setLoading(true);
-        const nextDay = new Date(date + 'T00:00:00');
-        nextDay.setDate(nextDay.getDate() + 1);
-        const until = nextDay.toISOString().split('T')[0];
         const data = await apiFetch<{ data: EventItem[] }>(
-          `/v1/events?since=${date}&until=${until}&limit=100`,
+          `/v1/events?since=${since}&until=${until}&limit=500`,
         );
         setEvents(data.data);
       } catch {
@@ -82,7 +81,7 @@ export function DayDetailsModal({ date, contributionCount, onClose }: DayDetails
       }
     }
     fetchEvents();
-  }, [date]);
+  }, [since, until]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -96,13 +95,6 @@ export function DayDetailsModal({ date, contributionCount, onClose }: DayDetails
     };
   }, [onClose]);
 
-  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
   // Group events by type
   const commits = events.filter((e) => e.event_type === 'github.commit.pushed');
   const prs = events.filter((e) => e.event_type === 'github.pr.merged');
@@ -114,7 +106,7 @@ export function DayDetailsModal({ date, contributionCount, onClose }: DayDetails
     { key: 'reviews', label: 'Reviews', items: reviews },
   ];
 
-  const [selectedCategory, setSelectedCategory] = useState('commits');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
   const activeItems = categories.find((c) => c.key === selectedCategory)?.items || [];
 
@@ -132,7 +124,7 @@ export function DayDetailsModal({ date, contributionCount, onClose }: DayDetails
           <div>
             <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Activity Details</h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-              {formattedDate} — {contributionCount} contribution{contributionCount !== 1 ? 's' : ''}
+              {title} — {events.length} contribution{events.length !== 1 ? 's' : ''}
             </p>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors p-1">
@@ -145,12 +137,14 @@ export function DayDetailsModal({ date, contributionCount, onClose }: DayDetails
         {/* Content */}
         <div className="overflow-y-auto flex-1 min-h-0 overscroll-contain">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500" />
+            <div className="p-6 space-y-2">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-14 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
+              ))}
             </div>
           ) : events.length === 0 ? (
             <div className="text-center py-16 px-6">
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">No detailed activity found for this day</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">No detailed activity found for this period</p>
             </div>
           ) : (
             <>
