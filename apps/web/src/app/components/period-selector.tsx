@@ -13,6 +13,38 @@ interface PeriodSelectorProps {
   onChange: (value: Period) => void;
 }
 
+const MONTHS_FULL = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
+}
+
+// Monday-anchored start of the current week, in UTC to match the API's period bounds.
+function startOfWeekUTC(now: Date): Date {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const sinceMonday = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - sinceMonday);
+  return d;
+}
+
+// Human label for the current period: a date range for the week, the month name,
+// or the year — e.g. "June 1st – June 7th", "June", "2026".
+export function periodRangeLabel(period: Period): string {
+  const now = new Date();
+  if (period === 'year') return String(now.getUTCFullYear());
+  if (period === 'month') return MONTHS_FULL[now.getUTCMonth()];
+  const start = startOfWeekUTC(now);
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 6);
+  const fmt = (d: Date) => `${MONTHS_FULL[d.getUTCMonth()]} ${ordinal(d.getUTCDate())}`;
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   return (
     <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800">

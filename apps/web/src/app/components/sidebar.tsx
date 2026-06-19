@@ -7,8 +7,8 @@ import { Logo } from './logo';
 
 const nav = [
   { href: '/', label: 'Overview' },
-  { href: '/activity', label: 'Activity' },
-  { href: '/trends', label: 'Trends' },
+  { href: '/history', label: 'History' },
+  { href: '/metrics', label: 'Metrics' },
   { href: '/sources', label: 'Sources' },
   { href: '/settings', label: 'Settings' },
 ];

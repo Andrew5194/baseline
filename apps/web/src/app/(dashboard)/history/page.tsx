@@ -62,7 +62,7 @@ const dayKey = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-export default function Activity() {
+export default function History() {
   const [source, setSource] = useState<SourceFilter>('all');
   const [items, setItems] = useState<EventItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -115,7 +115,7 @@ export default function Activity() {
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Activity</h1>
+          <h1 className="text-xl font-semibold tracking-tight">History</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Everything that&apos;s happened, most recent first</p>
         </div>
         <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800">
@@ -138,7 +138,7 @@ export default function Activity() {
       {loading ? (
         <div className="space-y-2">
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-12 bg-neutral-100 dark:bg-neutral-800/40 rounded-lg animate-pulse" />
+            <div key={i} className="h-12 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
           ))}
         </div>
       ) : items.length === 0 ? (

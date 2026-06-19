@@ -1,142 +1,262 @@
 'use client';
 
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import type { TooltipProps } from 'recharts';
-import { colorForCategory, FREE_COLOR } from '../../lib/categories';
+import { useState } from 'react';
+import { Group } from '@visx/group';
+import { scaleBand, scaleLinear } from '@visx/scale';
+import { useTooltip, TooltipWithBounds } from '@visx/tooltip';
+import { colorForCategory, FREE_COLOR, adjustLightness } from '../../lib/categories';
+import { useChartWidth } from './use-chart-width';
+import { RecurringIcon } from './recurring-icon';
+import { barLabel, fullLabel } from './chart-axis';
 
 interface DailyAllocationBarsProps {
-  // Each row: { date (ISO YYYY-MM-DD), [category]: hours, Free }. Each bar sums to 24h.
+  // Each row: { date (ISO YYYY-MM-DD), [category]: hours, Free }. Each bar fills to capacity.
   data: Array<Record<string, number | string>>;
   categories: string[];
   colorOf?: (category: string) => string;
-  // Today's ISO date; its bar's axis label is rendered bold + accented.
+  // Today's bucket key; its bar's axis label is rendered bold + accented.
   todayISO?: string;
-  // y-axis ceiling each bar fills to (24 for a day; the month's total for the year).
+  // y-axis ceiling (24 for a day; the month's total for the year view).
   yMax?: number;
-}
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-// Bar axis label. Compact "M/D" on short windows (e.g. 7d); otherwise
-// TradingView-style: day number for every bar, month abbreviation on the 1st.
-function barLabel(iso: string, compact: boolean): string {
-  const [, m, d] = iso.split('-');
-  if (compact) return `${Number(m)}/${Number(d)}`;
-  return Number(d) === 1 ? MONTHS[Number(m) - 1] : String(Number(d));
-}
-
-// Friendly full date for the tooltip header, e.g. "Jun 16".
-function fullLabel(iso: string): string {
-  const [, m, d] = iso.split('-');
-  return `${MONTHS[Number(m) - 1]} ${Number(d)}`;
-}
-
-// X-axis tick following TradingView convention; today is emphasized, and the
-// month markers (1st of a month) are given the stronger neutral color.
-function DateTick(props: {
-  x?: number;
-  y?: number;
-  payload?: { value: string };
-  todayISO?: string;
-  compact?: boolean;
-}) {
-  const { x = 0, y = 0, payload, todayISO, compact = false } = props;
-  const iso = payload?.value ?? '';
-  const isToday = !!todayISO && iso === todayISO;
-  // Only the TradingView format gets a distinct month-marker treatment.
-  const isMonthStart = !compact && iso.endsWith('-01');
-  return (
-    <text
-      x={x}
-      y={y + 12}
-      textAnchor="middle"
-      fontSize={11}
-      fontWeight={isToday || isMonthStart ? 600 : 400}
-      fill={isToday ? '#10b981' : isMonthStart ? '#6b7280' : '#9ca3af'}
-    >
-      {barLabel(iso, compact)}
-    </text>
-  );
+  // Categories sourced from a recurring routine, marked in the tooltip.
+  recurringCategories?: string[];
 }
 
 const FREE_KEY = 'Free';
-
 const FREE_SWATCH = '#94a3b8'; // solid slate-400 so "Free" reads clearly in the tooltip
+const HEIGHT = 256;
+const MARGIN = { top: 18, right: 8, bottom: 22 };
+const RADIUS = 4;
+const SEG_GAP = 1.5; // thin gap between stacked segments for a crisp, modern look
+const ACCENT = '#10b981';
 
-// Readable tooltip: neutral text + swatches. Categories get colored squares;
-// the "Free" remainder gets a gray circle so it's classified as unallocated.
-function AllocationTooltip({ active, payload, label }: TooltipProps<number, string>) {
-  if (!active || !payload?.length) return null;
-  const rows = payload.filter((p) => typeof p.value === 'number' && p.value > 0);
-  return (
-    <div className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-[11px] shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-      <div className="font-medium text-neutral-900 dark:text-white mb-1">
-        {typeof label === 'string' ? fullLabel(label) : label}
-      </div>
-      {rows.map((p) => {
-        const isFree = p.dataKey === FREE_KEY;
-        return (
-          <div key={String(p.dataKey)} className="flex items-center gap-1.5">
-            <span
-              className={`w-2 h-2 flex-shrink-0 ${isFree ? 'rounded-full' : 'rounded-sm'}`}
-              style={{ backgroundColor: isFree ? FREE_SWATCH : p.color }}
-            />
-            <span className={isFree ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-600 dark:text-neutral-300'}>
-              {String(p.dataKey)}
-            </span>
-            <span className="ml-auto pl-3 font-medium text-neutral-900 dark:text-white tabular-nums">{p.value}h</span>
-          </div>
-        );
-      })}
-    </div>
-  );
+const gradId = (key: string) => `bar-grad-${key.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+// Path for a rectangle with only its top corners rounded.
+function roundedTop(x: number, y: number, w: number, h: number, r: number): string {
+  const rr = Math.max(0, Math.min(r, w / 2, h));
+  return `M${x},${y + h} L${x},${y + rr} Q${x},${y} ${x + rr},${y} L${x + w - rr},${y} Q${x + w},${y} ${x + w},${y + rr} L${x + w},${y + h} Z`;
 }
 
-export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24 }: DailyAllocationBarsProps) {
+interface TooltipRow {
+  iso: string;
+  total: number;
+  segments: Array<{ key: string; value: number; color: string }>;
+}
+
+export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories }: DailyAllocationBarsProps) {
   const color = colorOf ?? ((c: string) => colorForCategory(c));
-  const yTicks = [0, 1, 2, 3, 4].map((i) => Math.round((yMax * i) / 4));
+  const recurringSet = new Set(recurringCategories ?? []);
+  const { ref, width } = useChartWidth();
+  const { showTooltip, hideTooltip, tooltipData, tooltipLeft, tooltipTop, tooltipOpen } =
+    useTooltip<TooltipRow>();
+  const [hovered, setHovered] = useState<string | null>(null);
+
   if (data.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center text-sm text-neutral-400 dark:text-neutral-500">
-        No data yet — add an entry to see your day fill up.
+        No data yet — add an entry to see your time fill up.
       </div>
     );
   }
 
-  const dense = data.length > 45;
-  // Short windows (e.g. 7d) use the compact M/D label; the day count fits easily.
+  const marginLeft = yMax > 99 ? 42 : 30;
+  const innerW = Math.max(0, width - marginLeft - MARGIN.right);
+  const innerH = HEIGHT - MARGIN.top - MARGIN.bottom;
   const compact = data.length <= 7;
+  const keys = [...categories, FREE_KEY];
+
+  const dates = data.map((d) => String(d.date));
+  const x = scaleBand<string>({ domain: dates, range: [0, innerW], padding: data.length > 45 ? 0.08 : 0.26 });
+  const yScale = scaleLinear<number>({ domain: [0, yMax], range: [innerH, 0] });
+  const bw = x.bandwidth();
+  const yTicks = [0, 1, 2, 3, 4].map((i) => Math.round((yMax * i) / 4));
+
+  const maxLabels = Math.max(1, Math.floor(innerW / 18));
+  const step = Math.ceil(data.length / maxLabels);
 
   return (
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }} barCategoryGap={dense ? 1 : '15%'}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} className="dark:opacity-20" />
-          <XAxis
-            dataKey="date"
-            tick={<DateTick todayISO={todayISO} compact={compact} />}
-            tickLine={false}
-            axisLine={false}
-            // Label every bar on short windows (7d/30d); thin out on the dense 90d view.
-            interval={dense ? 'preserveStartEnd' : 0}
-            minTickGap={dense ? 24 : 4}
-          />
-          <YAxis
-            domain={[0, yMax]}
-            ticks={yTicks}
-            tick={{ fontSize: 11, fill: '#9ca3af' }}
-            tickLine={false}
-            axisLine={false}
-            width={yMax > 99 ? 44 : 28}
-            unit="h"
-          />
-          <Tooltip content={<AllocationTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
-          {categories.map((c) => (
-            <Bar key={c} dataKey={c} stackId="h" fill={color(c)} isAnimationActive={false} />
-          ))}
-          <Bar dataKey={FREE_KEY} stackId="h" fill={FREE_COLOR} radius={dense ? 0 : [3, 3, 0, 0]} isAnimationActive={false} />
-        </BarChart>
-      </ResponsiveContainer>
+    <div ref={ref} className="relative h-64 text-neutral-200 dark:text-neutral-800">
+      {width > 0 && (
+        <svg width={width} height={HEIGHT}>
+          <defs>
+            {categories.map((c) => {
+              const base = color(c);
+              return (
+                <linearGradient key={c} id={gradId(c)} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={adjustLightness(base, 8)} />
+                  <stop offset="52%" stopColor={base} />
+                  <stop offset="100%" stopColor={adjustLightness(base, -6)} />
+                </linearGradient>
+              );
+            })}
+          </defs>
+          <Group left={marginLeft} top={MARGIN.top}>
+            {/* Gridlines: dashed inner lines + a soft baseline */}
+            {yTicks.map((t) => (
+              <line
+                key={t}
+                x1={0}
+                x2={innerW}
+                y1={yScale(t)}
+                y2={yScale(t)}
+                stroke="currentColor"
+                strokeWidth={1}
+                strokeDasharray={t === 0 ? undefined : '4 5'}
+                opacity={t === 0 ? 0.9 : 0.55}
+              />
+            ))}
+            {yTicks.map((t) => (
+              <text key={`l${t}`} x={-8} y={yScale(t)} dy={4} textAnchor="end" fontSize={11} fill="#9ca3af">
+                {t}h
+              </text>
+            ))}
+
+            {data.map((row) => {
+              const iso = String(row.date);
+              const bx = x(iso) ?? 0;
+              const dimmed = hovered !== null && hovered !== iso;
+
+              let acc = 0;
+              const segs = keys
+                .map((key) => {
+                  const v = Number(row[key]) || 0;
+                  const seg = { key, value: v, y0: acc, y1: acc + v };
+                  acc += v;
+                  return seg;
+                })
+                .filter((s) => s.value > 0);
+              const total = acc;
+              const clipId = `clip-${iso}`;
+
+              return (
+                <Group
+                  key={iso}
+                  style={{ opacity: dimmed ? 0.32 : 1, transition: 'opacity 0.15s ease' }}
+                >
+                  <clipPath id={clipId}>
+                    <path d={roundedTop(bx, yScale(total), bw, innerH - yScale(total), RADIUS)} />
+                  </clipPath>
+                  <Group clipPath={`url(#${clipId})`}>
+                    {segs.map((s, i) => {
+                      const isBottom = i === 0;
+                      const top = yScale(s.y1);
+                      const h = Math.max(0, yScale(s.y0) - yScale(s.y1) - (isBottom ? 0 : SEG_GAP));
+                      return (
+                        <rect
+                          key={s.key}
+                          x={bx}
+                          y={top}
+                          width={bw}
+                          height={h}
+                          fill={s.key === FREE_KEY ? FREE_COLOR : `url(#${gradId(s.key)})`}
+                        />
+                      );
+                    })}
+                  </Group>
+                  {/* Transparent hover target */}
+                  <rect
+                    x={bx}
+                    y={0}
+                    width={bw}
+                    height={innerH}
+                    fill="transparent"
+                    onMouseEnter={() => {
+                      setHovered(iso);
+                      showTooltip({
+                        tooltipLeft: marginLeft + bx + bw / 2,
+                        tooltipTop: MARGIN.top + yScale(total) - 8,
+                        tooltipData: {
+                          iso,
+                          total: Math.round(total * 10) / 10,
+                          segments: segs
+                            .slice()
+                            .reverse()
+                            .map((s) => ({
+                              key: s.key,
+                              value: s.value,
+                              color: s.key === FREE_KEY ? FREE_SWATCH : color(s.key),
+                            })),
+                        },
+                      });
+                    }}
+                    onMouseLeave={() => {
+                      setHovered(null);
+                      hideTooltip();
+                    }}
+                  />
+                  {/* Total label above the hovered bar */}
+                  {hovered === iso && total > 0 && (
+                    <text
+                      x={bx + bw / 2}
+                      y={yScale(total) - 7}
+                      textAnchor="middle"
+                      fontSize={11}
+                      fontWeight={600}
+                      fill="currentColor"
+                      className="text-neutral-700 dark:text-neutral-200"
+                    >
+                      {Math.round(total * 10) / 10}h
+                    </text>
+                  )}
+                </Group>
+              );
+            })}
+
+            {/* x-axis labels */}
+            {data.map((row, i) => {
+              const iso = String(row.date);
+              const isToday = !!todayISO && iso === todayISO;
+              const isMonthStart = !compact && iso.endsWith('-01');
+              if (!(i % step === 0 || isToday || isMonthStart)) return null;
+              return (
+                <text
+                  key={`x${iso}`}
+                  x={(x(iso) ?? 0) + bw / 2}
+                  y={innerH + 15}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fontWeight={isToday || isMonthStart ? 600 : 400}
+                  fill={isToday ? ACCENT : isMonthStart ? '#6b7280' : '#9ca3af'}
+                >
+                  {barLabel(iso, compact)}
+                </text>
+              );
+            })}
+          </Group>
+        </svg>
+      )}
+
+      {tooltipOpen && tooltipData && (
+        <TooltipWithBounds left={tooltipLeft} top={tooltipTop} style={{ position: 'absolute', pointerEvents: 'none' }}>
+          <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
+            <div className="flex items-center justify-between gap-4 mb-1.5">
+              <span className="font-medium text-neutral-900 dark:text-white">{fullLabel(tooltipData.iso)}</span>
+              <span className="text-neutral-400 dark:text-neutral-500 tabular-nums">{tooltipData.total}h</span>
+            </div>
+            {tooltipData.segments.map((s) => {
+              const isFree = s.key === FREE_KEY;
+              return (
+                <div key={s.key} className="flex items-center gap-1.5 py-0.5">
+                  <span
+                    className={`w-2 h-2 flex-shrink-0 ${isFree ? 'rounded-full' : 'rounded-sm'}`}
+                    style={{ backgroundColor: s.color }}
+                  />
+                  <span className={isFree ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-600 dark:text-neutral-300'}>
+                    {s.key}
+                  </span>
+                  {recurringSet.has(s.key) && (
+                    <span className="text-neutral-400 dark:text-neutral-500" title="Recurring routine">
+                      <RecurringIcon className="w-2.5 h-2.5" />
+                    </span>
+                  )}
+                  <span className="ml-auto pl-4 font-medium text-neutral-900 dark:text-white tabular-nums">{s.value}h</span>
+                </div>
+              );
+            })}
+          </div>
+        </TooltipWithBounds>
+      )}
     </div>
   );
 }

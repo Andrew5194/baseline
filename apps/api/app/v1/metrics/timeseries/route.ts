@@ -16,6 +16,7 @@ import {
   reviewRatioV1,
 } from '@baseline/metrics';
 import { getCurrentUserId } from '../../../../lib/user';
+import { periodBounds, periodBuckets, endOfTodayUTC, isPeriod } from '../../../../lib/period';
 
 const WINDOW_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
@@ -36,24 +37,70 @@ const METRIC_FNS: Record<string, MetricFn> = {
   review_ratio: reviewRatioV1,
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
-  const searchParams = request.nextUrl.searchParams;
-  const metric = searchParams.get('metric');
-  const window = searchParams.get('window') || '30d';
-  const bucket = searchParams.get('bucket') || 'day';
+  const params = request.nextUrl.searchParams;
+  const metric = params.get('metric');
+  const periodParam = params.get('period');
+  // bucket=day → daily (heatmap); absent → the period's natural buckets (bar chart).
+  const bucket = params.get('bucket');
 
   if (!metric || !METRIC_FNS[metric]) {
     return NextResponse.json({ error: 'Invalid metric', code: 'INVALID_METRIC' }, { status: 400 });
   }
 
-  const days = WINDOW_DAYS[window];
-  if (!days) {
-    return NextResponse.json({ error: 'Invalid window', code: 'INVALID_WINDOW' }, { status: 400 });
-  }
-
   const now = new Date();
-  const windowStart = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const todayEnd = endOfTodayUTC(now);
+  const dailyBuckets = (start: Date, end: Date) => {
+    const out: Array<{ start: Date; end: Date }> = [];
+    let c = new Date(start);
+    while (c.getTime() < end.getTime()) {
+      const e = new Date(c.getTime() + DAY_MS);
+      out.push({ start: new Date(c), end: e });
+      c = e;
+    }
+    return out;
+  };
+
+  // Two bucketing modes:
+  //   bucket=day → daily, capped at today (the heatmap needs daily cells)
+  //   default    → the period's natural buckets across the FULL period, matching the
+  //                Overview chart: 7 days (week), ~30 days (month), 12 months (year)
+  let fetchStart: Date;
+  let fetchEnd: Date;
+  let buckets: Array<{ start: Date; end: Date }>;
+  let granularity: 'day' | 'month' = 'day';
+  let label: string;
+
+  if (periodParam) {
+    if (!isPeriod(periodParam)) {
+      return NextResponse.json({ error: 'Invalid period', code: 'INVALID_PERIOD' }, { status: 400 });
+    }
+    const b = periodBounds(periodParam, now);
+    label = periodParam;
+    if (bucket === 'day') {
+      fetchStart = b.start;
+      fetchEnd = b.end < todayEnd ? b.end : todayEnd;
+      buckets = dailyBuckets(fetchStart, fetchEnd);
+    } else {
+      fetchStart = b.start;
+      fetchEnd = b.end;
+      buckets = periodBuckets(periodParam, b.start, b.end);
+      granularity = b.granularity;
+    }
+  } else {
+    const window = params.get('window') || '30d';
+    const days = WINDOW_DAYS[window];
+    if (!days) {
+      return NextResponse.json({ error: 'Invalid window', code: 'INVALID_WINDOW' }, { status: 400 });
+    }
+    fetchStart = new Date(now.getTime() - days * DAY_MS);
+    fetchEnd = now;
+    buckets = dailyBuckets(fetchStart, fetchEnd);
+    label = window;
+  }
 
   const rows = await db
     .select({
@@ -62,7 +109,7 @@ export async function GET(request: NextRequest) {
       payload: events.payload,
     })
     .from(events)
-    .where(and(eq(events.userId, userId), gte(events.occurredAt, windowStart), lt(events.occurredAt, now)));
+    .where(and(eq(events.userId, userId), gte(events.occurredAt, fetchStart), lt(events.occurredAt, fetchEnd)));
 
   const eventInputs = rows.map((r) => ({
     eventType: r.eventType,
@@ -70,20 +117,11 @@ export async function GET(request: NextRequest) {
     payload: r.payload as Record<string, unknown> | null,
   }));
 
-  const bucketDays = bucket === 'week' ? 7 : 1;
   const metricFn = METRIC_FNS[metric];
-  const data: Array<{ date: string; value: number }> = [];
+  const data = buckets.map((bk) => ({
+    date: bk.start.toISOString().split('T')[0],
+    value: metricFn(eventInputs, bk.start, bk.end) ?? 0,
+  }));
 
-  const cursor = new Date(windowStart);
-  while (cursor < now) {
-    const bucketEnd = new Date(cursor.getTime() + bucketDays * 24 * 60 * 60 * 1000);
-    const val = metricFn(eventInputs, cursor, bucketEnd > now ? now : bucketEnd);
-    data.push({
-      date: cursor.toISOString().split('T')[0],
-      value: val ?? 0,
-    });
-    cursor.setTime(bucketEnd.getTime());
-  }
-
-  return NextResponse.json({ metric, window, bucket, data });
+  return NextResponse.json({ metric, period: label, window: label, granularity, data });
 }

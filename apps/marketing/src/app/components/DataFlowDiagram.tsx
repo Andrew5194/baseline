@@ -96,9 +96,9 @@ export default function DataFlowDiagram() {
   ];
 
   const outputs = [
-    { label: 'Trends', desc: 'Week over week' },
-    { label: 'Metrics', desc: 'Quantitative' },
-    { label: 'Patterns', desc: 'Behavioral' },
+    { label: 'Overview', desc: 'Time allocation' },
+    { label: 'Metrics', desc: 'GitHub activity' },
+    { label: 'History', desc: 'Activity log' },
   ];
 
   // Layout dimensions matching Tailwind classes
@@ -135,20 +135,28 @@ export default function DataFlowDiagram() {
             {/* Sources */}
             <div className="flex flex-col gap-2 flex-shrink-0">
               <span className="text-[9px] font-medium uppercase tracking-[0.15em] text-neutral-400 dark:text-neutral-500 text-center mb-1">Integrations</span>
-              {sources.map((source, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2.5 w-[116px] px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80"
-                  style={{
-                    opacity: visible ? 1 : 0,
-                    transform: visible ? 'translateX(0)' : 'translateX(-16px)',
-                    transition: `opacity 0.4s ease-out ${i * 0.1}s, transform 0.4s ease-out ${i * 0.1}s`,
-                  }}
-                >
-                  <span className="flex-shrink-0">{source.icon}</span>
-                  <span className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">{source.label}</span>
-                </div>
-              ))}
+              {sources.map((source, i) => {
+                const isConnected = source.label === 'GitHub';
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2.5 w-[132px] px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80"
+                    style={{
+                      opacity: visible ? (isConnected ? 1 : 0.45) : 0,
+                      transform: visible ? 'translateX(0)' : 'translateX(-16px)',
+                      transition: `opacity 0.4s ease-out ${i * 0.1}s, transform 0.4s ease-out ${i * 0.1}s`,
+                    }}
+                  >
+                    <span className="flex-shrink-0">{source.icon}</span>
+                    <span className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 flex-1">{source.label}</span>
+                    {isConnected ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" title="Connected" />
+                    ) : (
+                      <span className="text-[8px] font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-600 flex-shrink-0">Soon</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Left connectors */}
@@ -200,9 +208,8 @@ export default function DataFlowDiagram() {
                   }}
                 />
 
-                <div className="relative w-[88px] h-[88px] rounded-2xl border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-neutral-900 flex flex-col items-center justify-center gap-1 shadow-[0_0_12px_rgba(16,185,129,0.1)] dark:shadow-[0_0_16px_rgba(16,185,129,0.2)]">
-                  <Logo className="w-7 h-7" />
-                  <span className="text-[9px] font-semibold text-neutral-900 dark:text-white tracking-tight">Baseline</span>
+                <div className="relative w-[88px] h-[88px] rounded-2xl border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-neutral-900 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.1)] dark:shadow-[0_0_16px_rgba(16,185,129,0.2)]">
+                  <Logo className="w-10 h-10" />
                 </div>
               </div>
             </div>
