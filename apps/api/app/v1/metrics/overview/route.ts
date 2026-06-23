@@ -16,7 +16,7 @@ import {
   peakDayV1,
   computeDelta,
 } from '@baseline/metrics';
-import { getCurrentUserId } from '../../../../lib/user';
+import { getCurrentUserId, getUserTimezone } from '../../../../lib/user';
 import { periodBounds, isPeriod } from '../../../../lib/period';
 
 const WINDOW_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
@@ -24,6 +24,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
+  const tz = await getUserTimezone(userId);
   const params = request.nextUrl.searchParams;
   const periodParam = params.get('period');
   const now = new Date();
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
     if (!isPeriod(periodParam)) {
       return NextResponse.json({ error: 'Invalid period', code: 'INVALID_PERIOD' }, { status: 400 });
     }
-    const b = periodBounds(periodParam, now);
+    const b = periodBounds(periodParam, now, tz);
     windowStart = b.start;
     windowEnd = b.end;
     prevStart = b.prevStart;
@@ -54,7 +55,13 @@ export async function GET(request: NextRequest) {
     prevStart = new Date(windowStart.getTime() - days * DAY_MS);
     label = window;
   }
-  const now2 = windowEnd; // end of the current window
+  // The current window is period-to-date (clamped to now). Compare against the SAME
+  // elapsed slice of the prior period — not the whole prior period — so a partial
+  // week/month isn't measured against a complete one (which made early-period deltas
+  // look like big drops and inflated growth vs sparse prior periods).
+  const currEnd = now < windowEnd ? now : windowEnd;
+  const elapsedMs = currEnd.getTime() - windowStart.getTime();
+  const prevEnd = new Date(prevStart.getTime() + elapsedMs);
 
   const rows = await db
     .select({
@@ -63,7 +70,7 @@ export async function GET(request: NextRequest) {
       payload: events.payload,
     })
     .from(events)
-    .where(and(eq(events.userId, userId), gte(events.occurredAt, prevStart), lt(events.occurredAt, now2)));
+    .where(and(eq(events.userId, userId), gte(events.occurredAt, prevStart), lt(events.occurredAt, currEnd)));
 
   const ei = rows.map((r) => ({
     eventType: r.eventType,
@@ -71,9 +78,9 @@ export async function GET(request: NextRequest) {
     payload: r.payload as Record<string, unknown> | null,
   }));
 
-  const m = (fn: (e: typeof ei, s: Date, e2: Date) => number | null) => {
-    const curr = fn(ei, windowStart, now2);
-    const prev = fn(ei, prevStart, windowStart);
+  const m = (fn: (e: typeof ei, s: Date, e2: Date, tz: string) => number | null) => {
+    const curr = fn(ei, windowStart, currEnd, tz);
+    const prev = fn(ei, prevStart, prevEnd, tz);
     return { value: curr, delta: computeDelta(curr, prev) };
   };
 
@@ -98,8 +105,8 @@ export async function GET(request: NextRequest) {
       streak: { ...m(streakDaysV1), unit: 'days' },
     },
     patterns: {
-      day_of_week: dayOfWeekDistributionV1(ei, windowStart, now2),
-      peak_day: peakDayV1(ei, windowStart, now2),
+      day_of_week: dayOfWeekDistributionV1(ei, windowStart, currEnd, tz),
+      peak_day: peakDayV1(ei, windowStart, currEnd, tz),
     },
   });
 }

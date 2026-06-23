@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, events } from '@baseline/db';
-import { eq, and, lt, gte, lte, desc } from 'drizzle-orm';
-import { getCurrentUserId } from '../../../lib/user';
+import { eq, and, lt, gte, desc } from 'drizzle-orm';
+import { zonedCivilToUtc } from '@baseline/metrics';
+import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
+
+// A since/until param. A date-only 'YYYY-MM-DD' is resolved to that calendar day's
+// start in the user's timezone (so day windows match the dashboard's local-day
+// bucketing); a full ISO timestamp is used as-is. Returns null on a bad value.
+function parseBoundary(v: string, tz: string): Date | null {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [y, mo, d] = v.split('-').map(Number);
+    return zonedCivilToUtc(y, mo, d, 0, tz);
+  }
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
+  const tz = await getUserTimezone(userId);
   const searchParams = request.nextUrl.searchParams;
 
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
@@ -19,18 +33,20 @@ export async function GET(request: NextRequest) {
     conditions.push(eq(events.source, source));
   }
   if (since) {
-    const d = new Date(since);
-    if (isNaN(d.getTime())) {
+    const d = parseBoundary(since, tz);
+    if (!d) {
       return NextResponse.json({ error: 'Invalid since date', code: 'INVALID_DATE' }, { status: 400 });
     }
     conditions.push(gte(events.occurredAt, d));
   }
   if (until) {
-    const d = new Date(until);
-    if (isNaN(d.getTime())) {
+    const d = parseBoundary(until, tz);
+    if (!d) {
       return NextResponse.json({ error: 'Invalid until date', code: 'INVALID_DATE' }, { status: 400 });
     }
-    conditions.push(lte(events.occurredAt, d));
+    // Exclusive upper bound: `until` is the start of the day/month *after* the
+    // selection, so events strictly before it belong to the window.
+    conditions.push(lt(events.occurredAt, d));
   }
   if (cursor) {
     try {

@@ -7,6 +7,7 @@ import { ConsistencyScore } from '../../components/consistency-score';
 import { MetricsStrip, type StripStat } from '../../components/metrics-strip';
 import { DayDetailsModal } from '../../components/day-details-modal';
 import { apiFetch } from '../../../lib/api';
+import { useTimezone } from '../../../lib/use-timezone';
 
 interface MetricValue {
   value: number | null;
@@ -32,16 +33,24 @@ const METRICS: Array<{ key: string; metric: string; label: string; unit: string;
 
 const PERIOD_LABEL: Record<Period, string> = { week: 'this week', month: 'this month', year: 'this year' };
 
-// Days elapsed so far in the current period (UTC), for the consistency denominator.
-function elapsedDaysInPeriod(period: Period): number {
-  const now = new Date();
+// Days elapsed so far in the current period, in the user's timezone, for the
+// consistency denominator.
+function elapsedDaysInPeriod(period: Period, tz: string): number {
+  const key = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date()); // YYYY-MM-DD in tz
+  const [y, m, d] = key.split('-').map(Number);
   if (period === 'year') {
-    const start = Date.UTC(now.getUTCFullYear(), 0, 1);
-    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const start = Date.UTC(y, 0, 1);
+    const today = Date.UTC(y, m - 1, d);
     return Math.floor((today - start) / 86400000) + 1;
   }
-  if (period === 'month') return now.getUTCDate();
-  return ((now.getUTCDay() + 6) % 7) + 1; // week, Monday-anchored
+  if (period === 'month') return d;
+  const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return ((weekday + 6) % 7) + 1; // week, Monday-anchored
 }
 
 // Event range + title for a clicked bar: a single day, or a whole month (year view).
@@ -65,6 +74,7 @@ function bucketRange(period: Period, date: string): { since: string; until: stri
 }
 
 export default function Metrics() {
+  const tz = useTimezone();
   const [period, setPeriod] = useState<Period>('week');
   const [active, setActive] = useState('commits');
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
@@ -96,13 +106,27 @@ export default function Metrics() {
   }, [period]);
 
   const m = overview?.metrics;
-  const elapsedDays = elapsedDaysInPeriod(period);
 
-  const now = new Date();
-  const todayKey =
-    period === 'year'
-      ? `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`
-      : now.toISOString().split('T')[0];
+  // `overview`/`seriesMap` load asynchronously, so during a period switch they
+  // still hold the PREVIOUS period while `period` has already flipped. Drive every
+  // data-derived value off the loaded period (`overview.period`) — not the pending
+  // `period` — so the consistency score never divides one period's active-day count
+  // by another period's elapsed days (which briefly rendered an impossible value,
+  // e.g. month's 6 active days ÷ year's 174 days = 3%, before settling).
+  const dataPeriod: Period =
+    overview?.period === 'week' || overview?.period === 'month' || overview?.period === 'year'
+      ? overview.period
+      : period;
+  const elapsedDays = elapsedDaysInPeriod(dataPeriod, tz);
+
+  // "Today" in the user's timezone, matching the server's local-day bucket keys.
+  const todayLocal = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date()); // YYYY-MM-DD
+  const todayKey = dataPeriod === 'year' ? `${todayLocal.slice(0, 7)}-01` : todayLocal;
 
   const stats: StripStat[] = METRICS.map((d) => ({
     key: d.key,
@@ -139,7 +163,7 @@ export default function Metrics() {
           activeDays={m?.active_days?.value ?? null}
           totalDays={elapsedDays}
           delta={m?.active_days?.delta ?? null}
-          window={period}
+          window={dataPeriod}
         />
       </div>
 
@@ -150,7 +174,7 @@ export default function Metrics() {
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
-            {activeDef.label} · {PERIOD_LABEL[period]}
+            {activeDef.label} · {PERIOD_LABEL[dataPeriod]}
           </p>
           <p className="text-[11px] text-neutral-400 dark:text-neutral-500">Click a bar for details</p>
         </div>
@@ -158,7 +182,7 @@ export default function Metrics() {
           data={seriesMap[active] ?? []}
           unit={activeDef.unit}
           todayISO={todayKey}
-          onSelectBar={(date) => setInspect({ ...bucketRange(period, date), tab: activeDef.tab ?? 'commits' })}
+          onSelectBar={(date) => setInspect({ ...bucketRange(dataPeriod, date), tab: activeDef.tab ?? 'commits' })}
         />
       </div>
 

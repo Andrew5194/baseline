@@ -3,7 +3,7 @@ import { db, events, recurringAllocations } from '@baseline/db';
 import { eq, and, gte, lt, gt } from 'drizzle-orm';
 import { hoursByCategoryV1, computeDelta, recurringToEvents } from '@baseline/metrics';
 import type { EventInput } from '@baseline/metrics';
-import { getCurrentUserId } from '../../../../lib/user';
+import { getCurrentUserId, getUserTimezone } from '../../../../lib/user';
 import { periodBounds, isPeriod } from '../../../../lib/period';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
-  const { start, end, prevStart, budgetHours } = periodBounds(periodParam, now);
+  const tz = await getUserTimezone(userId);
+  const { start, end, prevStart, budgetHours } = periodBounds(periodParam, now, tz);
 
   const rows = await db
     .select({
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
     })
     .from(recurringAllocations)
     .where(eq(recurringAllocations.userId, userId));
-  ei.push(...recurringToEvents(recurring, prevStart, end));
+  ei.push(...recurringToEvents(recurring, prevStart, end, tz));
 
   const curr = hoursByCategoryV1(ei, start, end);
   const prev = hoursByCategoryV1(ei, prevStart, start);

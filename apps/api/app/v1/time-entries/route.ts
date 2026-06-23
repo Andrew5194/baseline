@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, events } from '@baseline/db';
 import { eq, and, gte, lt, desc } from 'drizzle-orm';
 import { EVENT_TYPES, manualTimeEntryPayload } from '@baseline/events';
-import { getCurrentUserId } from '../../../lib/user';
+import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
 import { periodBounds, isPeriod } from '../../../lib/period';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid period', code: 'INVALID_PERIOD' }, { status: 400 });
   }
 
-  const { start, end } = periodBounds(periodParam, new Date());
+  const tz = await getUserTimezone(userId);
+  const { start, end } = periodBounds(periodParam, new Date(), tz);
 
   const manual = and(eq(events.userId, userId), eq(events.source, 'manual'));
 

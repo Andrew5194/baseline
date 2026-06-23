@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../../lib/api';
+import { useTimezone } from '../../../lib/use-timezone';
 
 interface EventItem {
   id: string;
@@ -58,11 +59,13 @@ const repoOf = (p: Record<string, unknown> | null) => {
   const repo = p?.repo as string | undefined;
   return repo ? repo.split('/').pop() || repo : null;
 };
-const dayKey = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+const dayKey = (iso: string, timeZone: string) =>
+  new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone });
+const timeOf = (iso: string, timeZone: string) =>
+  new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone });
 
 export default function History() {
+  const tz = useTimezone();
   const [source, setSource] = useState<SourceFilter>('all');
   const [items, setItems] = useState<EventItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -105,7 +108,7 @@ export default function History() {
   // Group consecutive items by day for date headers.
   const groups: Array<{ day: string; items: EventItem[] }> = [];
   for (const ev of items) {
-    const day = dayKey(ev.occurred_at);
+    const day = dayKey(ev.occurred_at, tz);
     const last = groups[groups.length - 1];
     if (last && last.day === day) last.items.push(ev);
     else groups.push({ day, items: [ev] });
@@ -180,7 +183,7 @@ export default function History() {
                         </span>
                       )}
                       <span className="text-xs text-neutral-400 dark:text-neutral-500 w-16 text-right flex-shrink-0">
-                        {timeOf(ev.occurred_at)}
+                        {timeOf(ev.occurred_at, tz)}
                       </span>
                       {isManual ? (
                         <button

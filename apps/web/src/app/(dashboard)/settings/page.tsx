@@ -1,3 +1,5 @@
+import { TimezoneSetting } from '../../components/timezone-setting';
+
 export default function Settings() {
   return (
     <div className="p-8 max-w-3xl">
@@ -10,6 +12,8 @@ export default function Settings() {
             Manage your account settings and preferences.
           </p>
         </div>
+
+        <TimezoneSetting />
 
         <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 opacity-60">
           <div className="flex items-center gap-2 mb-1">

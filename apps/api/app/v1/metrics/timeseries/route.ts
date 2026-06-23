@@ -15,12 +15,13 @@ import {
   reviewCountV1,
   reviewRatioV1,
 } from '@baseline/metrics';
-import { getCurrentUserId } from '../../../../lib/user';
-import { periodBounds, periodBuckets, endOfTodayUTC, isPeriod } from '../../../../lib/period';
+import { dayKeyInTz, addLocalDays } from '@baseline/metrics';
+import { getCurrentUserId, getUserTimezone } from '../../../../lib/user';
+import { periodBounds, periodBuckets, endOfToday, isPeriod } from '../../../../lib/period';
 
 const WINDOW_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
-type MetricFn = (events: Array<{ eventType: string; occurredAt: Date; payload: Record<string, unknown> | null }>, start: Date, end: Date) => number | null;
+type MetricFn = (events: Array<{ eventType: string; occurredAt: Date; payload: Record<string, unknown> | null }>, start: Date, end: Date, tz: string) => number | null;
 
 const METRIC_FNS: Record<string, MetricFn> = {
   focus_hours: focusHoursV1,
@@ -41,6 +42,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
+  const tz = await getUserTimezone(userId);
   const params = request.nextUrl.searchParams;
   const metric = params.get('metric');
   const periodParam = params.get('period');
@@ -52,13 +54,14 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
-  const todayEnd = endOfTodayUTC(now);
+  const todayEnd = endOfToday(now, tz);
+  // Local-day buckets (each one local calendar day as a UTC-instant range).
   const dailyBuckets = (start: Date, end: Date) => {
     const out: Array<{ start: Date; end: Date }> = [];
-    let c = new Date(start);
+    let c = start;
     while (c.getTime() < end.getTime()) {
-      const e = new Date(c.getTime() + DAY_MS);
-      out.push({ start: new Date(c), end: e });
+      const e = addLocalDays(c, 1, tz);
+      out.push({ start: c, end: e });
       c = e;
     }
     return out;
@@ -78,7 +81,7 @@ export async function GET(request: NextRequest) {
     if (!isPeriod(periodParam)) {
       return NextResponse.json({ error: 'Invalid period', code: 'INVALID_PERIOD' }, { status: 400 });
     }
-    const b = periodBounds(periodParam, now);
+    const b = periodBounds(periodParam, now, tz);
     label = periodParam;
     if (bucket === 'day') {
       fetchStart = b.start;
@@ -87,7 +90,7 @@ export async function GET(request: NextRequest) {
     } else {
       fetchStart = b.start;
       fetchEnd = b.end;
-      buckets = periodBuckets(periodParam, b.start, b.end);
+      buckets = periodBuckets(periodParam, b.start, b.end, tz);
       granularity = b.granularity;
     }
   } else {
@@ -119,8 +122,8 @@ export async function GET(request: NextRequest) {
 
   const metricFn = METRIC_FNS[metric];
   const data = buckets.map((bk) => ({
-    date: bk.start.toISOString().split('T')[0],
-    value: metricFn(eventInputs, bk.start, bk.end) ?? 0,
+    date: dayKeyInTz(bk.start, tz),
+    value: metricFn(eventInputs, bk.start, bk.end, tz) ?? 0,
   }));
 
   return NextResponse.json({ metric, period: label, window: label, granularity, data });

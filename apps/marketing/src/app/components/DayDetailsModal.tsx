@@ -118,11 +118,14 @@ export default function DayDetailsModal({ username, date, onClose }: DayDetailsM
     };
   }, [onClose]);
 
-  const formattedDate = new Date(date).toLocaleDateString('en-US', {
+  // `date` is a contribution-day string (YYYY-MM-DD). Format it in UTC so the
+  // label isn't shifted a day by the browser's local timezone.
+  const formattedDate = new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 
   const totalCommits =

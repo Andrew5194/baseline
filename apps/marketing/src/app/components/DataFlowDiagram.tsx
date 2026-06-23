@@ -135,28 +135,21 @@ export default function DataFlowDiagram() {
             {/* Sources */}
             <div className="flex flex-col gap-2 flex-shrink-0">
               <span className="text-[9px] font-medium uppercase tracking-[0.15em] text-neutral-400 dark:text-neutral-500 text-center mb-1">Integrations</span>
-              {sources.map((source, i) => {
-                const isConnected = source.label === 'GitHub';
-                return (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2.5 w-[132px] px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80"
-                    style={{
-                      opacity: visible ? (isConnected ? 1 : 0.45) : 0,
-                      transform: visible ? 'translateX(0)' : 'translateX(-16px)',
-                      transition: `opacity 0.4s ease-out ${i * 0.1}s, transform 0.4s ease-out ${i * 0.1}s`,
-                    }}
-                  >
-                    <span className="flex-shrink-0">{source.icon}</span>
-                    <span className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 flex-1">{source.label}</span>
-                    {isConnected ? (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" title="Connected" />
-                    ) : (
-                      <span className="text-[8px] font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-600 flex-shrink-0">Soon</span>
-                    )}
-                  </div>
-                );
-              })}
+              {sources.map((source, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2.5 w-[132px] px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80"
+                  style={{
+                    opacity: visible ? 1 : 0,
+                    transform: visible ? 'translateX(0)' : 'translateX(-16px)',
+                    transition: `opacity 0.4s ease-out ${i * 0.1}s, transform 0.4s ease-out ${i * 0.1}s`,
+                  }}
+                >
+                  <span className="flex-shrink-0">{source.icon}</span>
+                  <span className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 flex-1">{source.label}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                </div>
+              ))}
             </div>
 
             {/* Left connectors */}

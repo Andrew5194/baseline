@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { API_URL } from '../../lib/api';
+import { useTimezone } from '../../lib/use-timezone';
 import { PRESET_CATEGORIES } from '../../lib/categories';
+
+// Local calendar date (YYYY-MM-DD) of an instant in the given timezone.
+const localDate = (d: Date, timeZone: string) =>
+  d.toLocaleDateString('en-CA', { timeZone });
 
 export interface EditableEntry {
   id: string;
@@ -28,10 +33,11 @@ const inputClass =
 
 export function AddTimeEntryForm({ knownCategories, onClose, onSuccess, entry, onDelete }: AddTimeEntryFormProps) {
   const isEdit = !!entry;
+  const tz = useTimezone();
   const options = [...new Set([...PRESET_CATEGORIES, ...knownCategories, ...(entry ? [entry.category] : [])])];
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDate(new Date(), tz);
 
-  const [date, setDate] = useState(entry ? new Date(entry.occurred_at).toISOString().split('T')[0] : today);
+  const [date, setDate] = useState(entry ? localDate(new Date(entry.occurred_at), tz) : today);
   const [hours, setHours] = useState(entry ? String(entry.hours) : '');
   const [category, setCategory] = useState(entry?.category ?? options[0] ?? 'Deep Work');
   const [customCategory, setCustomCategory] = useState('');
