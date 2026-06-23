@@ -1,4 +1,5 @@
 import type { EventInput } from './types';
+import { dayKeyInTz, startOfDayInTz, addLocalDays } from './tz';
 
 /**
  * Measures consistency of daily output over the window.
@@ -12,14 +13,15 @@ export function consistencyScoreV1(
   events: EventInput[],
   windowStart: Date,
   windowEnd: Date,
+  timeZone = 'UTC',
 ): number {
   const dailyCounts: Record<string, number> = {};
 
-  // Initialize all days in the window
-  const cursor = new Date(windowStart);
+  // Initialize all local-calendar days in the window
+  let cursor = startOfDayInTz(windowStart, timeZone);
   while (cursor < windowEnd) {
-    dailyCounts[cursor.toISOString().split('T')[0]] = 0;
-    cursor.setDate(cursor.getDate() + 1);
+    dailyCounts[dayKeyInTz(cursor, timeZone)] = 0;
+    cursor = addLocalDays(cursor, 1, timeZone);
   }
 
   for (const e of events) {
@@ -28,7 +30,7 @@ export function consistencyScoreV1(
       e.occurredAt >= windowStart &&
       e.occurredAt < windowEnd
     ) {
-      const day = e.occurredAt.toISOString().split('T')[0];
+      const day = dayKeyInTz(e.occurredAt, timeZone);
       if (day in dailyCounts) {
         dailyCounts[day]++;
       }
@@ -56,10 +58,11 @@ export function deepWorkDaysV1(
   events: EventInput[],
   windowStart: Date,
   windowEnd: Date,
+  timeZone = 'UTC',
 ): number {
   const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
-  // Group commits by day
+  // Group commits by local-calendar day
   const byDay: Record<string, Date[]> = {};
   for (const e of events) {
     if (
@@ -67,7 +70,7 @@ export function deepWorkDaysV1(
       e.occurredAt >= windowStart &&
       e.occurredAt < windowEnd
     ) {
-      const day = e.occurredAt.toISOString().split('T')[0];
+      const day = dayKeyInTz(e.occurredAt, timeZone);
       if (!byDay[day]) byDay[day] = [];
       byDay[day].push(e.occurredAt);
     }

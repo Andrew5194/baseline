@@ -1,7 +1,7 @@
 import type { EventInput } from './types';
+import { startOfDayInTz, addLocalDays, weekdayInTz } from './tz';
 
 const HOUR_MS = 1000 * 60 * 60;
-const DAY_MS = 24 * HOUR_MS;
 
 export interface RecurringAllocationInput {
   category: string;
@@ -20,18 +20,18 @@ export function recurringToEvents(
   allocations: RecurringAllocationInput[],
   windowStart: Date,
   windowEnd: Date,
+  timeZone = 'UTC',
 ): EventInput[] {
   if (allocations.length === 0) return [];
 
   const out: EventInput[] = [];
-  // Iterate calendar days from the UTC date of windowStart.
-  const day = new Date(
-    Date.UTC(windowStart.getUTCFullYear(), windowStart.getUTCMonth(), windowStart.getUTCDate()),
-  );
+  // Iterate local calendar days from the day containing windowStart.
+  let dayStart = startOfDayInTz(windowStart, timeZone);
 
-  while (day.getTime() < windowEnd.getTime()) {
-    const weekday = day.getUTCDay();
-    const occurredAt = new Date(day.getTime() + 12 * HOUR_MS); // noon, safely inside the day
+  while (dayStart.getTime() < windowEnd.getTime()) {
+    const weekday = weekdayInTz(dayStart, timeZone);
+    // Local noon — safely inside the day, lands in the day's bucket.
+    const occurredAt = new Date(dayStart.getTime() + 12 * HOUR_MS);
     if (occurredAt >= windowStart && occurredAt < windowEnd) {
       for (const a of allocations) {
         if (!(a.durationMs > 0)) continue;
@@ -45,7 +45,7 @@ export function recurringToEvents(
         });
       }
     }
-    day.setTime(day.getTime() + DAY_MS);
+    dayStart = addLocalDays(dayStart, 1, timeZone);
   }
 
   return out;

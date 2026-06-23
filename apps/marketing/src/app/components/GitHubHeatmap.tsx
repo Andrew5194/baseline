@@ -69,9 +69,14 @@ export default function GitHubHeatmap({ username, token }: GitHubHeatmapProps) {
   const winActive = last.filter((d) => d.count > 0).length;
   const winDays = last.length;
   const activePct = winDays ? Math.round((winActive / winDays) * 100) : 0;
+  // Current streak: consecutive active days back from the most recent. Today (the
+  // last element) having no activity *yet* doesn't break the streak — it's still
+  // active through yesterday — so skip a trailing-empty today rather than zeroing
+  // out. Only a fully-missed earlier day ends the streak.
   let curStreak = 0;
   for (let i = last.length - 1; i >= 0; i--) {
     if (last[i].count > 0) curStreak++;
+    else if (i === last.length - 1) continue;
     else break;
   }
   let bestStreak = 0;
@@ -237,7 +242,7 @@ export default function GitHubHeatmap({ username, token }: GitHubHeatmapProps) {
           {last.map((d, i) =>
             i % labelEvery === 0 ? (
               <text key={i} x={mL + i * step + step / 2} y={H - 6} textAnchor="middle" className="fill-neutral-300 dark:fill-neutral-700" fontSize="8">
-                {new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {new Date(`${d.date}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
               </text>
             ) : null,
           )}
@@ -264,6 +269,32 @@ export default function GitHubHeatmap({ username, token }: GitHubHeatmapProps) {
               </foreignObject>
             </g>
           )}
+
+          {/* Bar hover tooltip — date + contribution count for the hovered day */}
+          {hovered && (() => {
+            const i = last.findIndex((d) => d.date === hovered.date);
+            if (i < 0) return null;
+            const cx = mL + i * step + step / 2;
+            const top = toY(hovered.count);
+            const label = new Date(`${hovered.date}T00:00:00Z`).toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              timeZone: 'UTC',
+            });
+            return (
+              <g style={{ pointerEvents: 'none' }}>
+                <foreignObject x={Math.min(Math.max(cx - 70, 0), W - 140)} y={Math.max(top - 46, 2)} width="140" height="42">
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md px-2 py-1 shadow text-center">
+                    <p className="text-[8px] text-neutral-400 dark:text-neutral-500 leading-tight">{label}</p>
+                    <p className="text-[11px] font-semibold text-neutral-900 dark:text-white leading-tight">
+                      {hovered.count} contribution{hovered.count === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                </foreignObject>
+              </g>
+            );
+          })()}
         </svg>
       </div>
 

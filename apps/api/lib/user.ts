@@ -29,3 +29,14 @@ export async function getCurrentUserId(): Promise<string> {
 
   throw new Error('Unauthorized');
 }
+
+// The user's IANA timezone, used to bucket activity into local calendar days.
+// Falls back to UTC if unset.
+export async function getUserTimezone(userId: string): Promise<string> {
+  const [u] = await db
+    .select({ timezone: users.timezone })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return u?.timezone || 'UTC';
+}

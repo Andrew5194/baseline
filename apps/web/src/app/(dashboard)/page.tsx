@@ -8,6 +8,7 @@ import { AddTimeEntryForm } from '../components/add-time-entry-form';
 import { RecurringAllocations } from '../components/recurring-allocations';
 import { Modal } from '../components/modal';
 import { apiFetch } from '../../lib/api';
+import { useTimezone } from '../../lib/use-timezone';
 import { buildColorMap, colorForCategory } from '../../lib/categories';
 
 interface BudgetResponse {
@@ -34,13 +35,14 @@ interface TrendResponse {
 }
 
 const DAY_HOURS = 24;
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const fmtDate = (iso: string, timeZone: string) =>
+  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone });
 
 type Panel = 'recurring';
 const PERIOD_LABEL: Record<Period, string> = { week: 'This week', month: 'This month', year: 'This year' };
 
 export default function Overview() {
+  const tz = useTimezone();
   const [period, setPeriod] = useState<Period>('week');
   const [budget, setBudget] = useState<BudgetResponse | null>(null);
   const [entries, setEntries] = useState<EntriesResponse | null>(null);
@@ -135,11 +137,14 @@ export default function Overview() {
   const yMax = isYear ? DAY_HOURS * 31 : DAY_HOURS;
   // Key of the bucket containing today, used to emphasize today's bar. For the
   // year view (monthly buckets) that's the 1st of the current month.
-  const now = new Date();
-  const todayKey =
-    granularity === 'month'
-      ? `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`
-      : now.toISOString().split('T')[0];
+  // Today in the user's timezone (matches the server's local-day bucket keys).
+  const todayLocal = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date()); // YYYY-MM-DD
+  const todayKey = granularity === 'month' ? `${todayLocal.slice(0, 7)}-01` : todayLocal;
 
   // Stack recurring routines (sleep, meals) together at the bottom of each bar so
   // the variable, one-off categories sit on top — making day-to-day changes obvious.
@@ -179,7 +184,7 @@ export default function Overview() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
-          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period)}</p>
+          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz)}</p>
         </div>
         <div className="flex items-center gap-3">
           <PeriodSelector value={period} onChange={setPeriod} />
@@ -283,7 +288,7 @@ export default function Overview() {
                   style={{ backgroundColor: colorOf(e.category) }}
                 />
                 <span className="text-sm text-neutral-900 dark:text-white w-32 truncate">{e.category}</span>
-                <span className="text-xs text-neutral-400 dark:text-neutral-500 w-16">{fmtDate(e.occurred_at)}</span>
+                <span className="text-xs text-neutral-400 dark:text-neutral-500 w-16">{fmtDate(e.occurred_at, tz)}</span>
                 <span className="text-sm text-neutral-600 dark:text-neutral-400 flex-1 truncate">{e.note}</span>
                 <span className="text-sm font-medium text-neutral-900 dark:text-white tabular-nums">{e.hours}h</span>
                 <button

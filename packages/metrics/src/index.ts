@@ -23,6 +23,18 @@ export { hoursByCategoryV1 } from './time-allocation';
 export { recurringToEvents } from './recurring-allocations';
 export type { RecurringAllocationInput } from './recurring-allocations';
 
+// Timezone helpers
+export {
+  tzOffsetMs,
+  partsInTz,
+  dayKeyInTz,
+  weekdayInTz,
+  hourInTz,
+  zonedCivilToUtc,
+  startOfDayInTz,
+  addLocalDays,
+} from './tz';
+
 // Utilities
 export { computeDelta } from './delta';
 export type { EventInput, MetricResult, TimeseriesPoint } from './types';

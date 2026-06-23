@@ -20,6 +20,9 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'),
   name: text('name'),
   image: text('image'),
+  // IANA timezone (e.g. 'America/New_York') used to bucket the user's activity
+  // into local calendar days/weeks/months on the dashboard.
+  timezone: text('timezone').notNull().default('UTC'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

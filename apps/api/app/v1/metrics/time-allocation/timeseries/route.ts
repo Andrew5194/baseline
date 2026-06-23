@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, events, recurringAllocations } from '@baseline/db';
 import { eq, and, gte, lt, gt } from 'drizzle-orm';
-import { hoursByCategoryV1, recurringToEvents } from '@baseline/metrics';
+import { hoursByCategoryV1, recurringToEvents, dayKeyInTz } from '@baseline/metrics';
 import type { EventInput } from '@baseline/metrics';
-import { getCurrentUserId } from '../../../../../lib/user';
+import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
 import { periodBounds, periodBuckets, isPeriod } from '../../../../../lib/period';
 
 // GET /v1/metrics/time-allocation/timeseries?period=week|month|year
@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
-  const { start, end, granularity } = periodBounds(periodParam, now);
+  const tz = await getUserTimezone(userId);
+  const { start, end, granularity } = periodBounds(periodParam, now, tz);
 
   const rows = await db
     .select({
@@ -54,15 +55,15 @@ export async function GET(request: NextRequest) {
     })
     .from(recurringAllocations)
     .where(eq(recurringAllocations.userId, userId));
-  ei.push(...recurringToEvents(recurring, start, end));
+  ei.push(...recurringToEvents(recurring, start, end, tz));
 
   const seen = new Set<string>();
   // Daily buckets sum to a day's hours; monthly (year) buckets sum to the month's
   // total hours by category.
-  const data = periodBuckets(periodParam, start, end).map((b) => {
+  const data = periodBuckets(periodParam, start, end, tz).map((b) => {
     const byCategory = hoursByCategoryV1(ei, b.start, b.end);
     Object.keys(byCategory).forEach((c) => seen.add(c));
-    return { date: b.start.toISOString().split('T')[0], by_category: byCategory };
+    return { date: dayKeyInTz(b.start, tz), by_category: byCategory };
   });
 
   return NextResponse.json({

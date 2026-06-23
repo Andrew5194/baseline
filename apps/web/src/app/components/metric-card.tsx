@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDelta } from '../../lib/format-delta';
+
 interface MetricCardProps {
   label: string;
   value: number | null;
@@ -20,10 +22,8 @@ function formatValue(value: number | null, unit: string): string {
 
 export function MetricCard({ label, value, delta, unit, window, active, onClick }: MetricCardProps) {
   const formattedValue = formatValue(value, unit);
-  const deltaColor = delta === null ? '' : delta >= 0 ? 'text-emerald-600' : 'text-red-500';
-  const deltaPct = delta === null ? '' : `${Math.abs(Math.round(delta * 100))}%`;
-  const deltaArrow = delta === null ? '' : delta >= 0 ? '▲' : '▼';
-  const windowLabel = window ? ` vs prior ${window}` : '';
+  const f = formatDelta(delta, value);
+  const toneColor = { up: 'text-emerald-600', down: 'text-red-500', neutral: 'text-neutral-400' }[f.tone];
 
   return (
     <button
@@ -39,13 +39,11 @@ export function MetricCard({ label, value, delta, unit, window, active, onClick 
         <p className="text-2xl font-semibold tracking-tight">{formattedValue}</p>
         <p className="text-xs text-neutral-400">{unit}</p>
       </div>
-      {delta !== null ? (
-        <p className={`text-xs mt-1 ${deltaColor}`}>
-          {deltaArrow} {deltaPct} vs prior {window || '30d'}
+      {(delta !== null || window) && (
+        <p className={`text-xs mt-1 ${toneColor}`}>
+          {f.text} vs prior {window || '30d'}
         </p>
-      ) : window ? (
-        <p className="text-xs mt-1 text-neutral-400">—  vs prior {window}</p>
-      ) : null}
+      )}
     </button>
   );
 }

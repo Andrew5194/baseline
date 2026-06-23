@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDelta } from '../../lib/format-delta';
+
 export interface StripStat {
   key: string;
   label: string;
@@ -9,8 +11,11 @@ export interface StripStat {
   delta?: number | null;
 }
 
-const deltaColor = (d: number | null | undefined) =>
-  d == null ? 'text-neutral-400 dark:text-neutral-600' : d >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400';
+const toneColor: Record<'up' | 'down' | 'neutral', string> = {
+  up: 'text-emerald-600 dark:text-emerald-400',
+  down: 'text-red-500 dark:text-red-400',
+  neutral: 'text-neutral-400 dark:text-neutral-600',
+};
 
 interface MetricsStripProps {
   stats: StripStat[];
@@ -40,11 +45,11 @@ export function MetricsStrip({ stats, activeKey, onSelect, accent = '#10b981' }:
               {s.value}
               {s.sub && <span className="text-sm font-medium text-neutral-400 dark:text-neutral-500"> {s.sub}</span>}
             </p>
-            {s.delta !== undefined && (
-              <p className={`mt-0.5 text-[11px] tabular-nums ${deltaColor(s.delta)}`}>
-                {s.delta == null ? '—' : `${s.delta >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(s.delta * 100))}%`}
-              </p>
-            )}
+            {s.delta !== undefined && (() => {
+              const num = typeof s.value === 'number' ? s.value : parseFloat(String(s.value));
+              const f = formatDelta(s.delta ?? null, Number.isFinite(num) ? num : null);
+              return <p className={`mt-0.5 text-[11px] tabular-nums ${toneColor[f.tone]}`}>{f.text}</p>;
+            })()}
             {active && <span className="absolute left-0 right-0 bottom-0 h-[2px]" style={{ backgroundColor: accent }} />}
           </Tag>
         );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../../lib/api';
+import { useTimezone } from '../../lib/use-timezone';
 
 interface EventItem {
   id: string;
@@ -63,6 +64,7 @@ function eventRepo(payload: Record<string, unknown> | null): string | null {
 }
 
 export function DayDetailsModal({ since, until, title, initialCategory = 'commits', onClose }: DayDetailsModalProps) {
+  const tz = useTimezone();
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventItem[]>([]);
 
@@ -214,7 +216,7 @@ export function DayDetailsModal({ since, until, title, initialCategory = 'commit
                               </span>
                             )}
                             <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-                              {new Date(event.occurred_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                              {new Date(event.occurred_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz })}
                             </span>
                           </div>
                         </div>

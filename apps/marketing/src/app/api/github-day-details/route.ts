@@ -2,6 +2,37 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const GITHUB_API = 'https://api.github.com';
 
+// GitHub buckets contribution-calendar days in the account's timezone, so a day's
+// detail window must use that timezone too — otherwise late-evening commits (which
+// fall on the next UTC day) are missed. Defaults to US Eastern; override per deploy.
+const CALENDAR_TZ = process.env.GITHUB_CALENDAR_TIMEZONE || 'America/New_York';
+
+// Offset (ms) to ADD to a UTC instant to get wall-clock time in `timeZone`.
+function tzOffsetMs(instant: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const m: Record<string, number> = {};
+  for (const p of dtf.formatToParts(instant)) {
+    if (p.type !== 'literal') m[p.type] = Number(p.value);
+  }
+  return Date.UTC(m.year, m.month - 1, m.day, m.hour, m.minute, m.second) - instant.getTime();
+}
+
+// UTC instant of local midnight starting day (y, mo 1-based, d) in `timeZone`.
+// Date.UTC normalizes day overflow, so d+1 yields the next day's midnight.
+function zonedDayStart(y: number, mo: number, d: number, timeZone: string): Date {
+  const asUTC = Date.UTC(y, mo - 1, d, 0, 0, 0);
+  return new Date(asUTC - tzOffsetMs(new Date(asUTC), timeZone));
+}
+
 interface GitHubRepository {
   owner: { login: string };
   name: string;
@@ -46,12 +77,14 @@ export async function GET(request: NextRequest) {
     'Authorization': `Bearer ${token}`
   };
 
-  // Parse the date and create start/end timestamps for the day
-  const targetDate = new Date(date);
-  const startOfDay = new Date(targetDate);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(targetDate);
-  endOfDay.setHours(23, 59, 59, 999);
+  // Day window in the account's calendar timezone (matches the bars), as UTC
+  // instants. `date` is a contribution-day string 'YYYY-MM-DD'.
+  const [y, mo, d] = date.split('-').map(Number);
+  if (!y || !mo || !d) {
+    return NextResponse.json({ error: 'Invalid date', code: 'INVALID_DATE' }, { status: 400 });
+  }
+  const startOfDay = zonedDayStart(y, mo, d, CALENDAR_TZ);
+  const endOfDay = new Date(zonedDayStart(y, mo, d + 1, CALENDAR_TZ).getTime() - 1);
 
   const query = `
     query($username: String!, $from: DateTime!, $to: DateTime!) {
@@ -169,9 +202,43 @@ export async function GET(request: NextRequest) {
 
     const contributionsData = data.data.user.contributionsCollection;
 
-    // Fetch detailed commit information for each repository
+    // GitHub's contributionsCollection snaps the from/to range to day granularity
+    // and can return adjacent-day items, so a PR/issue/review/commit created just
+    // outside the requested day leaks in (e.g. a Wednesday PR showing under Tuesday).
+    // Scope every category to the exact window by each node's occurredAt.
+    const startMs = startOfDay.getTime();
+    const endMs = endOfDay.getTime();
+    const inWindow = (occurredAt: string) => {
+      const t = new Date(occurredAt).getTime();
+      return t >= startMs && t <= endMs;
+    };
+    type DayNode = { occurredAt: string };
+    interface RepoCommitGroup {
+      repository: GitHubRepository & { url?: string };
+      contributions: { nodes: DayNode[] };
+    }
+
+    const scoped = {
+      commitContributionsByRepository: (contributionsData.commitContributionsByRepository as RepoCommitGroup[])
+        .map((repo) => ({
+          ...repo,
+          contributions: { ...repo.contributions, nodes: repo.contributions.nodes.filter((n) => inWindow(n.occurredAt)) },
+        }))
+        .filter((repo) => repo.contributions.nodes.length > 0),
+      issueContributions: {
+        nodes: (contributionsData.issueContributions.nodes as DayNode[]).filter((n) => inWindow(n.occurredAt)),
+      },
+      pullRequestContributions: {
+        nodes: (contributionsData.pullRequestContributions.nodes as DayNode[]).filter((n) => inWindow(n.occurredAt)),
+      },
+      pullRequestReviewContributions: {
+        nodes: (contributionsData.pullRequestReviewContributions.nodes as DayNode[]).filter((n) => inWindow(n.occurredAt)),
+      },
+    };
+
+    // Fetch detailed commit information for each repository (scoped list only)
     const commitDetails = await Promise.all(
-      contributionsData.commitContributionsByRepository.map(async (repo: RepoContribution) => {
+      scoped.commitContributionsByRepository.map(async (repo: RepoContribution) => {
         try {
           // Fetch commits for this repository on the specific date
           const commitsUrl = `${GITHUB_API}/repos/${repo.repository.owner.login}/${repo.repository.name}/commits`;
@@ -208,7 +275,7 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.json({
-      ...contributionsData,
+      ...scoped,
       commitDetails
     });
   } catch (error) {

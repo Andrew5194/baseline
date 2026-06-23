@@ -24,7 +24,17 @@ export async function syncIntegration(integrationId: string): Promise<number> {
     throw new Error('No GitHub username on integration');
   }
 
-  const since = integration.lastSyncedAt || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  // Incremental window. We re-scan an overlap before lastSyncedAt rather than
+  // trusting the cursor exactly: GitHub's contributionsCollection graph (used to
+  // enumerate repos in client.ts) lags behind freshly-pushed commits, so a narrow
+  // "since last run" window silently drops just-pushed events — and because the
+  // cursor advances to now() unconditionally, they were never retried. The overlap
+  // makes each run self-healing; onConflictDoNothing dedupes the re-scanned rows.
+  const FULL_BACKFILL_MS = 90 * 24 * 60 * 60 * 1000;
+  const OVERLAP_MS = 3 * 24 * 60 * 60 * 1000;
+  const since = integration.lastSyncedAt
+    ? new Date(integration.lastSyncedAt.getTime() - OVERLAP_MS)
+    : new Date(Date.now() - FULL_BACKFILL_MS);
   const startTime = Date.now();
   let totalEvents = 0;
 

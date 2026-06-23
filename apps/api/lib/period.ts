@@ -1,6 +1,12 @@
 // Calendar-aligned periods for the Overview: this week / month / year. Unlike the
 // trailing windows (7d/30d/90d), these start at the period boundary so a bar chart
 // spanning the full period shows where today falls within it.
+//
+// All boundaries are computed in the user's local timezone (`tz`, an IANA name)
+// and returned as the UTC instants the DB filters on — so a "day" is the user's
+// local calendar day, not a UTC day.
+
+import { partsInTz, zonedCivilToUtc, addLocalDays, startOfDayInTz } from '@baseline/metrics';
 
 export type Period = 'week' | 'month' | 'year';
 
@@ -10,18 +16,16 @@ export function isPeriod(v: string): v is Period {
   return v === 'week' || v === 'month' || v === 'year';
 }
 
-export function endOfTodayUTC(now: Date): Date {
-  const d = new Date(now);
-  d.setUTCHours(24, 0, 0, 0);
-  return d;
+// UTC instant of the start of the next local day after `now` (exclusive end of "today").
+export function endOfToday(now: Date, tz: string): Date {
+  return addLocalDays(startOfDayInTz(now, tz), 1, tz);
 }
 
-// Monday-anchored start of the week containing `now` (UTC, midnight).
-function startOfWeek(now: Date): Date {
-  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const sinceMonday = (d.getUTCDay() + 6) % 7;
-  d.setUTCDate(d.getUTCDate() - sinceMonday);
-  return d;
+// Monday-anchored start of the local week containing `now`, as a UTC instant.
+function startOfWeek(now: Date, tz: string): Date {
+  const { weekday } = partsInTz(now, tz);
+  const sinceMonday = (weekday + 6) % 7;
+  return addLocalDays(startOfDayInTz(now, tz), -sinceMonday, tz);
 }
 
 export interface PeriodBounds {
@@ -33,28 +37,29 @@ export interface PeriodBounds {
   budgetHours: number; // 24 * days
 }
 
-export function periodBounds(period: Period, now: Date): PeriodBounds {
-  const y = now.getUTCFullYear();
-  const m = now.getUTCMonth();
+export function periodBounds(period: Period, now: Date, tz: string): PeriodBounds {
+  const { year, month } = partsInTz(now, tz);
   let start: Date;
   let end: Date;
   let prevStart: Date;
   let granularity: 'day' | 'month';
 
   if (period === 'week') {
-    start = startOfWeek(now);
-    end = new Date(start.getTime() + 7 * DAY_MS);
-    prevStart = new Date(start.getTime() - 7 * DAY_MS);
+    start = startOfWeek(now, tz);
+    end = addLocalDays(start, 7, tz);
+    prevStart = addLocalDays(start, -7, tz);
     granularity = 'day';
   } else if (period === 'month') {
-    start = new Date(Date.UTC(y, m, 1));
-    end = new Date(Date.UTC(y, m + 1, 1));
-    prevStart = new Date(Date.UTC(y, m - 1, 1));
+    // zonedCivilToUtc passes month-1 to Date.UTC, which normalizes overflow
+    // (month+1 → next year's January, month-1 → previous December).
+    start = zonedCivilToUtc(year, month, 1, 0, tz);
+    end = zonedCivilToUtc(year, month + 1, 1, 0, tz);
+    prevStart = zonedCivilToUtc(year, month - 1, 1, 0, tz);
     granularity = 'day';
   } else {
-    start = new Date(Date.UTC(y, 0, 1));
-    end = new Date(Date.UTC(y + 1, 0, 1));
-    prevStart = new Date(Date.UTC(y - 1, 0, 1));
+    start = zonedCivilToUtc(year, 1, 1, 0, tz);
+    end = zonedCivilToUtc(year + 1, 1, 1, 0, tz);
+    prevStart = zonedCivilToUtc(year - 1, 1, 1, 0, tz);
     granularity = 'month';
   }
 
@@ -62,19 +67,28 @@ export function periodBounds(period: Period, now: Date): PeriodBounds {
   return { start, end, prevStart, granularity, days, budgetHours: days * 24 };
 }
 
-// Buckets covering [start, end): daily for week/month, monthly (Jan…Dec) for year.
-export function periodBuckets(period: Period, start: Date, end: Date): Array<{ start: Date; end: Date }> {
+// Buckets covering [start, end): one per local day for week/month, monthly
+// (Jan…Dec) for year. Each bucket is a UTC-instant range aligned to local days.
+export function periodBuckets(
+  period: Period,
+  start: Date,
+  end: Date,
+  tz: string,
+): Array<{ start: Date; end: Date }> {
   const out: Array<{ start: Date; end: Date }> = [];
   if (period === 'year') {
-    const y = start.getUTCFullYear();
-    for (let mm = 0; mm < 12; mm++) {
-      out.push({ start: new Date(Date.UTC(y, mm, 1)), end: new Date(Date.UTC(y, mm + 1, 1)) });
+    const { year } = partsInTz(start, tz);
+    for (let mm = 1; mm <= 12; mm++) {
+      out.push({
+        start: zonedCivilToUtc(year, mm, 1, 0, tz),
+        end: zonedCivilToUtc(year, mm + 1, 1, 0, tz),
+      });
     }
   } else {
-    let cursor = new Date(start);
+    let cursor = start;
     while (cursor.getTime() < end.getTime()) {
-      const next = new Date(cursor.getTime() + DAY_MS);
-      out.push({ start: new Date(cursor), end: next });
+      const next = addLocalDays(cursor, 1, tz);
+      out.push({ start: cursor, end: next });
       cursor = next;
     }
   }

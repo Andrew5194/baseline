@@ -1,11 +1,19 @@
 'use client';
 
+import { formatDelta } from '../../lib/format-delta';
+
 interface ConsistencyScoreProps {
   activeDays: number | null;
   totalDays: number;
   delta: number | null;
   window: string;
 }
+
+const toneColor: Record<'up' | 'down' | 'neutral', string> = {
+  up: 'text-emerald-600',
+  down: 'text-red-500',
+  neutral: 'text-neutral-400',
+};
 
 export function ConsistencyScore({ activeDays, totalDays, delta, window }: ConsistencyScoreProps) {
   const score = activeDays !== null && totalDays > 0 ? Math.round((activeDays / totalDays) * 100) : null;
@@ -15,11 +23,9 @@ export function ConsistencyScore({ activeDays, totalDays, delta, window }: Consi
   const circumference = 2 * Math.PI * radius;
   const progress = score !== null ? (score / 100) * circumference : 0;
 
-  const deltaColor = delta === null ? 'text-neutral-400' : delta >= 0 ? 'text-emerald-600' : 'text-red-500';
-  const deltaText =
-    delta !== null
-      ? `${delta >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(delta * 100))}% vs prior ${window}`
-      : `— vs prior ${window}`;
+  const f = formatDelta(delta, activeDays);
+  const deltaColor = toneColor[f.tone];
+  const deltaText = `${f.text} vs prior ${window}`;
 
   const scoreColor = score === null ? '#a3a3a3' : score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
 

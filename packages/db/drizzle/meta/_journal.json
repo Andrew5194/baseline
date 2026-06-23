@@ -43,6 +43,13 @@
       "when": 1781587940639,
       "tag": "0005_romantic_kat_farrell",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781909699482,
+      "tag": "0006_add_user_timezone",
+      "breakpoints": true
     }
   ]
 }
