@@ -6,6 +6,7 @@ import { MetricBarChart } from '../../components/metric-bar-chart';
 import { ConsistencyScore } from '../../components/consistency-score';
 import { MetricsStrip, type StripStat } from '../../components/metrics-strip';
 import { DayDetailsModal } from '../../components/day-details-modal';
+import { SourceDropdown } from '../../components/source-dropdown';
 import { apiFetch } from '../../../lib/api';
 import { useTimezone } from '../../../lib/use-timezone';
 
@@ -22,14 +23,19 @@ interface TimeseriesResponse {
   data: Array<{ date: string; value: number }>;
 }
 
-// Curated GitHub-derived metrics. `tab` is the Activity Details tab a bar opens to.
-const METRICS: Array<{ key: string; metric: string; label: string; unit: string; tab?: string; sub?: 'elapsed' }> = [
-  { key: 'commits', metric: 'commits', label: 'Commits', unit: 'commits', tab: 'commits' },
-  { key: 'throughput', metric: 'throughput', label: 'PRs Merged', unit: 'PRs', tab: 'prs' },
-  { key: 'reviews', metric: 'reviews', label: 'Reviews', unit: 'reviews', tab: 'reviews' },
-  { key: 'active_days', metric: 'active_days', label: 'Active Days', unit: 'days', sub: 'elapsed' },
-  { key: 'streak', metric: 'streak', label: 'Best Streak', unit: 'days' },
+// Available metrics, each tagged with the source it comes from. The source filter
+// is derived from these, so adding metrics for a new integration automatically
+// surfaces that source in the filter. `tab` is the Activity Details tab a bar opens.
+const METRICS: Array<{ key: string; metric: string; label: string; unit: string; source: string; tab?: string; sub?: 'elapsed' }> = [
+  { key: 'commits', metric: 'commits', label: 'Commits', unit: 'commits', source: 'github', tab: 'commits' },
+  { key: 'throughput', metric: 'throughput', label: 'PRs Merged', unit: 'PRs', source: 'github', tab: 'prs' },
+  { key: 'reviews', metric: 'reviews', label: 'Reviews', unit: 'reviews', source: 'github', tab: 'reviews' },
+  { key: 'active_days', metric: 'active_days', label: 'Active Days', unit: 'days', source: 'github', sub: 'elapsed' },
+  { key: 'streak', metric: 'streak', label: 'Best Streak', unit: 'days', source: 'github' },
 ];
+
+// Distinct sources that currently have metrics — drives the source filter.
+const SOURCES = [...new Set(METRICS.map((m) => m.source))];
 
 const PERIOD_LABEL: Record<Period, string> = { week: 'this week', month: 'this month', year: 'this year' };
 
@@ -76,6 +82,7 @@ function bucketRange(period: Period, date: string): { since: string; until: stri
 export default function Metrics() {
   const tz = useTimezone();
   const [period, setPeriod] = useState<Period>('week');
+  const [source, setSource] = useState('all');
   const [active, setActive] = useState('commits');
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [seriesMap, setSeriesMap] = useState<Record<string, Array<{ date: string; value: number }>>>({});
@@ -128,7 +135,17 @@ export default function Metrics() {
   }).format(new Date()); // YYYY-MM-DD
   const todayKey = dataPeriod === 'year' ? `${todayLocal.slice(0, 7)}-01` : todayLocal;
 
-  const stats: StripStat[] = METRICS.map((d) => ({
+  // Filter the displayed metrics by the selected source.
+  const visibleMetrics = source === 'all' ? METRICS : METRICS.filter((d) => d.source === source);
+  const showConsistency = visibleMetrics.some((d) => d.key === 'active_days');
+
+  function changeSource(s: string) {
+    setSource(s);
+    const vis = s === 'all' ? METRICS : METRICS.filter((d) => d.source === s);
+    if (!vis.some((d) => d.key === active)) setActive(vis[0]?.key ?? active);
+  }
+
+  const stats: StripStat[] = visibleMetrics.map((d) => ({
     key: d.key,
     label: d.label,
     value: d.key === 'streak' ? `${m?.[d.metric]?.value ?? 0}d` : (m?.[d.metric]?.value ?? 0),
@@ -155,17 +172,22 @@ export default function Metrics() {
           <h1 className="text-xl font-semibold tracking-tight">Metrics</h1>
           <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period)}</p>
         </div>
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <div className="flex items-center gap-3">
+          <SourceDropdown value={source} onChange={changeSource} sources={SOURCES} />
+          <PeriodSelector value={period} onChange={setPeriod} />
+        </div>
       </div>
 
-      <div className="mb-6">
-        <ConsistencyScore
-          activeDays={m?.active_days?.value ?? null}
-          totalDays={elapsedDays}
-          delta={m?.active_days?.delta ?? null}
-          window={dataPeriod}
-        />
-      </div>
+      {showConsistency && (
+        <div className="mb-6">
+          <ConsistencyScore
+            activeDays={m?.active_days?.value ?? null}
+            totalDays={elapsedDays}
+            delta={m?.active_days?.delta ?? null}
+            window={dataPeriod}
+          />
+        </div>
+      )}
 
       <div className="mb-6">
         <MetricsStrip stats={stats} activeKey={active} onSelect={setActive} />

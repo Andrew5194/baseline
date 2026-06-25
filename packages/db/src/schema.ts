@@ -5,6 +5,8 @@ import {
   timestamp,
   bigint,
   integer,
+  doublePrecision,
+  boolean,
   jsonb,
   uniqueIndex,
   index,
@@ -154,4 +156,50 @@ export const categoryColors = pgTable(
     color: text('color').notNull(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.category] })],
+);
+
+// ── Goals ────────────────────────────────────────────────────────────────────
+// A recurring target the user wants to hit each cadence period (day/week/month),
+// e.g. "at least 1h Coding every day" or "5 PRs merged each week". Progress is
+// computed on read from events; goals only store the definition.
+
+export const goals = pgTable(
+  'goals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    // 'time' → hours in a category; 'github' → a GitHub activity count.
+    type: text('type').notNull(),
+    // 'hours' for time goals; 'commits' | 'prs_merged' | 'reviews' | 'active_days' for github.
+    metric: text('metric').notNull(),
+    // The time category (time goals only); null for github goals.
+    category: text('category'),
+    // Minimum target per period: hours for time goals, a count for github goals.
+    target: doublePrecision('target').notNull(),
+    // 'day' | 'week' | 'month' — the period the target resets over.
+    cadence: text('cadence').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('goals_user_idx').on(table.userId)],
+);
+
+// ── Todos ────────────────────────────────────────────────────────────────────
+// One-off tasks the user wants to get done — a simple checklist alongside the
+// recurring goals.
+
+export const todos = pgTable(
+  'todos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: text('title').notNull(),
+    done: boolean('done').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [index('todos_user_idx').on(table.userId)],
 );

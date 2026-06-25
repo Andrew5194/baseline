@@ -9,5 +9,7 @@ export {
   events,
   recurringAllocations,
   categoryColors,
+  goals,
+  todos,
 } from './schema';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

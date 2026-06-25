@@ -52,6 +52,16 @@ export function periodRangeLabel(period: Period, timeZone = 'UTC'): string {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
+// Like periodRangeLabel but also handles a single day (for daily goals) — e.g.
+// "June 25th", "June 22nd – June 28th", "June", "2026".
+export function cadenceRangeLabel(cadence: string, timeZone = 'UTC'): string {
+  if (cadence === 'day') {
+    const today = localToday(timeZone);
+    return `${MONTHS_FULL[today.getUTCMonth()]} ${ordinal(today.getUTCDate())}`;
+  }
+  return periodRangeLabel(cadence as Period, timeZone);
+}
+
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   return (
     <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800">
