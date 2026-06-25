@@ -50,6 +50,20 @@
       "when": 1781909699482,
       "tag": "0006_add_user_timezone",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782249444237,
+      "tag": "0007_add_goals",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782414331531,
+      "tag": "0008_add_todos",
+      "breakpoints": true
     }
   ]
 }
