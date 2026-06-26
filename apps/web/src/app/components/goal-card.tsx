@@ -1,142 +1,158 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
-
-// Styled hover tooltip (the native `title` attribute is slow and OS-styled). Renders
-// above the trigger so it stacks over earlier cards in the list rather than being
-// covered by the next one.
-function Tooltip({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <span className="relative inline-flex group/tt">
-      {children}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-30 w-56 px-2.5 py-1.5 rounded-lg bg-neutral-900 dark:bg-neutral-700 text-white text-[11px] leading-snug text-center shadow-lg opacity-0 group-hover/tt:opacity-100 transition-opacity duration-150"
-      >
-        {label}
-      </span>
-    </span>
-  );
-}
-
-export type Cadence = 'day' | 'week' | 'month' | 'year';
+import { goalColor } from '../../lib/goal-colors';
+import { GoalColorPicker } from './goal-color-picker';
+import { GoalDetail } from './goal-detail';
 
 export interface Goal {
   id: string;
-  type: 'time' | 'github';
-  metric: string;
-  category: string | null;
-  target: number;
-  cadence: Cadence;
   title: string;
-  unit: string;
-  period_label: string;
-  current: number;
-  met: boolean;
-  pct: number;
-  streak: number;
+  color: string | null;
+  done: boolean;
+  completed_at: string | null;
+  task_total: number;
+  task_done: number;
 }
 
-export const CADENCE_ADVERB: Record<Cadence, string> = {
-  day: 'daily',
-  week: 'weekly',
-  month: 'monthly',
-  year: 'yearly',
-};
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-const fmtUnit = (v: number, unit: string) => (unit === 'h' ? `${v}h` : `${v} ${unit}`);
+export function GoalCard({ goal, onChange }: { goal: Goal; onChange: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(goal.title);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [everOpened, setEverOpened] = useState(false);
+  const color = goalColor(goal.color, goal.id);
 
-const METRIC_WORD: Record<string, string> = {
-  commits: 'commits',
-  prs_merged: 'merged PRs',
-  reviews: 'reviews',
-  active_days: 'active days',
-};
-
-// Where a goal's progress comes from — manual logging vs. integration-detected events.
-function verification(goal: Goal): { source: string; tip: string } {
-  if (goal.type === 'time') {
-    return {
-      source: 'time entries',
-      tip: `Verified from the time you log manually in the “${goal.category}” category.`,
-    };
+  function toggleExpand() {
+    setEverOpened(true);
+    setExpanded((v) => !v);
   }
-  return {
-    source: 'GitHub',
-    tip: `Verified automatically from ${METRIC_WORD[goal.metric] ?? goal.metric} detected via your GitHub integration — no manual logging needed.`,
-  };
-}
 
-interface GoalCardProps {
-  goal: Goal;
-  onChange: () => void;
-}
+  async function setColor(c: string) {
+    await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ color: c }) }).catch(console.error);
+    onChange();
+  }
 
-export function GoalCard({ goal, onChange }: GoalCardProps) {
+  async function toggle() {
+    await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ done: !goal.done }) }).catch(console.error);
+    onChange();
+  }
   async function remove() {
     await apiFetch(`/v1/goals/${goal.id}`, { method: 'DELETE' }).catch(console.error);
     onChange();
   }
 
-  const barColor = goal.met ? 'bg-emerald-500' : 'bg-emerald-400/70';
-  const verify = verification(goal);
+  function startEdit() {
+    setDraft(goal.title);
+    setEditing(true);
+  }
+  async function saveEdit() {
+    setEditing(false);
+    const t = draft.trim();
+    if (!t || t === goal.title) return;
+    await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ title: t }) }).catch(console.error);
+    onChange();
+  }
 
   return (
-    <div className="group p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
-              {goal.type === 'time' ? goal.category : goal.title.split(' · ')[0]}
-            </p>
-            {goal.met && (
-              <Tooltip label={verify.tip}>
-                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0 cursor-help">
-                  ✓ verified
-                </span>
-              </Tooltip>
-            )}
-          </div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-            At least {fmtUnit(goal.target, goal.unit)} ·{' '}
-            <Tooltip label={verify.tip}>
-              <span className="cursor-help underline decoration-dotted decoration-neutral-300 dark:decoration-neutral-600 underline-offset-2">
-                via {verify.source}
-              </span>
-            </Tooltip>
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {goal.streak > 0 && (
-            <span className="text-xs font-medium text-amber-600 dark:text-amber-400" title={`${goal.streak} ${goal.cadence}s in a row`}>
-              🔥 {goal.streak}
+    <div className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+      <div
+        className={`flex items-center gap-3 p-4 ${editing ? '' : 'cursor-pointer'}`}
+        onClick={editing ? undefined : toggleExpand}
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggle();
+          }}
+          aria-label={goal.done ? 'Mark as not done' : 'Mark as done'}
+          className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors ${
+            goal.done
+              ? 'bg-emerald-500 border-emerald-500 text-white'
+              : 'border-neutral-300 dark:border-neutral-600 hover:border-emerald-400'
+          }`}
+        >
+          {goal.done && (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          {editing ? (
+            <input
+              autoFocus
+              value={draft}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={saveEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEdit();
+                if (e.key === 'Escape') setEditing(false);
+              }}
+              className="w-full text-sm rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1 -my-1 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            />
+          ) : (
+            <span
+              className={`block text-sm truncate ${
+                goal.done ? 'line-through text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-white'
+              }`}
+            >
+              {goal.title}
             </span>
           )}
-          <button
-            onClick={remove}
-            aria-label="Delete goal"
-            className="text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-lg leading-none"
-          >
-            ×
-          </button>
+          {goal.done && goal.completed_at && !editing && (
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">Completed {fmtDate(goal.completed_at)}</p>
+          )}
         </div>
+
+        {!editing && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`flex items-center gap-2 flex-shrink-0 transition-opacity ${
+              pickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+          >
+            <GoalColorPicker current={color} onPick={setColor} onOpenChange={setPickerOpen} />
+            <button
+              onClick={startEdit}
+              aria-label="Edit goal"
+              className="text-neutral-300 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-300"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button
+              onClick={remove}
+              aria-label="Delete goal"
+              className="text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400 text-lg leading-none"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {!editing && (
+          <svg
+            className={`w-4 h-4 text-neutral-300 dark:text-neutral-600 flex-shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        )}
       </div>
 
-      {/* Progress bar */}
-      <div className="h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`}
-          style={{ width: `${goal.pct}%` }}
-        />
-      </div>
-
-      <div className="flex items-baseline justify-between mt-2">
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-          <span className="font-semibold text-neutral-900 dark:text-white tabular-nums">{fmtUnit(goal.current, goal.unit)}</span>
-          {' '}/ {fmtUnit(goal.target, goal.unit)} {goal.period_label}
-        </p>
-        <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 tabular-nums">{goal.pct}%</p>
+      {/* Slide-open detail */}
+      <div className={`grid transition-all duration-200 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden">{everOpened && <GoalDetail goalId={goal.id} />}</div>
       </div>
     </div>
   );

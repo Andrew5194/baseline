@@ -1,6 +1,6 @@
 {
-  "id": "bb6f5271-b420-41c5-8b72-106a63784726",
-  "prevId": "6e0fdb10-4a60-4103-82a1-313d27083360",
+  "id": "0597816f-0f84-44db-9c6a-20795e4159d7",
+  "prevId": "4b310650-354d-4ee6-a560-3e183fa55f03",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -352,6 +352,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "done": {
           "name": "done",
@@ -865,6 +871,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "date": {
+          "name": "date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "goal_id": {
+          "name": "goal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "done": {
           "name": "done",
           "type": "boolean",
@@ -915,6 +933,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "todos_goal_id_goals_id_fk": {
+          "name": "todos_goal_id_goals_id_fk",
+          "tableFrom": "todos",
+          "tableTo": "goals",
+          "columnsFrom": [
+            "goal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

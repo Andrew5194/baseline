@@ -5,7 +5,6 @@ import {
   timestamp,
   bigint,
   integer,
-  doublePrecision,
   boolean,
   jsonb,
   uniqueIndex,
@@ -159,9 +158,9 @@ export const categoryColors = pgTable(
 );
 
 // ── Goals ────────────────────────────────────────────────────────────────────
-// A recurring target the user wants to hit each cadence period (day/week/month),
-// e.g. "at least 1h Coding every day" or "5 PRs merged each week". Progress is
-// computed on read from events; goals only store the definition.
+// A finite thing the user wants to accomplish, in their own words (e.g. "Ship the
+// billing page", "Read Designing Data-Intensive Applications"). Checked off when
+// done; `completedAt` powers the monthly completion heatmap.
 
 export const goals = pgTable(
   'goals',
@@ -170,16 +169,13 @@ export const goals = pgTable(
     userId: uuid('user_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
-    // 'time' → hours in a category; 'github' → a GitHub activity count.
-    type: text('type').notNull(),
-    // 'hours' for time goals; 'commits' | 'prs_merged' | 'reviews' | 'active_days' for github.
-    metric: text('metric').notNull(),
-    // The time category (time goals only); null for github goals.
-    category: text('category'),
-    // Minimum target per period: hours for time goals, a count for github goals.
-    target: doublePrecision('target').notNull(),
-    // 'day' | 'week' | 'month' — the period the target resets over.
-    cadence: text('cadence').notNull(),
+    title: text('title').notNull(),
+    // User-chosen color (hex). Null falls back to a deterministic palette color.
+    color: text('color'),
+    // Free-text notes about the goal.
+    notes: text('notes'),
+    done: boolean('done').notNull().default(false),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index('goals_user_idx').on(table.userId)],
@@ -197,9 +193,53 @@ export const todos = pgTable(
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
     title: text('title').notNull(),
+    // The local day the task is scheduled for (YYYY-MM-DD). Defaults to the day it
+    // was created, but can be a future date.
+    date: text('date'),
+    // The goal this task advances (tag). Null when untagged.
+    goalId: uuid('goal_id').references(() => goals.id, { onDelete: 'set null' }),
     done: boolean('done').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
   },
   (table) => [index('todos_user_idx').on(table.userId)],
+);
+
+// A standing task that recurs on the given weekdays (daysMask bit i = weekday i,
+// 0=Sun … 6=Sat; 127 = every day). Shown in the list on matching days and checked
+// off per day via recurringTodoCompletions.
+export const recurringTodos = pgTable(
+  'recurring_todos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: text('title').notNull(),
+    daysMask: integer('days_mask').notNull().default(127),
+    // The goal this recurring task advances (tag). Null when untagged.
+    goalId: uuid('goal_id').references(() => goals.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('recurring_todos_user_idx').on(table.userId)],
+);
+
+// One row per day a recurring todo was checked off. `date` is the local day key.
+export const recurringTodoCompletions = pgTable(
+  'recurring_todo_completions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    recurringTodoId: uuid('recurring_todo_id')
+      .references(() => recurringTodos.id, { onDelete: 'cascade' })
+      .notNull(),
+    date: text('date').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('recurring_todo_completions_idx').on(table.recurringTodoId, table.date),
+    index('recurring_todo_completions_user_idx').on(table.userId),
+  ],
 );

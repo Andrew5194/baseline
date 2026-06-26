@@ -11,14 +11,14 @@ export async function PATCH(
   const userId = await getCurrentUserId();
   const { id } = await params;
 
-  let body: { done?: boolean; title?: string };
+  let body: { done?: boolean; title?: string; goal_id?: string | null };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const updates: { done?: boolean; completedAt?: Date | null; title?: string } = {};
+  const updates: { done?: boolean; completedAt?: Date | null; title?: string; goalId?: string | null } = {};
   if (typeof body.done === 'boolean') {
     updates.done = body.done;
     updates.completedAt = body.done ? new Date() : null;
@@ -29,6 +29,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'title cannot be empty', code: 'INVALID_TITLE' }, { status: 400 });
     }
     updates.title = title;
+  }
+  // goal_id present (string → tag, null → untag).
+  if ('goal_id' in body) {
+    updates.goalId = typeof body.goal_id === 'string' && body.goal_id ? body.goal_id : null;
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'nothing to update', code: 'INVALID_BODY' }, { status: 400 });

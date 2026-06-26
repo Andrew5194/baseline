@@ -1,0 +1,2 @@
+ALTER TABLE "todos" ADD COLUMN "goal_id" uuid;--> statement-breakpoint
+ALTER TABLE "todos" ADD CONSTRAINT "todos_goal_id_goals_id_fk" FOREIGN KEY ("goal_id") REFERENCES "public"."goals"("id") ON DELETE set null ON UPDATE no action;
