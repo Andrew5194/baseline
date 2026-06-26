@@ -174,6 +174,8 @@ export const goals = pgTable(
     color: text('color'),
     // Free-text notes about the goal.
     notes: text('notes'),
+    // Manual sort order (drag-and-drop); lower sorts first.
+    position: integer('position').notNull().default(0),
     done: boolean('done').notNull().default(false),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

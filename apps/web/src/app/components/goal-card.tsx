@@ -5,6 +5,7 @@ import { apiFetch } from '../../lib/api';
 import { goalColor } from '../../lib/goal-colors';
 import { GoalColorPicker } from './goal-color-picker';
 import { GoalDetail } from './goal-detail';
+import { Modal } from './modal';
 
 export interface Goal {
   id: string;
@@ -18,10 +19,19 @@ export interface Goal {
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-export function GoalCard({ goal, onChange }: { goal: Goal; onChange: () => void }) {
+export function GoalCard({
+  goal,
+  onChange,
+  drag,
+}: {
+  goal: Goal;
+  onChange: () => void;
+  drag?: { onStart: (e: React.DragEvent) => void; onEnd: (e: React.DragEvent) => void };
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(goal.title);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
   const color = goalColor(goal.color, goal.id);
@@ -58,10 +68,13 @@ export function GoalCard({ goal, onChange }: { goal: Goal; onChange: () => void 
   }
 
   return (
-    <div className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+    <div data-goal-card className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
       <div
-        className={`flex items-center gap-3 p-4 ${editing ? '' : 'cursor-pointer'}`}
+        className={`flex items-center gap-3 p-4 select-none ${editing ? '' : 'cursor-pointer'}`}
         onClick={editing ? undefined : toggleExpand}
+        draggable={!!drag && !editing}
+        onDragStart={drag?.onStart}
+        onDragEnd={drag?.onEnd}
       >
         <button
           onClick={(e) => {
@@ -128,11 +141,13 @@ export function GoalCard({ goal, onChange }: { goal: Goal; onChange: () => void 
               </svg>
             </button>
             <button
-              onClick={remove}
+              onClick={() => setConfirming(true)}
               aria-label="Delete goal"
-              className="text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400 text-lg leading-none"
+              className="text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400"
             >
-              ×
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
             </button>
           </div>
         )}
@@ -154,6 +169,31 @@ export function GoalCard({ goal, onChange }: { goal: Goal; onChange: () => void 
       <div className={`grid transition-all duration-200 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
         <div className="overflow-hidden">{everOpened && <GoalDetail goalId={goal.id} />}</div>
       </div>
+
+      {confirming && (
+        <Modal onClose={() => setConfirming(false)}>
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xl p-6">
+            <h2 className="text-base font-semibold tracking-tight text-neutral-900 dark:text-white">Delete goal?</h2>
+            <p className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+              “{goal.title}” will be permanently deleted. Tasks tagged to it will become uncategorized. This can’t be undone.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirming(false)}
+                className="px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={remove}
+                className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@ export async function GET() {
     .select({ id: goals.id, title: goals.title, color: goals.color, done: goals.done, completedAt: goals.completedAt, createdAt: goals.createdAt })
     .from(goals)
     .where(eq(goals.userId, userId))
-    .orderBy(asc(goals.done), desc(goals.createdAt));
+    .orderBy(asc(goals.done), asc(goals.position), desc(goals.createdAt));
 
   // Tally tagged tasks per goal.
   const taggedTasks = await db

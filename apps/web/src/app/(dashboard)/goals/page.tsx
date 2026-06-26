@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '../../../lib/api';
 import { Modal } from '../../components/modal';
 import { AddGoalForm } from '../../components/add-goal-form';
@@ -10,6 +10,8 @@ import { TodoSection } from '../../components/todo-section';
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[] | null>(null);
   const [adding, setAdding] = useState(false);
+  const dragIndex = useRef<number | null>(null);
+  const orderRef = useRef<Goal[]>([]);
 
   const load = useCallback(
     () => apiFetch<{ data: Goal[] }>('/v1/goals').then((r) => setGoals(r.data)).catch(console.error),
@@ -22,6 +24,38 @@ export default function Goals() {
     window.addEventListener('baseline:goals-changed', onChange);
     return () => window.removeEventListener('baseline:goals-changed', onChange);
   }, [load]);
+
+  useEffect(() => {
+    if (goals) orderRef.current = goals;
+  }, [goals]);
+
+  function onDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const from = dragIndex.current;
+    if (from === null || from === i) return;
+    // Only swap once the pointer crosses the target's midpoint — keeps the reorder
+    // from thrashing back and forth while hovering a single card.
+    const rect = e.currentTarget.getBoundingClientRect();
+    const past = e.clientY - rect.top > rect.height / 2;
+    if ((from < i && !past) || (from > i && past)) return;
+    setGoals((gs) => {
+      if (!gs) return gs;
+      const next = [...gs];
+      const [moved] = next.splice(from, 1);
+      next.splice(i, 0, moved);
+      return next;
+    });
+    dragIndex.current = i;
+  }
+
+  async function persistOrder() {
+    dragIndex.current = null;
+    const ids = orderRef.current.map((g) => g.id);
+    if (ids.length) {
+      await apiFetch('/v1/goals/reorder', { method: 'POST', body: JSON.stringify({ ids }) }).catch(console.error);
+    }
+  }
 
   return (
     <div className="p-8 max-w-3xl">
@@ -68,8 +102,23 @@ export default function Goals() {
             </div>
           ) : (
             <div className="space-y-2">
-              {goals.map((g) => (
-                <GoalCard key={g.id} goal={g} onChange={load} />
+              {goals.map((g, i) => (
+                <div key={g.id} onDragOver={(e) => onDragOver(e, i)} onDrop={(e) => e.preventDefault()}>
+                  <GoalCard
+                    goal={g}
+                    onChange={load}
+                    drag={{
+                      onStart: (e) => {
+                        dragIndex.current = i;
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', g.id);
+                        const card = (e.currentTarget as HTMLElement).closest('[data-goal-card]') as HTMLElement | null;
+                        if (card) e.dataTransfer.setDragImage(card, 20, 20);
+                      },
+                      onEnd: persistOrder,
+                    }}
+                  />
+                </div>
               ))}
             </div>
           )}

@@ -63,6 +63,28 @@ function eventRepo(payload: Record<string, unknown> | null): string | null {
   return repo || null;
 }
 
+// The GitHub URL for an event, built from its repo + identifier.
+function eventUrl(type: string, payload: Record<string, unknown> | null): string | null {
+  const repo = eventRepo(payload);
+  if (!repo || !payload) return null;
+  switch (type) {
+    case 'github.commit.pushed': {
+      const sha = payload.sha as string | undefined;
+      return sha ? `https://github.com/${repo}/commit/${sha}` : `https://github.com/${repo}`;
+    }
+    case 'github.pr.merged': {
+      const num = payload.number as number | undefined;
+      return num ? `https://github.com/${repo}/pull/${num}` : `https://github.com/${repo}`;
+    }
+    case 'github.pr.reviewed': {
+      const num = payload.pr_number as number | undefined;
+      return num ? `https://github.com/${repo}/pull/${num}` : `https://github.com/${repo}`;
+    }
+    default:
+      return `https://github.com/${repo}`;
+  }
+}
+
 export function DayDetailsModal({ since, until, title, initialCategory = 'commits', onClose }: DayDetailsModalProps) {
   const tz = useTimezone();
   const [loading, setLoading] = useState(true);
@@ -189,13 +211,19 @@ export function DayDetailsModal({ since, until, title, initialCategory = 'commit
                   activeItems.map((event) => {
                     const { icon, color } = eventIcon(event.event_type);
                     const repo = eventRepo(event.payload);
+                    const url = eventUrl(event.event_type, event.payload);
                     const sha = event.event_type === 'github.commit.pushed'
                       ? (event.payload?.sha as string)?.slice(0, 7)
                       : null;
                     return (
-                      <div
+                      <a
                         key={event.id}
-                        className="flex items-start gap-3 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
+                        href={url ?? undefined}
+                        target={url ? '_blank' : undefined}
+                        rel={url ? 'noopener noreferrer' : undefined}
+                        className={`group/event flex items-start gap-3 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800 transition-colors ${
+                          url ? 'cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-500/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/50' : ''
+                        }`}
                       >
                         <div className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${color}`}>
                           {icon}
@@ -220,7 +248,18 @@ export function DayDetailsModal({ since, until, title, initialCategory = 'commit
                             </span>
                           </div>
                         </div>
-                      </div>
+                        {url && (
+                          <svg
+                            className="w-4 h-4 mt-0.5 flex-shrink-0 text-neutral-300 dark:text-neutral-600 group-hover/event:text-emerald-500 transition-colors"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        )}
+                      </a>
                     );
                   })
                 )}

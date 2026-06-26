@@ -99,6 +99,13 @@
       "when": 1782432522689,
       "tag": "0013_goal_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1782506721611,
+      "tag": "0014_goal_position",
+      "breakpoints": true
     }
   ]
 }

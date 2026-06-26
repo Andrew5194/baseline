@@ -77,6 +77,8 @@ export function TodoSection() {
   const [title, setTitle] = useState('');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showRecurring, setShowRecurring] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
 
   const load = useCallback(
     () =>
@@ -121,6 +123,20 @@ export function TodoSection() {
     if (!t) return;
     setTitle('');
     await apiFetch('/v1/todos', { method: 'POST', body: JSON.stringify({ title: t, date: day }) }).catch(console.error);
+    load();
+  }
+
+  function startEdit(item: DayItem) {
+    setEditingId(item.id);
+    setEditDraft(item.title);
+  }
+  async function saveEdit(item: DayItem) {
+    setEditingId(null);
+    const t = editDraft.trim();
+    if (!t || t === item.title) return;
+    const path = item.recurring ? `/v1/recurring-todos/${item.id}` : `/v1/todos/${item.id}`;
+    await apiFetch(path, { method: 'PATCH', body: JSON.stringify({ title: t }) }).catch(console.error);
+    if (!item.recurring) notifyGoals();
     load();
   }
 
@@ -189,7 +205,7 @@ export function TodoSection() {
   return (
     <section className="mt-10">
       <div className="flex items-baseline justify-between mb-3">
-        <h2 className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">To-do</h2>
+        <h2 className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">Tasks</h2>
         <button
           onClick={() => setShowRecurring((v) => !v)}
           className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${
@@ -262,13 +278,29 @@ export function TodoSection() {
                 >
                   {t.done && <Check />}
                 </button>
-                <span
-                  className={`flex-1 text-sm truncate ${
-                    t.done ? 'text-neutral-400 dark:text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-200'
-                  }`}
-                >
-                  {t.title}
-                </span>
+                {editingId === t.id ? (
+                  <input
+                    autoFocus
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onBlur={() => saveEdit(t)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveEdit(t);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                    className="flex-1 text-sm rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1 -my-1 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  />
+                ) : (
+                  <button
+                    onClick={() => startEdit(t)}
+                    title="Click to edit"
+                    className={`flex-1 text-sm text-left truncate ${
+                      t.done ? 'text-neutral-400 dark:text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-200'
+                    }`}
+                  >
+                    {t.title}
+                  </button>
+                )}
                 {t.recurring ? (
                   <>
                     <TaskGoalTag
