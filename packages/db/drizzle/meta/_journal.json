@@ -54,15 +54,50 @@
     {
       "idx": 7,
       "version": "7",
-      "when": 1782249444237,
-      "tag": "0007_add_goals",
+      "when": 1782422532475,
+      "tag": "0007_add_goals_and_todos",
       "breakpoints": true
     },
     {
       "idx": 8,
       "version": "7",
-      "when": 1782414331531,
-      "tag": "0008_add_todos",
+      "when": 1782423238444,
+      "tag": "0008_add_recurring_todos",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782424278960,
+      "tag": "0009_todo_scheduled_date",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782426789713,
+      "tag": "0010_todo_goal_tag",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1782429103604,
+      "tag": "0011_goal_color",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1782431229621,
+      "tag": "0012_recurring_goal_tag",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1782432522689,
+      "tag": "0013_goal_notes",
       "breakpoints": true
     }
   ]

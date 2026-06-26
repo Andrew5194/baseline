@@ -2,26 +2,31 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Baseline AI mark: the Baseline logo (squircle + upward trend line + dots) as a
-// filled emerald app-icon, with a small sparkle to signal the AI assistant.
+// Baseline AI mark: a playful little robot in the Baseline logo's style — the same
+// monochrome, rounded squircle (theme-adaptive via currentColor). Robotic cues (a
+// jaunty tilted antenna + side ear-pods) made playful by a winking sparkly eye and
+// a big open grin, all at the Baseline logo's stroke weight.
 export function BaselineAIMark({ className = 'w-7 h-7' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 28 28" fill="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="baselineAiMark" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#059669" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="24" height="24" rx="6.8" fill="url(#baselineAiMark)" />
-      {/* baseline + upward trend line + dots (the Baseline mark) */}
-      <path d="M6.5 20h13.5" stroke="white" strokeOpacity="0.55" strokeWidth="1.3" strokeLinecap="round" />
-      <path d="M6.5 20 L11 14 L15 16 L20.5 8.5" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="11" cy="14" r="1.35" fill="white" />
-      <circle cx="15" cy="16" r="1.35" fill="white" />
-      <circle cx="20.5" cy="8.5" r="1.5" fill="white" />
-      {/* AI sparkle, tucked in the empty top-left */}
-      <path d="M8 5.6 L8.5 7.1 L10 7.6 L8.5 8.1 L8 9.6 L7.5 8.1 L6 7.6 L7.5 7.1 Z" fill="white" />
+    <svg className={`${className} text-neutral-900 dark:text-white`} viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      {/* jaunty antenna */}
+      <path d="M14 4 16 1.9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="16.4" cy="1.3" r="0.95" fill="currentColor" />
+      {/* ear-pods */}
+      <rect x="1" y="12.4" width="2.2" height="5.2" rx="1.1" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="24.8" y="12.4" width="2.2" height="5.2" rx="1.1" stroke="currentColor" strokeWidth="1.5" />
+      {/* head */}
+      <rect x="2.6" y="4" width="22.8" height="22" rx="6.8" stroke="currentColor" strokeWidth="1.6" />
+      {/* left eye — big and sparkly */}
+      <circle cx="10.6" cy="13.8" r="1.95" fill="currentColor" />
+      <circle cx="9.95" cy="13.2" r="0.6" className="fill-white dark:fill-neutral-900" />
+      {/* right eye — a happy wink */}
+      <path d="M15.6 14.2q1.8 -2.2 3.6 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      {/* soft blush */}
+      <circle cx="7.6" cy="17" r="0.95" fill="currentColor" opacity="0.3" />
+      <circle cx="20.4" cy="17" r="0.95" fill="currentColor" opacity="0.3" />
+      {/* clean smile */}
+      <path d="M11 18.4q3 2.6 6 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
@@ -33,9 +38,7 @@ export function BaselineAIMark({ className = 'w-7 h-7' }: { className?: string }
 // metrics + goals.
 
 interface Suggestion {
-  label: string;
-  sublabel: string;
-  payload: Record<string, unknown>;
+  label: string; // the goal text (also the payload title)
 }
 interface Msg {
   id: number;
@@ -57,41 +60,35 @@ const STARTERS = ['Help me code more consistently', 'Suggest a weekly goal', 'Am
 // Scripted stand-in for the model — loosely keyed to the message.
 function demoReply(input: string, id: number): Msg {
   const t = input.toLowerCase();
-  if (t.includes('cod') || t.includes('consistent') || t.includes('commit')) {
+  if (t.includes('cod') || t.includes('ship') || t.includes('build') || t.includes('feature')) {
     return {
       id,
       role: 'assistant',
-      text: "You've coded on 4 of the last 7 days — close to a streak. A daily target tends to lock that in. Want to start with one of these?",
-      suggestions: [
-        { label: 'At least 1h Coding', sublabel: 'every day', payload: { type: 'time', category: 'Coding', target: 1, cadence: 'day' } },
-        { label: '5 commits', sublabel: 'every week', payload: { type: 'github', metric: 'commits', target: 5, cadence: 'week' } },
-      ],
+      text: 'Nice — breaking a big push into clear, finishable goals helps. Want to add one of these?',
+      suggestions: [{ label: 'Ship the next feature' }, { label: 'Clear my PR backlog' }],
     };
   }
   if (t.includes('review') || t.includes('pr')) {
     return {
       id,
       role: 'assistant',
-      text: 'You merged 6 PRs this month but logged few reviews. Reviewing builds the habit both ways:',
-      suggestions: [{ label: '3 reviews', sublabel: 'every week', payload: { type: 'github', metric: 'reviews', target: 3, cadence: 'week' } }],
+      text: 'Reviewing keeps things moving for everyone. A concrete goal:',
+      suggestions: [{ label: 'Review my teammates’ open PRs' }],
     };
   }
-  if (t.includes('week')) {
+  if (t.includes('learn') || t.includes('read') || t.includes('study')) {
     return {
       id,
       role: 'assistant',
-      text: 'A weekly cadence is forgiving on busy days. Here are two that match your recent pace:',
-      suggestions: [
-        { label: '5 active days', sublabel: 'every week', payload: { type: 'github', metric: 'active_days', target: 5, cadence: 'week' } },
-        { label: '10h Deep Work', sublabel: 'every week', payload: { type: 'time', category: 'Deep Work', target: 10, cadence: 'week' } },
-      ],
+      text: 'Learning goals work best when they’re finishable. For example:',
+      suggestions: [{ label: 'Finish the course I started' }, { label: 'Read one technical book' }],
     };
   }
   return {
     id,
     role: 'assistant',
-    text: "Once connected, I'll tailor goals to your trends and nudge you when a streak's at risk. For now, a solid starting point:",
-    suggestions: [{ label: 'At least 1h Deep Work', sublabel: 'every day', payload: { type: 'time', category: 'Deep Work', target: 1, cadence: 'day' } }],
+    text: "Once connected, I'll suggest goals from your recent activity and help you track them. For now, a starting point:",
+    suggestions: [{ label: 'Finish what I started this week' }],
   };
 }
 
@@ -126,10 +123,9 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
   }
 
   async function create(s: Suggestion) {
-    const key = s.label + s.sublabel;
-    if (created[key]) return;
-    await onCreateGoal(s.payload);
-    setCreated((c) => ({ ...c, [key]: true }));
+    if (created[s.label]) return;
+    await onCreateGoal({ title: s.label });
+    setCreated((c) => ({ ...c, [s.label]: true }));
   }
 
   return (
@@ -172,15 +168,14 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
               {m.suggestions && (
                 <div className="mt-2 space-y-2">
                   {m.suggestions.map((s) => {
-                    const done = created[s.label + s.sublabel];
+                    const done = created[s.label];
                     return (
                       <div
-                        key={s.label + s.sublabel}
+                        key={s.label}
                         className="flex items-center gap-3 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/[0.06]"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 truncate">{s.label}</p>
-                          <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/60">{s.sublabel}</p>
+                          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">{s.label}</p>
                         </div>
                         <button
                           onClick={() => create(s)}

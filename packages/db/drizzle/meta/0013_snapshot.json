@@ -1,6 +1,6 @@
 {
-  "id": "bb6f5271-b420-41c5-8b72-106a63784726",
-  "prevId": "6e0fdb10-4a60-4103-82a1-313d27083360",
+  "id": "5bde3d36-4413-4ac2-92a1-2a2f5cb45dfe",
+  "prevId": "9dd9c906-6fee-48f6-bbf1-c9dc22b2c5ce",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -352,6 +352,18 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "done": {
           "name": "done",
@@ -751,6 +763,12 @@
           "notNull": true,
           "default": 127
         },
+        "goal_id": {
+          "name": "goal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -788,6 +806,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "recurring_todos_goal_id_goals_id_fk": {
+          "name": "recurring_todos_goal_id_goals_id_fk",
+          "tableFrom": "recurring_todos",
+          "tableTo": "goals",
+          "columnsFrom": [
+            "goal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -865,6 +896,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "date": {
+          "name": "date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "goal_id": {
+          "name": "goal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "done": {
           "name": "done",
           "type": "boolean",
@@ -915,6 +958,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "todos_goal_id_goals_id_fk": {
+          "name": "todos_goal_id_goals_id_fk",
+          "tableFrom": "todos",
+          "tableTo": "goals",
+          "columnsFrom": [
+            "goal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

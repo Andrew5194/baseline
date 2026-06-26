@@ -1,6 +1,6 @@
 {
-  "id": "bb6f5271-b420-41c5-8b72-106a63784726",
-  "prevId": "6e0fdb10-4a60-4103-82a1-313d27083360",
+  "id": "7a77c40c-13bb-4b0c-989f-daad8f5f2d4f",
+  "prevId": "bb6f5271-b420-41c5-8b72-106a63784726",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -864,6 +864,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "done": {
           "name": "done",
