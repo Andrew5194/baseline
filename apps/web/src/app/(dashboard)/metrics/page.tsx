@@ -198,7 +198,6 @@ export default function Metrics() {
           <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
             {activeDef.label} · {PERIOD_LABEL[dataPeriod]}
           </p>
-          <p className="text-[11px] text-neutral-400 dark:text-neutral-500">Click a bar for details</p>
         </div>
         <MetricBarChart
           data={seriesMap[active] ?? []}
