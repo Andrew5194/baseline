@@ -47,15 +47,18 @@ export async function GET(request: NextRequest) {
     source: r.source,
   }));
 
-  const recurring = await db
-    .select({
-      category: recurringAllocations.category,
-      durationMs: recurringAllocations.durationMs,
-      daysMask: recurringAllocations.daysMask,
-    })
-    .from(recurringAllocations)
-    .where(eq(recurringAllocations.userId, userId));
-  ei.push(...recurringToEvents(recurring, start, end, tz));
+  // Skip standing routines when the caller asks to focus on free time.
+  if (request.nextUrl.searchParams.get('recurring') !== 'exclude') {
+    const recurring = await db
+      .select({
+        category: recurringAllocations.category,
+        durationMs: recurringAllocations.durationMs,
+        daysMask: recurringAllocations.daysMask,
+      })
+      .from(recurringAllocations)
+      .where(eq(recurringAllocations.userId, userId));
+    ei.push(...recurringToEvents(recurring, start, end, tz));
+  }
 
   const seen = new Set<string>();
   // Daily buckets sum to a day's hours; monthly (year) buckets sum to the month's

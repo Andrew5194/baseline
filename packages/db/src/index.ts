@@ -13,5 +13,6 @@ export {
   todos,
   recurringTodos,
   recurringTodoCompletions,
+  dayNotes,
 } from './schema';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

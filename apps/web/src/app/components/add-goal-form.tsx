@@ -2,14 +2,19 @@
 
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import { PRESET_CATEGORIES } from '../../lib/categories';
 
 interface AddGoalFormProps {
   onClose: () => void;
   onSuccess: () => void;
 }
 
+const CUSTOM = '__custom__';
+
 export function AddGoalForm({ onClose, onSuccess }: AddGoalFormProps) {
   const [title, setTitle] = useState('');
+  const [cat, setCat] = useState(PRESET_CATEGORIES[0]);
+  const [customCat, setCustomCat] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,10 +23,12 @@ export function AddGoalForm({ onClose, onSuccess }: AddGoalFormProps) {
     setError('');
     const t = title.trim();
     if (!t) return setError('Enter what you want to accomplish');
+    const category = (cat === CUSTOM ? customCat.trim() : cat).trim();
+    if (!category) return setError('Pick or name a category');
 
     setLoading(true);
     try {
-      await apiFetch('/v1/goals', { method: 'POST', body: JSON.stringify({ title: t }) });
+      await apiFetch('/v1/goals', { method: 'POST', body: JSON.stringify({ title: t, category }) });
       onSuccess();
       onClose();
     } catch {
@@ -48,6 +55,32 @@ export function AddGoalForm({ onClose, onSuccess }: AddGoalFormProps) {
         placeholder="e.g. Ship the billing page"
         className="w-full text-sm px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
       />
+
+      <div>
+        <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5">
+          Category — time on this goal rolls up here
+        </label>
+        <select
+          value={cat}
+          onChange={(e) => setCat(e.target.value)}
+          className="w-full text-sm px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+        >
+          {PRESET_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+          <option value={CUSTOM}>Custom…</option>
+        </select>
+        {cat === CUSTOM && (
+          <input
+            value={customCat}
+            onChange={(e) => setCustomCat(e.target.value)}
+            placeholder="New category name"
+            className="mt-2 w-full text-sm px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+          />
+        )}
+      </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 

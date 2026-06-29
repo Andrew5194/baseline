@@ -12,6 +12,8 @@ const toDto = (r: {
   goalId: string | null;
   goalTitle: string | null;
   goalColor: string | null;
+  goalCategory: string | null;
+  category: string | null;
 }) => ({
   id: r.id,
   title: r.title,
@@ -19,6 +21,8 @@ const toDto = (r: {
   goal_id: r.goalId,
   goal_title: r.goalTitle,
   goal_color: r.goalColor,
+  goal_category: r.goalCategory,
+  category: r.category,
 });
 
 // GET /v1/recurring-todos — the user's recurring tasks (with their goal tag).
@@ -32,6 +36,8 @@ export async function GET() {
       goalId: recurringTodos.goalId,
       goalTitle: goals.title,
       goalColor: goals.color,
+      goalCategory: goals.category,
+      category: recurringTodos.category,
     })
     .from(recurringTodos)
     .leftJoin(goals, eq(recurringTodos.goalId, goals.id))
@@ -45,7 +51,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const userId = await getCurrentUserId();
 
-  let body: { title?: string; days_mask?: number; goal_id?: string };
+  let body: { title?: string; days_mask?: number; goal_id?: string; category?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -59,19 +65,22 @@ export async function POST(request: NextRequest) {
   const daysMask =
     Number.isInteger(body.days_mask) && body.days_mask! > 0 ? body.days_mask! & ALL_DAYS : ALL_DAYS;
   const goalId = typeof body.goal_id === 'string' && body.goal_id ? body.goal_id : null;
+  const category = !goalId && typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 120) : null;
 
   const [row] = await db
     .insert(recurringTodos)
-    .values({ userId, title, daysMask, goalId })
-    .returning({ id: recurringTodos.id, title: recurringTodos.title, daysMask: recurringTodos.daysMask, goalId: recurringTodos.goalId });
+    .values({ userId, title, daysMask, goalId, category })
+    .returning({ id: recurringTodos.id, title: recurringTodos.title, daysMask: recurringTodos.daysMask, goalId: recurringTodos.goalId, category: recurringTodos.category });
 
-  // Resolve the goal title/color for the response.
+  // Resolve the goal title/color/category for the response.
   let goalTitle: string | null = null;
   let goalColor: string | null = null;
+  let goalCategory: string | null = null;
   if (row.goalId) {
-    const [g] = await db.select({ title: goals.title, color: goals.color }).from(goals).where(eq(goals.id, row.goalId)).limit(1);
+    const [g] = await db.select({ title: goals.title, color: goals.color, category: goals.category }).from(goals).where(eq(goals.id, row.goalId)).limit(1);
     goalTitle = g?.title ?? null;
     goalColor = g?.color ?? null;
+    goalCategory = g?.category ?? null;
   }
-  return NextResponse.json(toDto({ ...row, goalTitle, goalColor }), { status: 201 });
+  return NextResponse.json(toDto({ ...row, goalTitle, goalColor, goalCategory }), { status: 201 });
 }

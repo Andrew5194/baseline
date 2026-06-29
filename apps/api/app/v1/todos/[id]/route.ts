@@ -11,14 +11,14 @@ export async function PATCH(
   const userId = await getCurrentUserId();
   const { id } = await params;
 
-  let body: { done?: boolean; title?: string; goal_id?: string | null };
+  let body: { done?: boolean; title?: string; goal_id?: string | null; category?: string | null };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const updates: { done?: boolean; completedAt?: Date | null; title?: string; goalId?: string | null } = {};
+  const updates: { done?: boolean; completedAt?: Date | null; title?: string; goalId?: string | null; category?: string | null } = {};
   if (typeof body.done === 'boolean') {
     updates.done = body.done;
     updates.completedAt = body.done ? new Date() : null;
@@ -30,9 +30,18 @@ export async function PATCH(
     }
     updates.title = title;
   }
-  // goal_id present (string → tag, null → untag).
+  // goal_id present (string → tag, null → untag). Tagging a goal clears any direct
+  // category, since the goal then supplies the category.
   if ('goal_id' in body) {
-    updates.goalId = typeof body.goal_id === 'string' && body.goal_id ? body.goal_id : null;
+    const gid = typeof body.goal_id === 'string' && body.goal_id ? body.goal_id : null;
+    updates.goalId = gid;
+    if (gid) updates.category = null;
+  }
+  // category present (string → tag, null → clear). Tagging a category untags the goal.
+  if ('category' in body) {
+    const c = typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 120) : null;
+    updates.category = c;
+    if (c) updates.goalId = null;
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'nothing to update', code: 'INVALID_BODY' }, { status: 400 });

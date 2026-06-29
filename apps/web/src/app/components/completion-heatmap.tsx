@@ -55,19 +55,34 @@ export function CompletionHeatmap({
   }).format(new Date());
   // The outline marks the selected day if one is chosen, otherwise today.
   const markedDate = selected ?? todayKey;
-  const c = hover !== null ? cells[hover] : null;
+  // The day whose count we feature: the hovered cell, otherwise the selected day
+  // (or today). Lets the user see "completed / scheduled" for the day at a glance.
+  const focus = hover !== null ? cells[hover] : cells.find((cell) => cell.date === markedDate) ?? null;
   const [yy, mm] = cells[0].date.split('-').map(Number);
   const monthName = `${MONTHS_FULL[mm - 1]} ${yy}`;
 
   return (
     <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
-      <div className="flex items-baseline justify-between mb-3">
-        <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Task completion</p>
-        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 tabular-nums">
-          {c
-            ? `${c.date === todayKey ? 'Today · ' : ''}${dayLabel(c.date)} · ${c.completed} / ${c.total} task${c.total === 1 ? '' : 's'} completed`
-            : monthName}
-        </p>
+      <div className="flex items-end justify-between mb-4">
+        <div className="min-w-0">
+          {focus ? (
+            <>
+              <p className="text-2xl font-semibold tracking-tight text-neutral-600 dark:text-neutral-300 tabular-nums leading-none">
+                {focus.completed} / {focus.total}
+                <span className="ml-2 align-middle text-sm font-semibold">
+                  task{focus.total === 1 ? '' : 's'} completed
+                </span>
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1.5">
+                {focus.date === todayKey ? 'Today · ' : ''}
+                {dayLabel(focus.date)}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">{monthName}</p>
+          )}
+        </div>
+        <p className="text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{monthName}</p>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {cells.map((cell, i) => (

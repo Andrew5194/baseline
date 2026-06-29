@@ -10,6 +10,7 @@ import { Modal } from './modal';
 export interface Goal {
   id: string;
   title: string;
+  category: string | null;
   color: string | null;
   done: boolean;
   completed_at: string | null;
@@ -110,13 +111,23 @@ export function GoalCard({
               className="w-full text-sm rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1 -my-1 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
             />
           ) : (
-            <span
-              className={`block text-sm truncate ${
-                goal.done ? 'line-through text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-white'
-              }`}
-            >
-              {goal.title}
-            </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className={`block text-sm truncate ${
+                  goal.done ? 'line-through text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-white'
+                }`}
+              >
+                {goal.title}
+              </span>
+              {goal.category && (
+                <span
+                  className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+                  title="Time on this goal rolls up to this category"
+                >
+                  {goal.category}
+                </span>
+              )}
+            </div>
           )}
           {goal.done && goal.completed_at && !editing && (
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">Completed {fmtDate(goal.completed_at)}</p>

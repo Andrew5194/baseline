@@ -24,10 +24,7 @@ export function SourceDropdown({ value, onChange, sources }: SourceDropdownProps
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
-  const options = [
-    { id: 'all', label: 'All sources', icon: null as React.ReactNode },
-    ...sources.map((s) => ({ id: s, label: SOURCE_META[s]?.label ?? s, icon: SOURCE_META[s]?.icon ?? null })),
-  ];
+  const options = sources.map((s) => ({ id: s, label: SOURCE_META[s]?.label ?? s, icon: SOURCE_META[s]?.icon ?? null as React.ReactNode }));
   const current = options.find((o) => o.id === value) ?? options[0];
 
   return (

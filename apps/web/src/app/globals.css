@@ -71,6 +71,21 @@ html {
   background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.07) 50%, transparent 100%);
 }
 
+/* EKG / heartbeat trace — a short bright dash sweeps along a static waveform (or a
+   flat line when paused), like the trace light on a heart monitor. pathLength=100
+   normalizes the path so one dash sweeps the whole length per cycle. */
+@keyframes ekg-trace {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.animate-ekg-trace {
+  animation: ekg-trace 1.6s linear infinite;
+}
+
 /* Hide scrollbar while maintaining scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;

@@ -8,6 +8,7 @@ interface GoalOpt {
   id: string;
   title: string;
   color: string;
+  category: string | null;
 }
 
 interface RecurringTodo {
@@ -17,7 +18,10 @@ interface RecurringTodo {
   goal_id: string | null;
   goal_title: string | null;
   goal_color: string | null;
+  category: string | null;
 }
+
+type TagSel = { goalId: string | null; category: string | null };
 
 const ALL_DAYS = 127;
 const WEEKDAYS = 0b0111110; // Mon–Fri
@@ -33,11 +37,11 @@ function describeDays(mask: number): string {
   return days.length ? days.join(', ') : 'Never';
 }
 
-export function RecurringTodos({ goals, onChange }: { goals: GoalOpt[]; onChange: () => void }) {
+export function RecurringTodos({ goals, categories, onChange }: { goals: GoalOpt[]; categories: string[]; onChange: () => void }) {
   const [items, setItems] = useState<RecurringTodo[]>([]);
   const [title, setTitle] = useState('');
   const [daysMask, setDaysMask] = useState(ALL_DAYS);
-  const [goalId, setGoalId] = useState<string | null>(null);
+  const [label, setLabel] = useState<TagSel>({ goalId: null, category: null });
   const [error, setError] = useState('');
 
   const load = useCallback(
@@ -56,17 +60,17 @@ export function RecurringTodos({ goals, onChange }: { goals: GoalOpt[]; onChange
     setError('');
     await apiFetch('/v1/recurring-todos', {
       method: 'POST',
-      body: JSON.stringify({ title: t, days_mask: daysMask, goal_id: goalId }),
+      body: JSON.stringify({ title: t, days_mask: daysMask, goal_id: label.goalId, category: label.category }),
     }).catch(console.error);
     setTitle('');
     setDaysMask(ALL_DAYS);
-    setGoalId(null);
+    setLabel({ goalId: null, category: null });
     load();
     onChange();
   }
 
-  async function tag(id: string, gid: string | null) {
-    await apiFetch(`/v1/recurring-todos/${id}`, { method: 'PATCH', body: JSON.stringify({ goal_id: gid }) }).catch(console.error);
+  async function tag(id: string, sel: TagSel) {
+    await apiFetch(`/v1/recurring-todos/${id}`, { method: 'PATCH', body: JSON.stringify({ goal_id: sel.goalId, category: sel.category }) }).catch(console.error);
     load();
     onChange();
   }
@@ -77,7 +81,7 @@ export function RecurringTodos({ goals, onChange }: { goals: GoalOpt[]; onChange
     onChange();
   }
 
-  const newGoal = goals.find((g) => g.id === goalId) ?? null;
+  const newGoal = goals.find((g) => g.id === label.goalId) ?? null;
 
   return (
     <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 space-y-4 mb-4">
@@ -96,10 +100,12 @@ export function RecurringTodos({ goals, onChange }: { goals: GoalOpt[]; onChange
               <span className="text-sm text-neutral-900 dark:text-white flex-1 truncate">{it.title}</span>
               <TaskGoalTag
                 goals={goals}
+                categories={categories}
                 value={it.goal_id}
                 goalTitle={it.goal_title}
                 goalColor={it.goal_color}
-                onChange={(gid) => tag(it.id, gid)}
+                category={it.category}
+                onChange={(sel) => tag(it.id, sel)}
               />
               <span className="text-xs text-neutral-400 dark:text-neutral-500">{describeDays(it.days_mask)}</span>
               <button
@@ -156,13 +162,15 @@ export function RecurringTodos({ goals, onChange }: { goals: GoalOpt[]; onChange
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">Category</span>
+          <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">Label</span>
           <TaskGoalTag
             goals={goals}
-            value={goalId}
+            categories={categories}
+            value={label.goalId}
             goalTitle={newGoal?.title ?? null}
             goalColor={newGoal?.color ?? null}
-            onChange={setGoalId}
+            category={label.category}
+            onChange={setLabel}
           />
         </div>
 

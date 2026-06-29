@@ -2,31 +2,32 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Baseline AI mark: a playful little robot in the Baseline logo's style — the same
-// monochrome, rounded squircle (theme-adaptive via currentColor). Robotic cues (a
-// jaunty tilted antenna + side ear-pods) made playful by a winking sparkly eye and
-// a big open grin, all at the Baseline logo's stroke weight.
+// Baseline AI mark: a monochrome, boxy robot head (the 🤖 emoji) in the Baseline
+// logo's line style — currentColor panel outlines (theme-adaptive) with solid eyes
+// and a friendly smile, echoing the logo's outlined squircle + filled dots.
 export function BaselineAIMark({ className = 'w-7 h-7' }: { className?: string }) {
   return (
-    <svg className={`${className} text-neutral-900 dark:text-white`} viewBox="0 0 28 28" fill="none" aria-hidden="true">
-      {/* jaunty antenna */}
-      <path d="M14 4 16 1.9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="16.4" cy="1.3" r="0.95" fill="currentColor" />
-      {/* ear-pods */}
-      <rect x="1" y="12.4" width="2.2" height="5.2" rx="1.1" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="24.8" y="12.4" width="2.2" height="5.2" rx="1.1" stroke="currentColor" strokeWidth="1.5" />
+    <svg className={`${className} text-neutral-900 dark:text-white`} viewBox="2.2 0.3 23.6 23.6" fill="none" aria-hidden="true">
+      {/* antenna */}
+      <path d="M14 4.8V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="14" cy="2.1" r="1" fill="currentColor" />
+      {/* ears */}
+      <rect x="2" y="11.2" width="2.4" height="4.6" rx="1" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="23.6" y="11.2" width="2.4" height="4.6" rx="1" stroke="currentColor" strokeWidth="1.4" />
       {/* head */}
-      <rect x="2.6" y="4" width="22.8" height="22" rx="6.8" stroke="currentColor" strokeWidth="1.6" />
-      {/* left eye — big and sparkly */}
-      <circle cx="10.6" cy="13.8" r="1.95" fill="currentColor" />
-      <circle cx="9.95" cy="13.2" r="0.6" className="fill-white dark:fill-neutral-900" />
-      {/* right eye — a happy wink */}
-      <path d="M15.6 14.2q1.8 -2.2 3.6 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      {/* soft blush */}
-      <circle cx="7.6" cy="17" r="0.95" fill="currentColor" opacity="0.3" />
-      <circle cx="20.4" cy="17" r="0.95" fill="currentColor" opacity="0.3" />
-      {/* clean smile */}
-      <path d="M11 18.4q3 2.6 6 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <rect x="4.6" y="4.8" width="18.8" height="17.4" rx="3.2" stroke="currentColor" strokeWidth="1.6" />
+      {/* happy anime eyes (^ ^) */}
+      <path d="M9.2 12.9 L10.6 11.4 L12 12.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 12.9 L17.4 11.4 L18.8 12.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      {/* happy smile */}
+      <path
+        d="M10.6 16.9 C 12.1 18.9, 15.9 18.9, 17.4 16.9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        shapeRendering="geometricPrecision"
+      />
     </svg>
   );
 }

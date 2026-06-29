@@ -54,8 +54,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Hand the API the resolved origin (it can't see forwarded headers behind the
-  // rewrite) so its GitHub OAuth redirects stay browser-reachable. Authorize + callback.
-  if (pathname.startsWith('/v1/integrations/github/')) {
+  // rewrite) so OAuth redirects stay browser-reachable. Authorize + callback.
+  if (
+    pathname.startsWith('/v1/integrations/github/') ||
+    pathname.startsWith('/v1/integrations/google/')
+  ) {
     const headers = new Headers(request.headers);
     headers.set('x-public-origin', publicOrigin(request));
     return NextResponse.next({ request: { headers } });
@@ -92,5 +95,6 @@ export const config = {
   matcher: [
     '/((?!_next/static|_next/image|api/auth|v1|.*\\.).*)',
     '/v1/integrations/github/:path*',
+    '/v1/integrations/google/:path*',
   ],
 };

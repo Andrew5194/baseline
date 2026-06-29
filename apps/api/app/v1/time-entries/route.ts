@@ -4,6 +4,7 @@ import { eq, and, gte, lt, desc } from 'drizzle-orm';
 import { EVENT_TYPES, manualTimeEntryPayload } from '@baseline/events';
 import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
 import { periodBounds, isPeriod } from '../../../lib/period';
+import { resolveOccurredAt } from '../../../lib/time-entry';
 
 const HOUR_MS = 60 * 60 * 1000;
 const MAX_HOURS = 24 * 7; // one week
@@ -14,13 +15,14 @@ const entryFromRow = (r: {
   durationMs: number | null;
   payload: unknown;
 }) => {
-  const p = (r.payload ?? {}) as { category?: string; note?: string };
+  const p = (r.payload ?? {}) as { category?: string; note?: string; timed?: boolean };
   return {
     id: r.id,
     occurred_at: r.occurredAt,
     hours: Math.round(((r.durationMs ?? 0) / HOUR_MS) * 100) / 100,
     category: p.category ?? 'Other',
     note: p.note ?? null,
+    timed: p.timed === true,
   };
 };
 
@@ -69,17 +71,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const userId = await getCurrentUserId();
 
-  let body: { occurred_at?: string; hours?: number; category?: string; note?: string };
+  let body: { occurred_at?: string; date?: string; hours?: number; category?: string; note?: string; timed?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const occurredAt = body.occurred_at ? new Date(body.occurred_at) : null;
+  const tz = await getUserTimezone(userId);
+  const occurredAt = resolveOccurredAt(body, tz);
   if (!occurredAt || isNaN(occurredAt.getTime())) {
     return NextResponse.json(
-      { error: 'Valid occurred_at is required', code: 'INVALID_DATE' },
+      { error: 'Valid date is required', code: 'INVALID_DATE' },
       { status: 400 },
     );
   }
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const parsed = manualTimeEntryPayload.safeParse({ category: body.category, note: body.note });
+  const parsed = manualTimeEntryPayload.safeParse({ category: body.category, note: body.note, timed: body.timed });
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'category is required', code: 'INVALID_CATEGORY' },
