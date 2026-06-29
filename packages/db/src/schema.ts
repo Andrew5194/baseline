@@ -170,6 +170,9 @@ export const goals = pgTable(
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
     title: text('title').notNull(),
+    // The time-allocation category this goal rolls up into, so tracked time on a
+    // goal's tasks aggregates from goals → categories. Null = uncategorized.
+    category: text('category'),
     // User-chosen color (hex). Null falls back to a deterministic palette color.
     color: text('color'),
     // Free-text notes about the goal.
@@ -200,6 +203,9 @@ export const todos = pgTable(
     date: text('date'),
     // The goal this task advances (tag). Null when untagged.
     goalId: uuid('goal_id').references(() => goals.id, { onDelete: 'set null' }),
+    // A category tagged directly on the task (when not tagged to a goal). The task's
+    // effective category is its goal's category if tagged, else this.
+    category: text('category'),
     done: boolean('done').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -221,6 +227,8 @@ export const recurringTodos = pgTable(
     daysMask: integer('days_mask').notNull().default(127),
     // The goal this recurring task advances (tag). Null when untagged.
     goalId: uuid('goal_id').references(() => goals.id, { onDelete: 'set null' }),
+    // A category tagged directly on the task (when not tagged to a goal).
+    category: text('category'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index('recurring_todos_user_idx').on(table.userId)],
@@ -244,4 +252,21 @@ export const recurringTodoCompletions = pgTable(
     uniqueIndex('recurring_todo_completions_idx').on(table.recurringTodoId, table.date),
     index('recurring_todo_completions_user_idx').on(table.userId),
   ],
+);
+
+// A free-text daily journal — one entry per local day, where the user records
+// their thoughts and feelings for that day.
+export const dayNotes = pgTable(
+  'day_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    date: text('date').notNull(), // the local day key (YYYY-MM-DD)
+    content: text('content').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex('day_notes_user_date_idx').on(table.userId, table.date)],
 );

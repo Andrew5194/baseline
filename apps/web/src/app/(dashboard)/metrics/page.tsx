@@ -6,6 +6,7 @@ import { MetricBarChart } from '../../components/metric-bar-chart';
 import { ConsistencyScore } from '../../components/consistency-score';
 import { MetricsStrip, type StripStat } from '../../components/metrics-strip';
 import { DayDetailsModal } from '../../components/day-details-modal';
+import { CalendarDayModal } from '../../components/calendar-day-modal';
 import { SourceDropdown } from '../../components/source-dropdown';
 import { apiFetch } from '../../../lib/api';
 import { useTimezone } from '../../../lib/use-timezone';
@@ -23,31 +24,47 @@ interface TimeseriesResponse {
   data: Array<{ date: string; value: number }>;
 }
 
-// Available metrics, each tagged with the source it comes from. The source filter
-// is derived from these, so adding metrics for a new integration automatically
-// surfaces that source in the filter. `tab` is the Activity Details tab a bar opens.
-const METRICS: Array<{ key: string; metric: string; label: string; unit: string; source: string; tab?: string; sub?: 'elapsed' }> = [
+// Every metric, tagged with its source. The source filter is derived from these, so
+// adding a new integration's metrics here automatically surfaces it in the dropdown.
+// `tab` is the GitHub Activity Details tab a bar opens; `suffix` formats the tile
+// value; `days` marks the active-days-style metric that drives the consistency card.
+const METRICS: Array<{
+  key: string;
+  metric: string;
+  label: string;
+  unit: string;
+  source: string;
+  tab?: string;
+  sub?: 'elapsed';
+  suffix?: string;
+  days?: boolean;
+}> = [
   { key: 'commits', metric: 'commits', label: 'Commits', unit: 'commits', source: 'github', tab: 'commits' },
   { key: 'throughput', metric: 'throughput', label: 'PRs Merged', unit: 'PRs', source: 'github', tab: 'prs' },
   { key: 'reviews', metric: 'reviews', label: 'Reviews', unit: 'reviews', source: 'github', tab: 'reviews' },
-  { key: 'active_days', metric: 'active_days', label: 'Active Days', unit: 'days', source: 'github', sub: 'elapsed' },
-  { key: 'streak', metric: 'streak', label: 'Best Streak', unit: 'days', source: 'github' },
+  { key: 'active_days', metric: 'active_days', label: 'Active Days', unit: 'days', source: 'github', sub: 'elapsed', days: true },
+  { key: 'streak', metric: 'streak', label: 'Best Streak', unit: 'days', source: 'github', suffix: 'd' },
+  { key: 'meeting_hours', metric: 'meeting_hours', label: 'Meeting Hours', unit: 'hrs', source: 'google_calendar', suffix: 'h' },
+  { key: 'events', metric: 'events', label: 'Events', unit: 'events', source: 'google_calendar' },
+  { key: 'avg_length', metric: 'avg_length', label: 'Avg Length', unit: 'min', source: 'google_calendar', suffix: 'm' },
+  { key: 'busy_days', metric: 'busy_days', label: 'Busy Days', unit: 'days', source: 'google_calendar', sub: 'elapsed', days: true },
 ];
 
 // Distinct sources that currently have metrics — drives the source filter.
 const SOURCES = [...new Set(METRICS.map((m) => m.source))];
 
+// Where each source's overview/timeseries live.
+const overviewUrl = (source: string, period: string) =>
+  source === 'google_calendar' ? `/v1/metrics/calendar/overview?period=${period}` : `/v1/metrics/overview?period=${period}`;
+const timeseriesUrl = (source: string, metric: string, period: string) =>
+  source === 'google_calendar'
+    ? `/v1/metrics/calendar/timeseries?metric=${metric}&period=${period}`
+    : `/v1/metrics/timeseries?metric=${metric}&period=${period}`;
+
 const PERIOD_LABEL: Record<Period, string> = { week: 'this week', month: 'this month', year: 'this year' };
 
-// Days elapsed so far in the current period, in the user's timezone, for the
-// consistency denominator.
 function elapsedDaysInPeriod(period: Period, tz: string): number {
-  const key = new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date()); // YYYY-MM-DD in tz
+  const key = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const [y, m, d] = key.split('-').map(Number);
   if (period === 'year') {
     const start = Date.UTC(y, 0, 1);
@@ -59,7 +76,6 @@ function elapsedDaysInPeriod(period: Period, tz: string): number {
   return ((weekday + 6) % 7) + 1; // week, Monday-anchored
 }
 
-// Event range + title for a clicked bar: a single day, or a whole month (year view).
 function bucketRange(period: Period, date: string): { since: string; until: string; title: string } {
   const [y, mo, d] = date.split('-').map(Number);
   if (period === 'year') {
@@ -82,30 +98,32 @@ function bucketRange(period: Period, date: string): { since: string; until: stri
 export default function Metrics() {
   const tz = useTimezone();
   const [period, setPeriod] = useState<Period>('week');
-  const [source, setSource] = useState('all');
+  const [source, setSource] = useState('github');
   const [active, setActive] = useState('commits');
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [seriesMap, setSeriesMap] = useState<Record<string, Array<{ date: string; value: number }>>>({});
   const [loading, setLoading] = useState(true);
-  const [inspect, setInspect] = useState<{ since: string; until: string; title: string; tab: string } | null>(null);
+  const [inspect, setInspect] = useState<{ since: string; until: string; title: string; tab: string; source: string } | null>(null);
 
-  // Prefetch the overview + every metric's series (period's natural buckets) in
-  // parallel on period change, so switching tiles is instant — no per-click fetch,
-  // no lingering/clickable stale bars.
+  // Prefetch every source's overview + each metric's series on period change, so
+  // switching tiles/sources is instant. Resilient: a source that isn't connected
+  // (or errors) just contributes empty data instead of failing the whole load.
   useEffect(() => {
     setLoading(true);
+    const empty = { period, metrics: {} as Record<string, MetricValue> };
     Promise.all([
-      apiFetch<OverviewResponse>(`/v1/metrics/overview?period=${period}`),
+      apiFetch<OverviewResponse>(overviewUrl('github', period)).catch(() => empty),
+      apiFetch<OverviewResponse>(overviewUrl('google_calendar', period)).catch(() => empty),
       Promise.all(
         METRICS.map((d) =>
-          apiFetch<TimeseriesResponse>(`/v1/metrics/timeseries?metric=${d.metric}&period=${period}`).then(
-            (r) => [d.key, r.data] as [string, Array<{ date: string; value: number }>],
-          ),
+          apiFetch<TimeseriesResponse>(timeseriesUrl(d.source, d.metric, period))
+            .then((r) => [d.key, r.data] as [string, Array<{ date: string; value: number }>])
+            .catch(() => [d.key, []] as [string, Array<{ date: string; value: number }>]),
         ),
       ),
     ])
-      .then(([ov, entries]) => {
-        setOverview(ov);
+      .then(([gh, cal, entries]) => {
+        setOverview({ period: gh.period ?? period, metrics: { ...gh.metrics, ...cal.metrics } });
         setSeriesMap(Object.fromEntries(entries));
       })
       .catch(console.error)
@@ -114,30 +132,20 @@ export default function Metrics() {
 
   const m = overview?.metrics;
 
-  // `overview`/`seriesMap` load asynchronously, so during a period switch they
-  // still hold the PREVIOUS period while `period` has already flipped. Drive every
-  // data-derived value off the loaded period (`overview.period`) — not the pending
-  // `period` — so the consistency score never divides one period's active-day count
-  // by another period's elapsed days (which briefly rendered an impossible value,
-  // e.g. month's 6 active days ÷ year's 174 days = 3%, before settling).
   const dataPeriod: Period =
-    overview?.period === 'week' || overview?.period === 'month' || overview?.period === 'year'
-      ? overview.period
-      : period;
+    overview?.period === 'week' || overview?.period === 'month' || overview?.period === 'year' ? overview.period : period;
   const elapsedDays = elapsedDaysInPeriod(dataPeriod, tz);
 
-  // "Today" in the user's timezone, matching the server's local-day bucket keys.
-  const todayLocal = new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date()); // YYYY-MM-DD
+  const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const todayKey = dataPeriod === 'year' ? `${todayLocal.slice(0, 7)}-01` : todayLocal;
 
-  // Filter the displayed metrics by the selected source.
   const visibleMetrics = source === 'all' ? METRICS : METRICS.filter((d) => d.source === source);
-  const showConsistency = visibleMetrics.some((d) => d.key === 'active_days');
+
+  // The consistency card tracks the active-days-style metric for the current view:
+  // busy days for calendar, active days otherwise (incl. the combined "all" view).
+  const consistencyDef =
+    source === 'google_calendar' ? METRICS.find((d) => d.key === 'busy_days') : METRICS.find((d) => d.key === 'active_days');
+  const showConsistency = !!consistencyDef && visibleMetrics.some((d) => d.key === consistencyDef.key);
 
   function changeSource(s: string) {
     setSource(s);
@@ -145,15 +153,18 @@ export default function Metrics() {
     if (!vis.some((d) => d.key === active)) setActive(vis[0]?.key ?? active);
   }
 
-  const stats: StripStat[] = visibleMetrics.map((d) => ({
-    key: d.key,
-    label: d.label,
-    value: d.key === 'streak' ? `${m?.[d.metric]?.value ?? 0}d` : (m?.[d.metric]?.value ?? 0),
-    sub: d.sub === 'elapsed' ? `/ ${elapsedDays}` : undefined,
-    delta: m?.[d.metric]?.delta ?? null,
-  }));
+  const stats: StripStat[] = visibleMetrics.map((d) => {
+    const v = m?.[d.metric]?.value ?? 0;
+    return {
+      key: d.key,
+      label: d.label,
+      value: d.suffix ? `${v}${d.suffix}` : v,
+      sub: d.sub === 'elapsed' ? `/ ${elapsedDays}` : undefined,
+      delta: m?.[d.metric]?.delta ?? null,
+    };
+  });
 
-  const activeDef = METRICS.find((d) => d.key === active)!;
+  const activeDef = (visibleMetrics.find((d) => d.key === active) ?? METRICS.find((d) => d.key === active))!;
 
   if (loading && !overview) {
     return (
@@ -170,7 +181,7 @@ export default function Metrics() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Metrics</h1>
-          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period)}</p>
+          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz)}</p>
         </div>
         <div className="flex items-center gap-3">
           <SourceDropdown value={source} onChange={changeSource} sources={SOURCES} />
@@ -178,12 +189,12 @@ export default function Metrics() {
         </div>
       </div>
 
-      {showConsistency && (
+      {showConsistency && consistencyDef && (
         <div className="mb-6">
           <ConsistencyScore
-            activeDays={m?.active_days?.value ?? null}
+            activeDays={m?.[consistencyDef.metric]?.value ?? null}
             totalDays={elapsedDays}
-            delta={m?.active_days?.delta ?? null}
+            delta={m?.[consistencyDef.metric]?.delta ?? null}
             window={dataPeriod}
           />
         </div>
@@ -203,11 +214,13 @@ export default function Metrics() {
           data={seriesMap[active] ?? []}
           unit={activeDef.unit}
           todayISO={todayKey}
-          onSelectBar={(date) => setInspect({ ...bucketRange(dataPeriod, date), tab: activeDef.tab ?? 'commits' })}
+          onSelectBar={(date) => setInspect({ ...bucketRange(dataPeriod, date), tab: activeDef.tab ?? 'commits', source: activeDef.source })}
         />
       </div>
 
-      {inspect && (
+      {inspect && inspect.source === 'google_calendar' ? (
+        <CalendarDayModal since={inspect.since} until={inspect.until} title={inspect.title} onClose={() => setInspect(null)} />
+      ) : inspect ? (
         <DayDetailsModal
           since={inspect.since}
           until={inspect.until}
@@ -215,7 +228,7 @@ export default function Metrics() {
           initialCategory={inspect.tab}
           onClose={() => setInspect(null)}
         />
-      )}
+      ) : null}
     </div>
   );
 }

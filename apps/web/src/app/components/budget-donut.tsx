@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useReducer } from 'react';
 import { Pie } from '@visx/shape';
 import { Group } from '@visx/group';
-import { colorForCategory, FREE_COLOR, adjustLightness } from '../../lib/categories';
+import { colorForCategory, FREE_COLOR, FREE_FOCUS_COLOR, FREE_FOCUS_SWATCH, adjustLightness } from '../../lib/categories';
 import { RecurringIcon } from './recurring-icon';
 
 export interface BudgetCategory {
@@ -22,6 +22,8 @@ interface BudgetDonutProps {
   onRecolor?: (category: string, color: string) => void;
   // Categories sourced from a recurring routine, marked with a repeat glyph.
   recurringCategories?: string[];
+  // When true, recurring routines are hidden and free time is shown in green.
+  freeFocus?: boolean;
 }
 
 interface Slice {
@@ -38,32 +40,73 @@ const THICK = 26;
 const FREE_SWATCH = '#94a3b8';
 const gradId = (name: string) => `donut-grad-${name.replace(/[^a-zA-Z0-9]/g, '-')}`;
 
-export function BudgetDonut({ categories, trackedHours, freeHours, budget, colorOf, onRecolor, recurringCategories }: BudgetDonutProps) {
+export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecolor, recurringCategories, freeFocus }: BudgetDonutProps) {
   const baseColor = colorOf ?? ((c: string) => colorForCategory(c));
+  const freeColor = freeFocus ? FREE_FOCUS_COLOR : FREE_COLOR;
+  const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
   const recurringSet = new Set(recurringCategories ?? []);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const colorVal = (c: string) => draft[c] ?? baseColor(c);
   const [active, setActive] = useState<string | null>(null);
 
+  // Tween 0 → 1 (show routines → free focus) so the arcs grow/shrink smoothly each
+  // frame, instead of jumping via a CSS path morph.
+  const target = freeFocus ? 1 : 0;
+  const progressRef = useRef(target);
+  const [, force] = useReducer((x) => x + 1, 0);
+  useEffect(() => {
+    const start = progressRef.current;
+    if (start === target) return;
+    const startTime = performance.now();
+    const dur = 480;
+    const ease = (x: number) => 1 - Math.pow(1 - x, 3);
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - startTime) / dur);
+      progressRef.current = start + (target - start) * ease(p);
+      force();
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  const progress = progressRef.current;
+
+  // Hiding recurring reframes the donut around free time: the pool shrinks from the
+  // full budget to `freeBudget` (budget minus routines), recurring slices shrink to
+  // 0, and "Untracked" is what's left of that pool after the non-recurring tracked
+  // work. Driven by `progress` (0..1) for a smooth tween.
+  const recurringTotal = Math.round(categories.filter((c) => recurringSet.has(c.category)).reduce((s, c) => s + c.hours, 0) * 10) / 10;
+  const freeBudget = budget - recurringTotal * progress;
+  const displayTracked = Math.round((trackedHours - recurringTotal * progress) * 10) / 10;
+  const displayFree = Math.round((freeBudget - displayTracked) * 10) / 10;
+  const slicePct = (hours: number) => (freeBudget > 0 ? Math.round((hours / freeBudget) * 1000) / 10 : 0);
+
+  const orderedCats = [
+    ...categories.filter((c) => c.hours > 0 && !recurringSet.has(c.category)),
+    ...categories.filter((c) => c.hours > 0 && recurringSet.has(c.category)),
+  ];
   const slices: Slice[] = [
-    ...categories.map((c) => ({
+    ...orderedCats.map((c) => ({
       name: c.category,
-      value: c.hours,
+      value: recurringSet.has(c.category) ? c.hours * (1 - progress) : c.hours,
       color: colorVal(c.category),
       free: false,
-      pct: c.pct,
+      pct: slicePct(c.hours),
     })),
     {
-      name: 'Free',
-      value: freeHours,
-      color: FREE_COLOR,
+      name: freeFocus ? 'Focus time' : 'Free',
+      value: displayFree,
+      color: freeColor,
       free: true,
-      pct: budget > 0 ? Math.round((freeHours / budget) * 1000) / 10 : 0,
+      pct: slicePct(displayFree),
     },
-  ].filter((s) => s.value > 0);
+    // Drop fully-collapsed slices (e.g. recurring as it shrinks to 0) so visx's
+    // padAngle doesn't reserve an empty gap where they used to be.
+  ].filter((s) => s.value > 0.05);
 
-  const pct = budget > 0 ? Math.round((trackedHours / budget) * 100) : 0;
-  const freePct = budget > 0 ? Math.round((freeHours / budget) * 1000) / 10 : 0;
+  const pct = freeBudget > 0 ? Math.round((displayTracked / freeBudget) * 100) : 0;
+  const freePct = slicePct(displayFree);
   const activeSlice = slices.find((s) => s.name === active) ?? null;
 
   return (
@@ -81,6 +124,12 @@ export function BudgetDonut({ categories, trackedHours, freeHours, budget, color
                 </linearGradient>
               );
             })}
+            {/* Free-time gradient — a faint translucent emerald glow when focusing on free time */}
+            <linearGradient id="donut-grad-free" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(16,185,129,0.28)" />
+              <stop offset="55%" stopColor="rgba(16,185,129,0.16)" />
+              <stop offset="100%" stopColor="rgba(16,185,129,0.08)" />
+            </linearGradient>
           </defs>
           <Group top={SIZE / 2} left={SIZE / 2}>
             <Pie
@@ -95,15 +144,27 @@ export function BudgetDonut({ categories, trackedHours, freeHours, budget, color
               {(pie) =>
                 pie.arcs.map((arc) => {
                   const s = arc.data;
+                  const d = pie.path(arc) ?? undefined;
+                  const dim = active && active !== s.name ? 0.45 : 1;
+                  // Free is two stacked arcs (grey + green) on the same path; the
+                  // value tween grows the arc and `progress` crossfades the colour.
+                  if (s.free) {
+                    return (
+                      <g key={s.name} onMouseEnter={() => setActive(s.name)} onMouseLeave={() => setActive(null)} style={{ cursor: 'default' }}>
+                        <path d={d} fill={FREE_COLOR} opacity={(1 - progress) * dim} />
+                        <path d={d} fill="url(#donut-grad-free)" opacity={progress * dim} />
+                      </g>
+                    );
+                  }
                   return (
                     <path
                       key={s.name}
-                      d={pie.path(arc) ?? undefined}
-                      fill={s.free ? FREE_COLOR : `url(#${gradId(s.name)})`}
+                      d={d}
+                      fill={`url(#${gradId(s.name)})`}
                       onMouseEnter={() => setActive(s.name)}
                       onMouseLeave={() => setActive(null)}
                       style={{ transition: 'opacity 0.15s ease', cursor: 'default' }}
-                      opacity={active && active !== s.name ? 0.45 : 1}
+                      opacity={dim}
                     />
                   );
                 })
@@ -120,9 +181,9 @@ export function BudgetDonut({ categories, trackedHours, freeHours, budget, color
             </>
           ) : (
             <>
-              <span className="text-3xl font-bold text-neutral-900 dark:text-white tabular-nums">{trackedHours}</span>
-              <span className="text-[11px] text-neutral-400 dark:text-neutral-500">of {budget.toLocaleString()} h</span>
-              <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{pct}% tracked</span>
+              <span className="text-3xl font-bold text-neutral-900 dark:text-white tabular-nums">{displayTracked}</span>
+              <span className="text-[11px] text-neutral-400 dark:text-neutral-500">of {Math.round(freeBudget).toLocaleString()} {freeFocus ? 'free' : 'total'} hours</span>
+              <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{pct}% {freeFocus ? 'focused' : 'tracked'}</span>
             </>
           )}
         </div>
@@ -132,16 +193,18 @@ export function BudgetDonut({ categories, trackedHours, freeHours, budget, color
         {categories.length === 0 ? (
           <p className="text-sm text-neutral-400 dark:text-neutral-500">No tracked hours yet.</p>
         ) : (
-          categories.map((c) => (
+          categories
+            .filter((c) => !(freeFocus && recurringSet.has(c.category)))
+            .map((c) => (
             <div
               key={c.category}
-              className="flex items-center gap-2.5 text-sm rounded-md -mx-1 px-1 py-0.5 transition-colors"
+              className="flex items-baseline gap-2.5 text-sm rounded-md -mx-1 px-1 py-0.5 transition-colors"
               style={{ backgroundColor: active === c.category ? 'rgba(148,163,184,0.12)' : 'transparent' }}
               onMouseEnter={() => setActive(c.category)}
               onMouseLeave={() => setActive(null)}
             >
               {onRecolor ? (
-                <label className="relative w-2.5 h-2.5 flex-shrink-0 cursor-pointer" title={`Change ${c.category} color`}>
+                <label className="relative w-2.5 h-2.5 flex-shrink-0 cursor-pointer self-center" title={`Change ${c.category} color`}>
                   <span className="block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: colorVal(c.category) }} />
                   <input
                     type="color"
@@ -153,25 +216,25 @@ export function BudgetDonut({ categories, trackedHours, freeHours, budget, color
                   />
                 </label>
               ) : (
-                <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: colorVal(c.category) }} />
+                <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: colorVal(c.category) }} />
               )}
               <span className="text-neutral-700 dark:text-neutral-300 truncate">{c.category}</span>
               {recurringSet.has(c.category) && (
-                <span className="text-neutral-400 dark:text-neutral-500" title="Recurring routine">
+                <span className="text-neutral-400 dark:text-neutral-500 self-center" title="Recurring routine">
                   <RecurringIcon className="w-3 h-3" />
                 </span>
               )}
               <span className="flex-1" />
-              <span className="text-neutral-900 dark:text-white font-medium tabular-nums">{c.hours}h</span>
-              <span className="text-[11px] text-neutral-400 dark:text-neutral-500 w-10 text-right tabular-nums">{c.pct}%</span>
+              <span className="w-14 text-right text-neutral-900 dark:text-white font-medium tabular-nums">{c.hours}h</span>
+              <span className="w-10 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums">{slicePct(c.hours)}%</span>
             </div>
           ))
         )}
-        <div className="flex items-center gap-2.5 text-sm pt-2 border-t border-neutral-100 dark:border-neutral-800">
-          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: FREE_SWATCH }} />
-          <span className="text-neutral-400 dark:text-neutral-500 flex-1">Free</span>
-          <span className="text-neutral-500 dark:text-neutral-400 font-medium tabular-nums">{freeHours}h</span>
-          <span className="text-[11px] text-neutral-400 dark:text-neutral-500 w-10 text-right tabular-nums">{freePct}%</span>
+        <div className="flex items-baseline gap-2.5 text-sm pt-2 border-t border-neutral-100 dark:border-neutral-800">
+          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: freeSwatch }} />
+          <span className="text-neutral-400 dark:text-neutral-500 flex-1">{freeFocus ? 'Focus time' : 'Free'}</span>
+          <span className="w-14 text-right text-neutral-500 dark:text-neutral-400 font-medium tabular-nums">{displayFree}h</span>
+          <span className="w-10 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums">{freePct}%</span>
         </div>
       </div>
     </div>

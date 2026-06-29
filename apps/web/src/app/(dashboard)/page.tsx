@@ -4,8 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { PeriodSelector, periodRangeLabel, type Period } from '../components/period-selector';
 import { BudgetDonut, type BudgetCategory } from '../components/budget-donut';
 import { DailyAllocationBars } from '../components/daily-allocation-bars';
+import { CalendarAllocation } from '../components/calendar-allocation';
 import { AddTimeEntryForm } from '../components/add-time-entry-form';
+import { FocusTimerBar } from '../components/focus-timer-bar';
 import { RecurringAllocations } from '../components/recurring-allocations';
+import { ManageCategoriesModal } from '../components/manage-categories-modal';
 import { Modal } from '../components/modal';
 import { apiFetch } from '../../lib/api';
 import { useTimezone } from '../../lib/use-timezone';
@@ -23,6 +26,7 @@ interface Entry {
   hours: number;
   category: string;
   note: string | null;
+  timed?: boolean;
 }
 interface EntriesResponse {
   data: Entry[];
@@ -38,7 +42,18 @@ const DAY_HOURS = 24;
 const fmtDate = (iso: string, timeZone: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone });
 
-type Panel = 'recurring';
+const fmtTime = (d: Date, timeZone: string) =>
+  d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone });
+
+// For timer sessions, occurred_at is the end time — derive the start from the
+// duration and show "start – end".
+const timeRange = (iso: string, hours: number, timeZone: string) => {
+  const end = new Date(iso);
+  const start = new Date(end.getTime() - hours * 60 * 60 * 1000);
+  return `${fmtTime(start, timeZone)} – ${fmtTime(end, timeZone)}`;
+};
+
+type Panel = 'recurring' | 'categories';
 const PERIOD_LABEL: Record<Period, string> = { week: 'This week', month: 'This month', year: 'This year' };
 
 export default function Overview() {
@@ -48,11 +63,16 @@ export default function Overview() {
   const [entries, setEntries] = useState<EntriesResponse | null>(null);
   const [daily, setDaily] = useState<TrendResponse | null>(null);
   const [colors, setColors] = useState<Record<string, string>>({});
+  const [colorsReady, setColorsReady] = useState(false);
   const [recurringCats, setRecurringCats] = useState<string[]>([]);
   const [panel, setPanel] = useState<Panel | null>(null);
+  const [hideRecurring, setHideRecurring] = useState(false);
+  const [allocView, setAllocView] = useState<'bars' | 'calendar'>('bars');
   // 'new' = add modal; an Entry = edit modal; null = closed.
   const [editing, setEditing] = useState<Entry | 'new' | null>(null);
 
+  // Always fetch the full picture (incl. recurring). Hiding routines is applied
+  // client-side so the donut/bars can animate recurring → free smoothly.
   const loadBudget = useCallback(
     () =>
       apiFetch<BudgetResponse>(`/v1/metrics/time-allocation?period=${period}`)
@@ -64,7 +84,8 @@ export default function Overview() {
     () =>
       apiFetch<{ colors: Record<string, string> }>('/v1/category-colors')
         .then((d) => setColors(d.colors ?? {}))
-        .catch(console.error),
+        .catch(console.error)
+        .finally(() => setColorsReady(true)),
     [],
   );
   const loadRecurring = useCallback(
@@ -89,6 +110,10 @@ export default function Overview() {
     loadBudget();
     loadPeriod();
   }, [loadBudget, loadPeriod]);
+  // Restore the persisted "Hide recurring" choice (after mount → no hydration clash).
+  useEffect(() => {
+    if (window.localStorage.getItem('baseline:hide-recurring') === 'true') setHideRecurring(true);
+  }, []);
 
   const refreshAll = () => {
     loadBudget();
@@ -160,16 +185,23 @@ export default function Overview() {
   const variableInChart = categories.filter((c) => !recurringSet.has(c));
   const stackCategories = [...recurringInChart, ...variableInChart];
 
-  // Every category the user has touched, with a distinct color (overrides win).
+  // Every category the user has touched or created, with a distinct color (overrides
+  // win). Keys of `colors` are the registry — they include categories created in the
+  // manage-categories modal that aren't used yet.
   const allCategories = [
     ...new Set([
       ...categories,
       ...(entries?.categories ?? []),
       ...(budget?.categories.map((c) => c.category) ?? []),
+      ...Object.keys(colors),
     ]),
   ].sort();
   const colorMap = buildColorMap(allCategories, colors);
   const colorOf = (c: string) => colorMap[c] ?? colorForCategory(c, colors);
+
+  // Hold the charts/entries until the color overrides and the full category set are
+  // loaded, so the first paint uses the final colors (no split-second recolor).
+  const ready = colorsReady && budget !== null && daily !== null && entries !== null;
 
   const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
   const tabClass = (p: Panel) =>
@@ -199,15 +231,21 @@ export default function Overview() {
             <button onClick={() => togglePanel('recurring')} className={tabClass('recurring')}>
               Recurring
             </button>
+            <button onClick={() => togglePanel('categories')} className={tabClass('categories')}>
+              Categories
+            </button>
           </div>
         </div>
       </div>
+
+      <FocusTimerBar onLogged={refreshAll} />
 
       {editing !== null && (
         <Modal onClose={() => setEditing(null)}>
           <AddTimeEntryForm
             entry={editing === 'new' ? null : editing}
             knownCategories={allCategories}
+            tz={tz}
             onClose={() => setEditing(null)}
             onSuccess={refreshAll}
             onDelete={
@@ -222,6 +260,17 @@ export default function Overview() {
         </Modal>
       )}
 
+      {panel === 'categories' && (
+        <div className="mb-6">
+          <ManageCategoriesModal
+            onChange={() => {
+              loadColors();
+              refreshAll();
+            }}
+          />
+        </div>
+      )}
+
       {panel === 'recurring' && (
         <div className="mb-6">
           <RecurringAllocations knownCategories={allCategories} colorOf={colorOf} onChange={refreshAll} />
@@ -230,10 +279,40 @@ export default function Overview() {
 
       {/* Budget donut for the selected period */}
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
-        <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-5">
-          {PERIOD_LABEL[period]}
-        </p>
-        {budget ? (
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+            {PERIOD_LABEL[period]}
+          </p>
+          <button
+            role="switch"
+            aria-checked={hideRecurring}
+            onClick={() =>
+              setHideRecurring((v) => {
+                const next = !v;
+                try {
+                  window.localStorage.setItem('baseline:hide-recurring', next ? 'true' : 'false');
+                } catch {}
+                return next;
+              })
+            }
+            title="Hide recurring routines to focus on free time"
+            className="flex items-center gap-2"
+          >
+            <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Hide recurring</span>
+            <span
+              className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                hideRecurring ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                  hideRecurring ? 'translate-x-3.5' : 'translate-x-0.5'
+                }`}
+              />
+            </span>
+          </button>
+        </div>
+        {ready && budget ? (
           <BudgetDonut
             categories={budget.categories}
             trackedHours={budget.tracked_hours}
@@ -242,19 +321,51 @@ export default function Overview() {
             colorOf={colorOf}
             onRecolor={recolor}
             recurringCategories={recurringCats}
+            freeFocus={hideRecurring}
           />
         ) : (
           <div className="h-[200px] bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
         )}
       </div>
 
-      {/* Allocation over the period — each bar reads as a 24h day */}
+      {/* Allocation over the period — bar chart or calendar grid */}
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
-        <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-5">
-          {isYear ? 'Monthly allocation' : 'Daily allocation'}
-        </p>
-        {daily ? (
-          <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} />
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+            {isYear ? 'Monthly allocation' : 'Daily allocation'}
+          </p>
+          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+            {(['bars', 'calendar'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setAllocView(v)}
+                aria-label={v === 'bars' ? 'Bar view' : 'Calendar view'}
+                aria-pressed={allocView === v}
+                className={`p-1.5 rounded-md transition-colors ${
+                  allocView === v
+                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm'
+                    : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300'
+                }`}
+              >
+                {v === 'bars' ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 20V10M12 20V4M19 20v-6" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 3v3m10-3v3M4 8h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+        {ready && daily ? (
+          allocView === 'calendar' ? (
+            <CalendarAllocation data={barRows} categories={stackCategories} colorOf={colorOf} granularity={granularity} recurringCategories={recurringCats} freeFocus={hideRecurring} todayISO={todayKey} />
+          ) : (
+            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} />
+          )
         ) : (
           <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
         )}
@@ -265,7 +376,7 @@ export default function Overview() {
         <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-4">
           Entries · {PERIOD_LABEL[period].toLowerCase()}
         </p>
-        {!entries ? (
+        {!ready || !entries ? (
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-10 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
@@ -290,6 +401,11 @@ export default function Overview() {
                 <span className="text-sm text-neutral-900 dark:text-white w-32 truncate">{e.category}</span>
                 <span className="text-xs text-neutral-400 dark:text-neutral-500 w-16">{fmtDate(e.occurred_at, tz)}</span>
                 <span className="text-sm text-neutral-600 dark:text-neutral-400 flex-1 truncate">{e.note}</span>
+                {e.timed && (
+                  <span className="hidden sm:block text-xs text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">
+                    {timeRange(e.occurred_at, e.hours, tz)}
+                  </span>
+                )}
                 <span className="text-sm font-medium text-neutral-900 dark:text-white tabular-nums">{e.hours}h</span>
                 <button
                   onClick={(ev) => {

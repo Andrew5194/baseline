@@ -49,16 +49,19 @@ export async function GET(request: NextRequest) {
   }));
 
   // Fold in standing recurring allocations (sleep, meals, …) across the whole
-  // period, including future days, since they're a planned routine.
-  const recurring = await db
-    .select({
-      category: recurringAllocations.category,
-      durationMs: recurringAllocations.durationMs,
-      daysMask: recurringAllocations.daysMask,
-    })
-    .from(recurringAllocations)
-    .where(eq(recurringAllocations.userId, userId));
-  ei.push(...recurringToEvents(recurring, prevStart, end, tz));
+  // period, including future days, since they're a planned routine — unless the
+  // caller asks to exclude them (?recurring=exclude) to focus on free time.
+  if (request.nextUrl.searchParams.get('recurring') !== 'exclude') {
+    const recurring = await db
+      .select({
+        category: recurringAllocations.category,
+        durationMs: recurringAllocations.durationMs,
+        daysMask: recurringAllocations.daysMask,
+      })
+      .from(recurringAllocations)
+      .where(eq(recurringAllocations.userId, userId));
+    ei.push(...recurringToEvents(recurring, prevStart, end, tz));
+  }
 
   const curr = hoursByCategoryV1(ei, start, end);
   const prev = hoursByCategoryV1(ei, prevStart, start);

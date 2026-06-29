@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, events } from '@baseline/db';
 import { eq, and } from 'drizzle-orm';
 import { manualTimeEntryPayload } from '@baseline/events';
-import { getCurrentUserId } from '../../../../lib/user';
+import { getCurrentUserId, getUserTimezone } from '../../../../lib/user';
+import { resolveOccurredAt } from '../../../../lib/time-entry';
 
 const HOUR_MS = 60 * 60 * 1000;
 const MAX_HOURS = 24 * 7;
@@ -23,16 +24,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const userId = await getCurrentUserId();
   const { id } = await params;
 
-  let body: { occurred_at?: string; hours?: number; category?: string; note?: string };
+  let body: { occurred_at?: string; date?: string; hours?: number; category?: string; note?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const occurredAt = body.occurred_at ? new Date(body.occurred_at) : null;
+  const tz = await getUserTimezone(userId);
+  const occurredAt = resolveOccurredAt(body, tz);
   if (!occurredAt || isNaN(occurredAt.getTime())) {
-    return NextResponse.json({ error: 'Valid occurred_at is required', code: 'INVALID_DATE' }, { status: 400 });
+    return NextResponse.json({ error: 'Valid date is required', code: 'INVALID_DATE' }, { status: 400 });
   }
   if (typeof body.hours !== 'number' || !(body.hours > 0) || body.hours > MAX_HOURS) {
     return NextResponse.json({ error: `hours must be between 0 and ${MAX_HOURS}`, code: 'INVALID_HOURS' }, { status: 400 });

@@ -16,6 +16,7 @@ export async function GET(
     .select({
       id: goals.id,
       title: goals.title,
+      category: goals.category,
       color: goals.color,
       notes: goals.notes,
       done: goals.done,
@@ -45,6 +46,7 @@ export async function GET(
     goal: {
       id: goal.id,
       title: goal.title,
+      category: goal.category,
       color: goal.color,
       notes: goal.notes,
       done: goal.done,
@@ -63,14 +65,14 @@ export async function PATCH(
   const userId = await getCurrentUserId();
   const { id } = await params;
 
-  let body: { done?: boolean; title?: string; color?: string; notes?: string };
+  let body: { done?: boolean; title?: string; category?: string | null; color?: string; notes?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const updates: { done?: boolean; completedAt?: Date | null; title?: string; color?: string; notes?: string } = {};
+  const updates: { done?: boolean; completedAt?: Date | null; title?: string; category?: string | null; color?: string; notes?: string } = {};
   if (typeof body.done === 'boolean') {
     updates.done = body.done;
     updates.completedAt = body.done ? new Date() : null;
@@ -84,6 +86,12 @@ export async function PATCH(
   }
   if (typeof body.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.color)) {
     updates.color = body.color;
+  }
+  if (body.category === null) {
+    updates.category = null;
+  } else if (typeof body.category === 'string') {
+    const c = body.category.trim();
+    updates.category = c ? c.slice(0, 120) : null;
   }
   if (typeof body.notes === 'string') {
     updates.notes = body.notes.slice(0, 5000);

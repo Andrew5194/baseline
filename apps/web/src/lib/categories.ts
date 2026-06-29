@@ -31,6 +31,11 @@ const PRESET_COLORS: Record<string, string> = {
 // colored segments on both light and dark backgrounds.
 export const FREE_COLOR = 'rgba(148, 163, 184, 0.22)'; // slate-400 @ ~22%
 
+// Free time when recurring routines are hidden — a faint green to signal that
+// free time is now the focus.
+export const FREE_FOCUS_COLOR = 'rgba(16, 185, 129, 0.2)'; // emerald-500 @ ~20%
+export const FREE_FOCUS_SWATCH = '#34d399'; // emerald-400
+
 function hslToHex(h: number, s: number, l: number): string {
   const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
   const f = (n: number) => {

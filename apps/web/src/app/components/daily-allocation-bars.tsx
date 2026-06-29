@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useReducer } from 'react';
 import { Group } from '@visx/group';
 import { scaleBand, scaleLinear } from '@visx/scale';
 import { useTooltip, TooltipWithBounds } from '@visx/tooltip';
-import { colorForCategory, FREE_COLOR, adjustLightness } from '../../lib/categories';
+import { colorForCategory, FREE_COLOR, FREE_FOCUS_SWATCH, adjustLightness } from '../../lib/categories';
 import { useChartWidth } from './use-chart-width';
 import { RecurringIcon } from './recurring-icon';
 import { barLabel, fullLabel } from './chart-axis';
@@ -20,6 +20,8 @@ interface DailyAllocationBarsProps {
   yMax?: number;
   // Categories sourced from a recurring routine, marked in the tooltip.
   recurringCategories?: string[];
+  // When true, recurring routines are hidden and free time is shown in green.
+  freeFocus?: boolean;
 }
 
 const FREE_KEY = 'Free';
@@ -44,13 +46,37 @@ interface TooltipRow {
   segments: Array<{ key: string; value: number; color: string }>;
 }
 
-export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories }: DailyAllocationBarsProps) {
+export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories, freeFocus }: DailyAllocationBarsProps) {
   const color = colorOf ?? ((c: string) => colorForCategory(c));
+  const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
   const recurringSet = new Set(recurringCategories ?? []);
   const { ref, width } = useChartWidth();
   const { showTooltip, hideTooltip, tooltipData, tooltipLeft, tooltipTop, tooltipOpen } =
     useTooltip<TooltipRow>();
   const [hovered, setHovered] = useState<string | null>(null);
+
+  // Tween 0 → 1 (show routines → focus on free time) so each bar smoothly shrinks
+  // from 24h to (24h − recurring) and the colours crossfade, instead of snapping.
+  const target = freeFocus ? 1 : 0;
+  const progressRef = useRef(target);
+  const [, force] = useReducer((x) => x + 1, 0);
+  useEffect(() => {
+    const start = progressRef.current;
+    if (start === target) return;
+    const startTime = performance.now();
+    const dur = 480;
+    const ease = (x: number) => 1 - Math.pow(1 - x, 3);
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - startTime) / dur);
+      progressRef.current = start + (target - start) * ease(p);
+      force();
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  const progress = progressRef.current;
 
   if (data.length === 0) {
     return (
@@ -64,6 +90,10 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
   const innerW = Math.max(0, width - marginLeft - MARGIN.right);
   const innerH = HEIGHT - MARGIN.top - MARGIN.bottom;
   const compact = data.length <= 7;
+  // Respect the incoming stack order — recurring routines at the bottom, variable
+  // (non-recurring) categories above — with Free as the top segment. So when
+  // recurring is hidden, it shrinks away at the base and the non-recurring work
+  // settles to the bottom, coming into focus.
   const keys = [...categories, FREE_KEY];
 
   const dates = data.map((d) => String(d.date));
@@ -90,6 +120,12 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                 </linearGradient>
               );
             })}
+            {/* Free-time gradient — a faint translucent emerald glow when focusing on free time */}
+            <linearGradient id="bar-grad-free" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(16,185,129,0.3)" />
+              <stop offset="55%" stopColor="rgba(16,185,129,0.16)" />
+              <stop offset="100%" stopColor="rgba(16,185,129,0.07)" />
+            </linearGradient>
           </defs>
           <Group left={marginLeft} top={MARGIN.top}>
             {/* Gridlines: dashed inner lines + a soft baseline */}
@@ -117,15 +153,22 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
               const bx = x(iso) ?? 0;
               const dimmed = hovered !== null && hovered !== iso;
 
+              // Focusing on free time removes recurring time from the day entirely:
+              // recurring segments shrink by `progress`, Free stays as-is, so the bar
+              // total falls from 24h toward (24h − recurring).
               let acc = 0;
               const segs = keys
                 .map((key) => {
-                  const v = Number(row[key]) || 0;
-                  const seg = { key, value: v, y0: acc, y1: acc + v };
-                  acc += v;
-                  return seg;
+                  const raw = Number(row[key]) || 0;
+                  const value = key !== FREE_KEY && recurringSet.has(key) ? raw * (1 - progress) : raw;
+                  return { key, raw, value };
                 })
-                .filter((s) => s.value > 0);
+                .filter((s) => s.raw > 0 || s.key === FREE_KEY)
+                .map((s) => {
+                  const seg = { key: s.key, value: s.value, y0: acc, y1: acc + s.value };
+                  acc += s.value;
+                  return seg;
+                });
               const total = acc;
               const clipId = `clip-${iso}`;
 
@@ -143,14 +186,16 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                       const top = yScale(s.y1);
                       const h = Math.max(0, yScale(s.y0) - yScale(s.y1) - (isBottom ? 0 : SEG_GAP));
                       return (
-                        <rect
-                          key={s.key}
-                          x={bx}
-                          y={top}
-                          width={bw}
-                          height={h}
-                          fill={s.key === FREE_KEY ? FREE_COLOR : `url(#${gradId(s.key)})`}
-                        />
+                        s.key === FREE_KEY ? (
+                          // Two stacked rects (grey + green) on the same geometry; the
+                          // tween moves the geometry and `progress` crossfades colour.
+                          <g key={s.key}>
+                            <rect x={bx} y={top} width={bw} height={h} fill={FREE_COLOR} opacity={1 - progress} />
+                            <rect x={bx} y={top} width={bw} height={h} fill="url(#bar-grad-free)" opacity={progress} />
+                          </g>
+                        ) : (
+                          <rect key={s.key} x={bx} y={top} width={bw} height={h} fill={`url(#${gradId(s.key)})`} />
+                        )
                       );
                     })}
                   </Group>
@@ -175,7 +220,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                             .map((s) => ({
                               key: s.key,
                               value: s.value,
-                              color: s.key === FREE_KEY ? FREE_SWATCH : color(s.key),
+                              color: s.key === FREE_KEY ? freeSwatch : color(s.key),
                             })),
                         },
                       });
@@ -243,7 +288,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                     style={{ backgroundColor: s.color }}
                   />
                   <span className={isFree ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-600 dark:text-neutral-300'}>
-                    {s.key}
+                    {isFree && freeFocus ? 'Focus time' : s.key}
                   </span>
                   {recurringSet.has(s.key) && (
                     <span className="text-neutral-400 dark:text-neutral-500" title="Recurring routine">

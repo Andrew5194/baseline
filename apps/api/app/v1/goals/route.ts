@@ -9,7 +9,7 @@ export async function GET() {
   const userId = await getCurrentUserId();
 
   const rows = await db
-    .select({ id: goals.id, title: goals.title, color: goals.color, done: goals.done, completedAt: goals.completedAt, createdAt: goals.createdAt })
+    .select({ id: goals.id, title: goals.title, category: goals.category, color: goals.color, done: goals.done, completedAt: goals.completedAt, createdAt: goals.createdAt })
     .from(goals)
     .where(eq(goals.userId, userId))
     .orderBy(asc(goals.done), asc(goals.position), desc(goals.createdAt));
@@ -30,7 +30,7 @@ export async function GET() {
 
   const data = rows.map((r) => {
     const c = counts.get(r.id) ?? { total: 0, done: 0 };
-    return { id: r.id, title: r.title, color: r.color, done: r.done, completed_at: r.completedAt, task_total: c.total, task_done: c.done };
+    return { id: r.id, title: r.title, category: r.category, color: r.color, done: r.done, completed_at: r.completedAt, task_total: c.total, task_done: c.done };
   });
 
   return NextResponse.json({ data });
@@ -40,7 +40,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const userId = await getCurrentUserId();
 
-  let body: { title?: string; color?: string };
+  let body: { title?: string; category?: string; color?: string };
   try {
     body = await request.json();
   } catch {
@@ -56,14 +56,15 @@ export async function POST(request: NextRequest) {
   }
 
   const color = typeof body.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.color) ? body.color : null;
+  const category = typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 120) : null;
 
   const [row] = await db
     .insert(goals)
-    .values({ userId, title, color })
-    .returning({ id: goals.id, title: goals.title, color: goals.color, done: goals.done, completedAt: goals.completedAt });
+    .values({ userId, title, category, color })
+    .returning({ id: goals.id, title: goals.title, category: goals.category, color: goals.color, done: goals.done, completedAt: goals.completedAt });
 
   return NextResponse.json(
-    { id: row.id, title: row.title, color: row.color, done: row.done, completed_at: row.completedAt, task_total: 0, task_done: 0 },
+    { id: row.id, title: row.title, category: row.category, color: row.color, done: row.done, completed_at: row.completedAt, task_total: 0, task_done: 0 },
     { status: 201 },
   );
 }

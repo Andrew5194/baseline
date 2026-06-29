@@ -29,6 +29,9 @@ importers:
       '@baseline/integrations-github':
         specifier: workspace:*
         version: link:../../packages/integrations/github
+      '@baseline/integrations-google-calendar':
+        specifier: workspace:*
+        version: link:../../packages/integrations/google-calendar
       '@baseline/metrics':
         specifier: workspace:*
         version: link:../../packages/metrics
@@ -229,6 +232,16 @@ importers:
         version: 5.9.3
 
   packages/integrations/github:
+    dependencies:
+      '@baseline/events':
+        specifier: workspace:*
+        version: link:../../events
+    devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/integrations/google-calendar:
     dependencies:
       '@baseline/events':
         specifier: workspace:*

@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../lib/api';
+import { PRESET_CATEGORIES } from '../../lib/categories';
+
+const CUSTOM = '__custom__';
 
 interface DetailTodo {
   id: string;
@@ -15,7 +18,7 @@ interface DetailRecurring {
   days_mask: number;
 }
 interface GoalDetailData {
-  goal: { id: string; title: string; color: string | null; notes: string | null; done: boolean; completed_at: string | null };
+  goal: { id: string; title: string; category: string | null; color: string | null; notes: string | null; done: boolean; completed_at: string | null };
   todos: DetailTodo[];
   recurring: DetailRecurring[];
 }
@@ -45,6 +48,9 @@ export function GoalDetail({ goalId }: { goalId: string }) {
   const [notes, setNotes] = useState('');
   const [savedNotes, setSavedNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [cat, setCat] = useState<string | null>(null);
+  const [customizing, setCustomizing] = useState(false);
+  const [customCat, setCustomCat] = useState('');
 
   const load = useCallback(
     () =>
@@ -53,10 +59,28 @@ export function GoalDetail({ goalId }: { goalId: string }) {
           setDetail(d);
           setNotes((prev) => (prev === '' ? d.goal.notes ?? '' : prev));
           setSavedNotes(d.goal.notes ?? '');
+          setCat((prev) => (prev === null ? d.goal.category : prev));
         })
         .catch(console.error),
     [goalId],
   );
+
+  async function saveCategory(value: string | null) {
+    setCat(value);
+    await apiFetch(`/v1/goals/${goalId}`, { method: 'PATCH', body: JSON.stringify({ category: value }) }).catch(console.error);
+    // Refresh the goal card chip + any rolled-up category views.
+    window.dispatchEvent(new CustomEvent('baseline:goals-changed'));
+  }
+
+  function onSelectCategory(v: string) {
+    if (v === CUSTOM) {
+      setCustomizing(true);
+      setCustomCat('');
+      return;
+    }
+    setCustomizing(false);
+    saveCategory(v || null);
+  }
   useEffect(() => {
     load();
     const onChange = () => load();
@@ -80,6 +104,46 @@ export function GoalDetail({ goalId }: { goalId: string }) {
 
   return (
     <div className="px-4 pb-4 pt-1 space-y-4 border-t border-neutral-100 dark:border-neutral-800">
+      {/* Category — time on this goal's tasks rolls up here */}
+      <div className="pt-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Category</span>
+          <span className="text-[10px] text-neutral-400 dark:text-neutral-500">Tracked time rolls up here</span>
+        </div>
+        {customizing ? (
+          <input
+            autoFocus
+            value={customCat}
+            onChange={(e) => setCustomCat(e.target.value)}
+            onBlur={() => {
+              setCustomizing(false);
+              const c = customCat.trim();
+              if (c) saveCategory(c);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              if (e.key === 'Escape') setCustomizing(false);
+            }}
+            placeholder="New category name"
+            className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+          />
+        ) : (
+          <select
+            value={cat ?? ''}
+            onChange={(e) => onSelectCategory(e.target.value)}
+            className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+          >
+            <option value="">Uncategorized</option>
+            {[...new Set([...PRESET_CATEGORIES, ...(cat && !PRESET_CATEGORIES.includes(cat) ? [cat] : [])])].map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            <option value={CUSTOM}>Custom…</option>
+          </select>
+        )}
+      </div>
+
       {/* Notes */}
       <div className="pt-3">
         <div className="flex items-center justify-between mb-1.5">
