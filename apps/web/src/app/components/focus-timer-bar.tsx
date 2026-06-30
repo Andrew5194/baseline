@@ -39,8 +39,12 @@ export function FocusTimerBar({ onLogged }: { onLogged: () => void }) {
           category: timer!.category,
           note: timer!.note || undefined,
           timed: true,
+          task_id: timer!.taskId,
         }),
       }).catch(() => {});
+      window.dispatchEvent(
+        new CustomEvent('baseline:session-logged', { detail: { hours, taskId: timer!.taskId ?? null, taskTitle: timer!.note ?? null } }),
+      );
     }
     clearTimer();
     setSaving(false);

@@ -38,10 +38,12 @@ export function CompletionHeatmap({
   cells,
   onSelectDay,
   selected,
+  countdown = false,
 }: {
   cells: HeatmapCell[];
   onSelectDay?: (date: string) => void;
   selected?: string | null;
+  countdown?: boolean;
 }) {
   const tz = useTimezone();
   const [hover, setHover] = useState<number | null>(null);
@@ -67,11 +69,22 @@ export function CompletionHeatmap({
         <div className="min-w-0">
           {focus ? (
             <>
-              <p className="text-2xl font-semibold tracking-tight text-neutral-600 dark:text-neutral-300 tabular-nums leading-none">
-                {focus.completed} / {focus.total}
-                <span className="ml-2 align-middle text-sm font-semibold">
-                  task{focus.total === 1 ? '' : 's'} completed
-                </span>
+              <p className="text-2xl font-semibold tracking-tight text-neutral-800 dark:text-neutral-100 tabular-nums leading-none">
+                {countdown ? (
+                  <>
+                    {Math.max(0, focus.total - focus.completed)}
+                    <span className="ml-2 align-middle text-sm font-semibold">
+                      task{focus.total - focus.completed === 1 ? '' : 's'} to go
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {focus.completed} / {focus.total}
+                    <span className="ml-2 align-middle text-sm font-semibold">
+                      task{focus.total === 1 ? '' : 's'} completed
+                    </span>
+                  </>
+                )}
               </p>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1.5">
                 {focus.date === todayKey ? 'Today · ' : ''}

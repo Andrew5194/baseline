@@ -177,6 +177,9 @@ export const goals = pgTable(
     color: text('color'),
     // Free-text notes about the goal.
     notes: text('notes'),
+    // Optional target/expiration date (local day key, YYYY-MM-DD) — when the goal
+    // should be accomplished by. Past + not done reads as overdue. Null = open-ended.
+    dueAt: text('due_at'),
     // Manual sort order (drag-and-drop); lower sorts first.
     position: integer('position').notNull().default(0),
     done: boolean('done').notNull().default(false),

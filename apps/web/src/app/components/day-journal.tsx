@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../lib/api';
 
+// How long to wait after the last keystroke before autosaving. Deliberately roomy so a
+// slip (or an accidental clear) can be undone before it's committed.
+const AUTOSAVE_MS = 2500;
+
 // A per-day journal subsection (mirrors the Tasks subsection). Loads the entry for
 // `day` and saves edits (on blur, via the Save button, or when the day switches).
 // The textarea auto-grows with its content.
@@ -11,14 +15,17 @@ export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string })
   const [saved, setSaved] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
 
   const taRef = useRef<HTMLTextAreaElement>(null);
-  // Mirror the latest content/saved so the day-switch cleanup can flush correctly.
+  // Mirror the latest content/saved so the debounce timer and day-switch cleanup
+  // always flush the current text (no stale closures).
   const latest = useRef({ content: '', saved: '' });
   latest.current = { content, saved };
+  const savingRef = useRef(false);
 
   function persist(date: string, text: string) {
-    return apiFetch(`/v1/day-notes`, { method: 'PUT', body: JSON.stringify({ date, content: text }) }).catch(console.error);
+    return apiFetch(`/v1/day-notes`, { method: 'PUT', body: JSON.stringify({ date, content: text }) });
   }
 
   // Grow the textarea to fit its content (no manual resize handle).
@@ -51,22 +58,42 @@ export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string })
 
     return () => {
       cancelled = true;
-      // Flush the day we're leaving if it has unsaved edits.
+      // Flush the day we're leaving if it has unsaved edits (safety net against losing
+      // a journal entry when navigating days — distinct from the explicit Update button).
       const { content: c, saved: s } = latest.current;
-      if (c !== s) persist(loadingDay, c);
+      if (c !== s) persist(loadingDay, c).catch(console.error);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [day]);
 
   async function save() {
-    if (content === saved) return;
+    const { content: c, saved: s } = latest.current;
+    if (c === s || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
-    setSaved(content);
-    await persist(day, content);
-    setSaving(false);
+    setError(false);
+    try {
+      await persist(day, c);
+      setSaved(c);
+    } catch (e) {
+      console.error(e);
+      setError(true);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   const dirty = content !== saved;
+
+  // Debounced autosave — persist ~800ms after the last keystroke. Re-runs on each edit,
+  // so the timer always trails the latest text; the day-switch cleanup flushes the rest.
+  useEffect(() => {
+    if (loading || !dirty) return;
+    const t = setTimeout(save, AUTOSAVE_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, dirty, loading, saving]);
 
   return (
     <section className="mt-10">
@@ -74,20 +101,18 @@ export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string })
         <h2 className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">Notes</h2>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden transition focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/30">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
           <p className="text-sm font-medium text-neutral-900 dark:text-white">{dayLabel}</p>
-          <div className="text-[11px]">
-            {saving ? (
-              <span className="text-neutral-400 dark:text-neutral-500">Saving…</span>
-            ) : dirty ? (
-              <button onClick={save} className="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500">
-                Save
-              </button>
-            ) : content ? (
-              <span className="text-neutral-400 dark:text-neutral-500">Saved</span>
-            ) : null}
-          </div>
+          {saving ? (
+            <span className="text-[11px] text-neutral-400 dark:text-neutral-500">Saving…</span>
+          ) : error ? (
+            <span className="text-[11px] text-red-500">Couldn’t save</span>
+          ) : dirty ? (
+            <span className="text-[11px] text-neutral-400 dark:text-neutral-500">Unsaved…</span>
+          ) : content ? (
+            <span className="text-[11px] text-neutral-400 dark:text-neutral-500">Saved</span>
+          ) : null}
         </div>
 
         {loading ? (
@@ -100,7 +125,6 @@ export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string })
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onInput={autosize}
-            onBlur={save}
             placeholder="How did today go? Jot down your thoughts and feelings…"
             className="block w-full min-h-[120px] px-4 py-3 text-sm bg-transparent text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none resize-none leading-relaxed overflow-hidden"
           />

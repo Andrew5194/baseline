@@ -3,7 +3,7 @@ import { db, events } from '@baseline/db';
 import { eq, and, gte, lt } from 'drizzle-orm';
 import { dayKeyInTz, computeDelta } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
-import { periodBounds, isPeriod } from '../../../../../lib/period';
+import { periodBounds, isPeriod, offsetNow, parseOffset } from '../../../../../lib/period';
 
 const SOURCE = 'google_calendar';
 const HOUR_MS = 3_600_000;
@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
-  const b = periodBounds(periodParam, now, tz);
+  const offset = parseOffset(request.nextUrl.searchParams.get('offset'));
+  const b = periodBounds(periodParam, offsetNow(periodParam, now, tz, offset), tz);
   const currEnd = now < b.end ? now : b.end;
   const elapsedMs = currEnd.getTime() - b.start.getTime();
   const prevEnd = new Date(b.prevStart.getTime() + elapsedMs);

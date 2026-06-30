@@ -19,6 +19,7 @@ export async function GET(
       category: goals.category,
       color: goals.color,
       notes: goals.notes,
+      dueAt: goals.dueAt,
       done: goals.done,
       completedAt: goals.completedAt,
     })
@@ -49,6 +50,7 @@ export async function GET(
       category: goal.category,
       color: goal.color,
       notes: goal.notes,
+      due_at: goal.dueAt,
       done: goal.done,
       completed_at: goal.completedAt,
     },
@@ -65,14 +67,14 @@ export async function PATCH(
   const userId = await getCurrentUserId();
   const { id } = await params;
 
-  let body: { done?: boolean; title?: string; category?: string | null; color?: string; notes?: string };
+  let body: { done?: boolean; title?: string; category?: string | null; color?: string; notes?: string; due_at?: string | null };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const updates: { done?: boolean; completedAt?: Date | null; title?: string; category?: string | null; color?: string; notes?: string } = {};
+  const updates: { done?: boolean; completedAt?: Date | null; title?: string; category?: string | null; color?: string; notes?: string; dueAt?: string | null } = {};
   if (typeof body.done === 'boolean') {
     updates.done = body.done;
     updates.completedAt = body.done ? new Date() : null;
@@ -95,6 +97,11 @@ export async function PATCH(
   }
   if (typeof body.notes === 'string') {
     updates.notes = body.notes.slice(0, 5000);
+  }
+  if (body.due_at === null) {
+    updates.dueAt = null;
+  } else if (typeof body.due_at === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.due_at)) {
+    updates.dueAt = body.due_at;
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'nothing to update', code: 'INVALID_BODY' }, { status: 400 });

@@ -36,6 +36,9 @@ export const manualTimeEntryPayload = z.object({
   // True for stopwatch/timer sessions — occurred_at is the real end time, so a
   // start–end range can be derived. Manual entries leave this unset (no real time).
   timed: z.boolean().optional(),
+  // When the session was started from a task's timer, the task's id — lets the
+  // entry link back to that task.
+  task_id: z.string().optional(),
 });
 
 export const gcalEventPayload = z.object({

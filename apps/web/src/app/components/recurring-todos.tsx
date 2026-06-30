@@ -37,7 +37,17 @@ function describeDays(mask: number): string {
   return days.length ? days.join(', ') : 'Never';
 }
 
-export function RecurringTodos({ goals, categories, onChange }: { goals: GoalOpt[]; categories: string[]; onChange: () => void }) {
+export function RecurringTodos({
+  goals,
+  categories,
+  categoryColorOf,
+  onChange,
+}: {
+  goals: GoalOpt[];
+  categories: string[];
+  categoryColorOf?: (cat: string) => string;
+  onChange: () => void;
+}) {
   const [items, setItems] = useState<RecurringTodo[]>([]);
   const [title, setTitle] = useState('');
   const [daysMask, setDaysMask] = useState(ALL_DAYS);
@@ -101,6 +111,7 @@ export function RecurringTodos({ goals, categories, onChange }: { goals: GoalOpt
               <TaskGoalTag
                 goals={goals}
                 categories={categories}
+                categoryColorOf={categoryColorOf}
                 value={it.goal_id}
                 goalTitle={it.goal_title}
                 goalColor={it.goal_color}
@@ -166,6 +177,7 @@ export function RecurringTodos({ goals, categories, onChange }: { goals: GoalOpt
           <TaskGoalTag
             goals={goals}
             categories={categories}
+            categoryColorOf={categoryColorOf}
             value={label.goalId}
             goalTitle={newGoal?.title ?? null}
             goalColor={newGoal?.color ?? null}

@@ -5,12 +5,13 @@ import { apiFetch } from '../../lib/api';
 import { CompletionHeatmap, type HeatmapCell } from './completion-heatmap';
 import { RecurringTodos } from './recurring-todos';
 import { TaskGoalTag } from './task-goal-tag';
-import { TaskTimer } from './task-timer';
+import { TaskTimerPanel } from './task-timer-panel';
 import { useFocusTimer, updateTimer } from '../../lib/focus-timer';
+import { useTimeUnit } from '../../lib/use-time-unit';
 import { DayJournal } from './day-journal';
 import { useTimezone } from '../../lib/use-timezone';
 import { goalColor } from '../../lib/goal-colors';
-import { PRESET_CATEGORIES } from '../../lib/categories';
+import { PRESET_CATEGORIES, buildColorMap, colorForCategory } from '../../lib/categories';
 
 interface Todo {
   id: string;
@@ -89,8 +90,9 @@ const Check = () => (
   </svg>
 );
 
-export function TodoSection() {
+export function TodoSection({ countdown = false }: { countdown?: boolean } = {}) {
   const tz = useTimezone();
+  const [unit] = useTimeUnit();
   const [todos, setTodos] = useState<Todo[] | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
   const [recurring, setRecurring] = useState<RecurringDef[]>([]);
@@ -103,6 +105,9 @@ export function TodoSection() {
   const [editDraft, setEditDraft] = useState('');
   const [timerTask, setTimerTask] = useState<string | null>(null);
   const [knownCats, setKnownCats] = useState<string[]>([]);
+  const [catColors, setCatColors] = useState<Record<string, string>>({});
+  // A task id from a `?task=` deep link (e.g. the "go to task" link on a time entry).
+  const [pendingTask, setPendingTask] = useState<string | null>(null);
   const activeTimer = useFocusTimer();
 
   const load = useCallback(
@@ -135,24 +140,55 @@ export function TodoSection() {
         .catch(() => {}),
     [],
   );
+  // The user's category color overrides — so category tags use the same colors as
+  // the donut/registry, not a stale palette guess.
+  const loadCatColors = useCallback(
+    () =>
+      apiFetch<{ colors: Record<string, string> }>('/v1/category-colors')
+        .then((r) => setCatColors(r.colors ?? {}))
+        .catch(() => {}),
+    [],
+  );
 
   useEffect(() => {
     load();
     loadGoals();
     loadCategories();
+    loadCatColors();
     const onGoals = () => {
       loadGoals();
       loadCategories();
+      loadCatColors();
     };
+    // A task completed elsewhere (e.g. the post-timer toast) should refresh the list.
+    const onTodos = () => load();
     window.addEventListener('baseline:goals-changed', onGoals);
-    return () => window.removeEventListener('baseline:goals-changed', onGoals);
-  }, [load, loadGoals, loadCategories]);
+    window.addEventListener('baseline:todos-changed', onTodos);
+    return () => {
+      window.removeEventListener('baseline:goals-changed', onGoals);
+      window.removeEventListener('baseline:todos-changed', onTodos);
+    };
+  }, [load, loadGoals, loadCategories, loadCatColors]);
 
   // If a task's timer is running (e.g. started from the Overview), reveal that
   // task's dropdown automatically when returning to this page.
   useEffect(() => {
     if (activeTimer?.taskId) setTimerTask(activeTimer.taskId);
   }, [activeTimer?.taskId]);
+
+  // Pick up a `?task=` deep link (the "go to task" link on a time entry).
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('task');
+    if (t) setPendingTask(t);
+  }, []);
+  // Once tasks load, jump to the linked task's day and open its panel.
+  useEffect(() => {
+    if (!pendingTask || todos === null) return;
+    const oneOff = todos.find((x) => x.id === pendingTask);
+    if (oneOff) setSelectedDay(oneOff.date);
+    setTimerTask(pendingTask);
+    setPendingTask(null);
+  }, [pendingTask, todos]);
 
   // Notify the Goals page so its tagged-task counts refresh.
   const notifyGoals = () => window.dispatchEvent(new CustomEvent('baseline:goals-changed'));
@@ -224,6 +260,10 @@ export function TodoSection() {
   const categories = [
     ...new Set([...PRESET_CATEGORIES, ...goalsList.map((g) => g.category).filter((c): c is string => !!c), ...knownCats]),
   ];
+  // Resolve a category to its registry color (override → preset → stable palette),
+  // matching the donut. Goals keep their own color (carried on each goal option).
+  const categoryColorMap = buildColorMap(categories, catColors);
+  const categoryColorOf = (c: string) => categoryColorMap[c] ?? colorForCategory(c, catColors);
 
   // The tasks scheduled for `day`: recurring tasks active that weekday + one-offs.
   const wd = weekdayOf(day);
@@ -280,9 +320,9 @@ export function TodoSection() {
         </button>
       </div>
 
-      {showRecurring && <RecurringTodos goals={goalsList} categories={categories} onChange={load} />}
+      {showRecurring && <RecurringTodos goals={goalsList} categories={categories} categoryColorOf={categoryColorOf} onChange={load} />}
 
-      {hasData && <CompletionHeatmap cells={heatmap} onSelectDay={setSelectedDay} selected={day} />}
+      {hasData && <CompletionHeatmap cells={heatmap} onSelectDay={setSelectedDay} selected={day} countdown={countdown} />}
 
       <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
         {/* Day header */}
@@ -301,7 +341,7 @@ export function TodoSection() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={isToday ? 'Add a task…' : `Add a task for ${fullDayLabel(day)}…`}
+            placeholder="Add a task…"
             className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none"
           />
           {title.trim() && (
@@ -362,6 +402,7 @@ export function TodoSection() {
                   <TaskGoalTag
                     goals={goalsList}
                     categories={categories}
+                    categoryColorOf={categoryColorOf}
                     value={t.goalId ?? null}
                     goalTitle={t.goalTitle ?? null}
                     goalColor={t.goalColor ?? null}
@@ -396,8 +437,23 @@ export function TodoSection() {
                   </button>
                 </div>
                 {timerTask === t.id && (
-                  <div className="px-4 pb-3">
-                    <TaskTimer taskId={t.id} title={t.title} goal={t.goalTitle} category={t.goalCategory ?? t.category ?? 'Uncategorized'} />
+                  <div className="pl-11 pr-4 pb-3">
+                    <TaskTimerPanel
+                      taskId={t.id}
+                      title={t.title}
+                      category={t.goalCategory ?? t.category ?? 'Uncategorized'}
+                      color={
+                        t.goalId && t.goalTitle
+                          ? t.goalColor ?? '#9ca3af'
+                          : t.category
+                            ? categoryColorOf(t.category)
+                            : '#9ca3af'
+                      }
+                      tz={tz}
+                      unit={unit}
+                      onLogged={load}
+                      taskDone={t.done}
+                    />
                   </div>
                 )}
               </li>

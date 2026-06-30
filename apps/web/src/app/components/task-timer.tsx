@@ -19,13 +19,11 @@ function fmt(ms: number): string {
 export function TaskTimer({
   taskId,
   title,
-  goal,
   category,
   onLogged,
 }: {
   taskId: string;
   title: string;
-  goal?: string | null;
   category: string;
   onLogged?: () => void;
 }) {
@@ -50,8 +48,10 @@ export function TaskTimer({
           category: timer.category || category,
           note: title,
           timed: true,
+          task_id: taskId,
         }),
       }).catch(() => {});
+      window.dispatchEvent(new CustomEvent('baseline:session-logged', { detail: { hours, taskId, taskTitle: title } }));
     }
     clearTimer();
     setSaving(false);
@@ -73,9 +73,9 @@ export function TaskTimer({
           </svg>
           Start
         </button>
-        <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
-          {otherRunning ? 'Another timer is running' : `Logs to ${goal ? `${goal}, ` : ''}${category}`}
-        </span>
+        {otherRunning && (
+          <span className="text-[11px] text-neutral-400 dark:text-neutral-500">Another timer is running</span>
+        )}
       </div>
     );
   }

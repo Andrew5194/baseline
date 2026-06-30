@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiFetch } from '../../lib/api';
 import { PRESET_CATEGORIES } from '../../lib/categories';
 
@@ -15,8 +15,18 @@ export function AddGoalForm({ onClose, onSuccess }: AddGoalFormProps) {
   const [title, setTitle] = useState('');
   const [cat, setCat] = useState(PRESET_CATEGORIES[0]);
   const [customCat, setCustomCat] = useState('');
+  const [dueAt, setDueAt] = useState('');
+  const [known, setKnown] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Offer every category the user already uses (presets + created/used ones).
+  useEffect(() => {
+    apiFetch<{ categories: Array<{ name: string }> }>('/v1/categories')
+      .then((r) => setKnown((r.categories ?? []).map((c) => c.name)))
+      .catch(() => {});
+  }, []);
+  const options = [...new Set([...PRESET_CATEGORIES, ...known])];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +38,7 @@ export function AddGoalForm({ onClose, onSuccess }: AddGoalFormProps) {
 
     setLoading(true);
     try {
-      await apiFetch('/v1/goals', { method: 'POST', body: JSON.stringify({ title: t, category }) });
+      await apiFetch('/v1/goals', { method: 'POST', body: JSON.stringify({ title: t, category, due_at: dueAt || null }) });
       onSuccess();
       onClose();
     } catch {
@@ -65,7 +75,7 @@ export function AddGoalForm({ onClose, onSuccess }: AddGoalFormProps) {
           onChange={(e) => setCat(e.target.value)}
           className="w-full text-sm px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
         >
-          {PRESET_CATEGORIES.map((c) => (
+          {options.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
@@ -80,6 +90,18 @@ export function AddGoalForm({ onClose, onSuccess }: AddGoalFormProps) {
             className="mt-2 w-full text-sm px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
           />
         )}
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5">
+          Target date — when you want this done by (optional)
+        </label>
+        <input
+          type="date"
+          value={dueAt}
+          onChange={(e) => setDueAt(e.target.value)}
+          className="w-full text-sm px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+        />
       </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}

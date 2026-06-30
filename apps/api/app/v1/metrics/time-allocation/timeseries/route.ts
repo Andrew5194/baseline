@@ -4,7 +4,7 @@ import { eq, and, gte, lt, gt } from 'drizzle-orm';
 import { hoursByCategoryV1, recurringToEvents, dayKeyInTz } from '@baseline/metrics';
 import type { EventInput } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
-import { periodBounds, periodBuckets, isPeriod } from '../../../../../lib/period';
+import { periodBounds, periodBuckets, isPeriod, offsetNow, parseOffset } from '../../../../../lib/period';
 
 // GET /v1/metrics/time-allocation/timeseries?period=week|month|year
 // Buckets spanning the whole period: daily for week/month (each ~24h), monthly
@@ -19,8 +19,9 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
+  const offset = parseOffset(request.nextUrl.searchParams.get('offset'));
   const tz = await getUserTimezone(userId);
-  const { start, end, granularity } = periodBounds(periodParam, now, tz);
+  const { start, end, granularity } = periodBounds(periodParam, offsetNow(periodParam, now, tz, offset), tz);
 
   const rows = await db
     .select({

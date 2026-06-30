@@ -18,13 +18,16 @@ interface TaskGoalTagProps {
   goalTitle: string | null;
   goalColor: string | null; // effective color of the tagged goal
   category: string | null; // directly-tagged category (when not tagged to a goal)
+  // Resolves a category to its registry color (overrides → preset → palette). Falls
+  // back to the plain palette if not provided.
+  categoryColorOf?: (cat: string) => string;
   onChange: (sel: { goalId: string | null; category: string | null }) => void;
 }
 
 // A task's label. It can be tagged either to a goal (shown in the goal's color) or
 // directly to a category — the menu lists both as separate sections. Untagged reads
 // "Uncategorized". The menu renders in a portal so it isn't clipped by overflow.
-export function TaskGoalTag({ goals, categories, value, goalTitle, goalColor, category, onChange }: TaskGoalTagProps) {
+export function TaskGoalTag({ goals, categories, value, goalTitle, goalColor, category, categoryColorOf = colorForCategory, onChange }: TaskGoalTagProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -79,7 +82,7 @@ export function TaskGoalTag({ goals, categories, value, goalTitle, goalColor, ca
   const taggedGoal = !!(value && goalTitle);
   const taggedCat = !taggedGoal && !!category;
   // The chip's color + label reflect whichever tag is set.
-  const chipColor = taggedGoal ? goalColor ?? '#9ca3af' : taggedCat ? colorForCategory(category!) : null;
+  const chipColor = taggedGoal ? goalColor ?? '#9ca3af' : taggedCat ? categoryColorOf(category!) : null;
   const chipLabel = taggedGoal ? goalTitle : taggedCat ? category : null;
 
   function pick(sel: { goalId: string | null; category: string | null }) {
@@ -150,7 +153,7 @@ export function TaskGoalTag({ goals, categories, value, goalTitle, goalColor, ca
                       taggedCat && category === cat ? 'font-medium text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-300'
                     }`}
                   >
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: colorForCategory(cat) }} />
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: categoryColorOf(cat) }} />
                     <span className="truncate">{cat}</span>
                   </button>
                 ))}

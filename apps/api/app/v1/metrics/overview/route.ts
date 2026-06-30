@@ -17,7 +17,7 @@ import {
   computeDelta,
 } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../../lib/user';
-import { periodBounds, isPeriod } from '../../../../lib/period';
+import { periodBounds, isPeriod, offsetNow, parseOffset } from '../../../../lib/period';
 
 const WINDOW_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
     if (!isPeriod(periodParam)) {
       return NextResponse.json({ error: 'Invalid period', code: 'INVALID_PERIOD' }, { status: 400 });
     }
-    const b = periodBounds(periodParam, now, tz);
+    const offset = parseOffset(params.get('offset'));
+    const b = periodBounds(periodParam, offsetNow(periodParam, now, tz, offset), tz);
     windowStart = b.start;
     windowEnd = b.end;
     prevStart = b.prevStart;

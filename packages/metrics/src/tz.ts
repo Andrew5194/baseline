@@ -76,8 +76,9 @@ export function zonedCivilToUtc(
   day: number,
   hour: number,
   timeZone: string,
+  minute = 0,
 ): Date {
-  const asUTC = Date.UTC(year, month - 1, day, hour, 0, 0);
+  const asUTC = Date.UTC(year, month - 1, day, hour, minute, 0);
   const offset = tzOffsetMs(new Date(asUTC), timeZone);
   return new Date(asUTC - offset);
 }

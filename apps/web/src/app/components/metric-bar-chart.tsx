@@ -16,6 +16,7 @@ interface Point {
 const HEIGHT = 256;
 const MARGIN = { top: 12, right: 8, bottom: 22, left: 36 };
 const ACCENT = '#10b981';
+const AVG_COLOR = '#3b82f6'; // the "expected average" reference line (matches marketing)
 
 function roundedTop(x: number, y: number, w: number, h: number, r: number): string {
   const rr = Math.max(0, Math.min(r, w / 2, h));
@@ -27,22 +28,33 @@ export function MetricBarChart({
   unit = '',
   todayISO,
   onSelectBar,
+  average = null,
+  averageLabel = '',
+  averageInfo = '',
+  yMax,
 }: {
   data: Point[];
   unit?: string;
   todayISO?: string;
   onSelectBar?: (date: string) => void;
+  average?: number | null; // server-computed all-time per-bucket baseline (line position)
+  averageLabel?: string; // fully-formatted label drawn at the line
+  averageInfo?: string; // how the baseline was derived (shown when the line is clicked)
+  yMax?: number; // fixed axis ceiling (e.g. days-per-bucket) so a % line lands at its true height
 }) {
   const { ref, width } = useChartWidth();
   const { showTooltip, hideTooltip, tooltipData, tooltipLeft, tooltipTop, tooltipOpen } = useTooltip<Point>();
   const [hovered, setHovered] = useState<string | null>(null);
+  const [avgOpen, setAvgOpen] = useState(false);
 
   const innerW = Math.max(0, width - MARGIN.left - MARGIN.right);
   const innerH = HEIGHT - MARGIN.top - MARGIN.bottom;
   const compact = data.length <= 7;
   const x = scaleBand<string>({ domain: data.map((d) => d.date), range: [0, innerW], padding: data.length > 45 ? 0.1 : 0.28 });
-  const maxVal = Math.max(1, ...data.map((d) => d.value));
-  const y = scaleLinear<number>({ domain: [0, maxVal * 1.1], range: [innerH, 0] });
+  // A fixed ceiling (yMax) keeps a percentage-style line at its true height; otherwise
+  // scale to the data, including the baseline so its line is always within range.
+  const domainMax = yMax ?? Math.max(1, ...data.map((d) => d.value), average ?? 0) * 1.1;
+  const y = scaleLinear<number>({ domain: [0, domainMax], range: [innerH, 0] });
   const bw = x.bandwidth();
   const yTicks = y.ticks(4).filter((t) => Number.isInteger(t));
 
@@ -75,6 +87,12 @@ export function MetricBarChart({
               </text>
             ))}
 
+            {/* Click target for the baseline line — under the bars so they keep hover priority;
+                clickable over empty days and the gaps between bars. */}
+            {average != null && average > 0 && averageInfo && (
+              <rect x={0} y={y(average) - 7} width={innerW} height={14} fill="transparent" style={{ cursor: 'pointer' }} onClick={() => setAvgOpen((o) => !o)} />
+            )}
+
             {data.map((d) => {
               const bx = x(d.date) ?? 0;
               const top = y(d.value);
@@ -83,26 +101,38 @@ export function MetricBarChart({
               return (
                 <g key={d.date} style={{ opacity: dimmed ? 0.35 : 1, transition: 'opacity 0.15s ease' }}>
                   {h > 0 && <path d={roundedTop(bx, top, bw, h, Math.min(3, bw / 2))} fill="url(#metric-bar-grad)" />}
-                  <rect
-                    x={bx}
-                    y={0}
-                    width={bw}
-                    height={innerH}
-                    fill="transparent"
-                    style={{ cursor: onSelectBar ? 'pointer' : 'default' }}
-                    onMouseEnter={() => {
-                      setHovered(d.date);
-                      showTooltip({ tooltipLeft: MARGIN.left + bx + bw / 2, tooltipTop: MARGIN.top + top - 8, tooltipData: d });
-                    }}
-                    onMouseLeave={() => {
-                      setHovered(null);
-                      hideTooltip();
-                    }}
-                    onClick={() => onSelectBar?.(d.date)}
-                  />
+                  {/* Hit area only exists where there's an actual bar — empty days aren't interactive. */}
+                  {d.value > 0 && (
+                    <rect
+                      x={bx}
+                      y={0}
+                      width={bw}
+                      height={innerH}
+                      fill="transparent"
+                      style={{ cursor: onSelectBar ? 'pointer' : 'default' }}
+                      onMouseEnter={() => {
+                        setHovered(d.date);
+                        showTooltip({ tooltipLeft: MARGIN.left + bx + bw / 2, tooltipTop: MARGIN.top + top - 8, tooltipData: d });
+                      }}
+                      onMouseLeave={() => {
+                        setHovered(null);
+                        hideTooltip();
+                      }}
+                      onClick={() => onSelectBar?.(d.date)}
+                    />
+                  )}
                 </g>
               );
             })}
+
+            {average != null && average > 0 && (
+              <g style={{ pointerEvents: 'none' }}>
+                <line x1={0} x2={innerW} y1={y(average)} y2={y(average)} stroke={AVG_COLOR} strokeWidth={1.5} strokeDasharray="5 4" />
+                <text x={innerW} y={y(average) - 5} textAnchor="end" fontSize={10} fontWeight={600} fill={AVG_COLOR}>
+                  {averageLabel}
+                </text>
+              </g>
+            )}
 
             {data.map((d, i) => {
               const isToday = !!todayISO && d.date === todayISO;
@@ -135,6 +165,37 @@ export function MetricBarChart({
             </div>
           </div>
         </TooltipWithBounds>
+      )}
+
+      {avgOpen && averageInfo && average != null && (
+        <>
+          <div className="absolute inset-0 z-10" onClick={() => setAvgOpen(false)} />
+          <div
+            className="absolute z-20 max-w-[280px] rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] leading-snug shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+            style={
+              y(average) > innerH / 2
+                ? { bottom: HEIGHT - (MARGIN.top + y(average)) + 10, right: 8 }
+                : { top: MARGIN.top + y(average) + 10, right: 8 }
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-2 mb-0.5">
+              <span className="font-semibold" style={{ color: AVG_COLOR }}>
+                How the baseline is calculated
+              </span>
+              <button
+                onClick={() => setAvgOpen(false)}
+                aria-label="Close"
+                className="-mr-1 -mt-0.5 flex-shrink-0 text-neutral-400 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-200"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="text-neutral-600 dark:text-neutral-300">{averageInfo}</div>
+          </div>
+        </>
       )}
     </div>
   );
