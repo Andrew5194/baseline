@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { Logo } from './logo';
 
 // The official, full-color Google Calendar mark (shared by the badge and Sources).
 export function GoogleCalendarIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -22,6 +23,10 @@ export function GoogleCalendarIcon({ className = 'w-4 h-4' }: { className?: stri
 // Registry of metric sources (label + icon), shared by the source badge and the
 // source filter. Add an entry here when a new integration starts producing metrics.
 export const SOURCE_META: Record<string, { label: string; icon: ReactNode }> = {
+  baseline: {
+    label: 'Baseline',
+    icon: <Logo className="w-3.5 h-3.5" />,
+  },
   github: {
     label: 'GitHub',
     icon: (

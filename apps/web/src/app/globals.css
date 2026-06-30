@@ -86,6 +86,28 @@ html {
   animation: ekg-trace 1.6s linear infinite;
 }
 
+/* Legend row shimmer — a faint emerald sweep over the category that's currently
+   accruing live timer time. */
+@keyframes legend-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.legend-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(16, 185, 129, 0.08);
+}
+.legend-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(16, 185, 129, 0.45) 50%, transparent 100%);
+  animation: legend-shimmer 1.6s linear infinite;
+  pointer-events: none;
+}
+
 /* Hide scrollbar while maintaining scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -96,10 +118,22 @@ html {
   display: none;
 }
 
-/* Focus ring utility */
-*:focus-visible {
-  outline: 2px solid rgb(16 185 129 / 0.5);
-  outline-offset: 2px;
+/* Default focus ring — in @layer base so element-level utilities (focus:outline-none,
+   focus:ring-*) can override it. Unlayered, it would beat every Tailwind utility and
+   paint an emerald outline on inputs that opt out (e.g. the goal notes box). */
+@layer base {
+  *:focus-visible {
+    outline: 2px solid rgb(16 185 129 / 0.5);
+    outline-offset: 2px;
+  }
+  /* Form controls supply their own focus styling (rings/borders), so the global
+     outline must not also paint on them — otherwise it doubles up (and an offset
+     outline gets clipped by overflow-hidden containers, showing a stray top line). */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+  }
 }
 
 /* Selection color */

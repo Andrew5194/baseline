@@ -6,12 +6,14 @@ import { goalColor } from '../../lib/goal-colors';
 import { GoalColorPicker } from './goal-color-picker';
 import { GoalDetail } from './goal-detail';
 import { Modal } from './modal';
+import { dueMeta, DUE_TONE_CLASS } from '../../lib/due-date';
 
 export interface Goal {
   id: string;
   title: string;
   category: string | null;
   color: string | null;
+  due_at: string | null;
   done: boolean;
   completed_at: string | null;
   task_total: number;
@@ -23,10 +25,12 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { mon
 export function GoalCard({
   goal,
   onChange,
+  countdown = false,
   drag,
 }: {
   goal: Goal;
   onChange: () => void;
+  countdown?: boolean;
   drag?: { onStart: (e: React.DragEvent) => void; onEnd: (e: React.DragEvent) => void };
 }) {
   const [editing, setEditing] = useState(false);
@@ -36,6 +40,8 @@ export function GoalCard({
   const [expanded, setExpanded] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
   const color = goalColor(goal.color, goal.id);
+  // Show the target-date badge while the goal is open; once done, the "Completed" line takes over.
+  const due = goal.done ? null : dueMeta(goal.due_at, false, countdown);
 
   function toggleExpand() {
     setEverOpened(true);
@@ -127,6 +133,11 @@ export function GoalCard({
                   {goal.category}
                 </span>
               )}
+              {due && (
+                <span className={`flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${DUE_TONE_CLASS[due.tone]}`} title="Target date">
+                  {due.label}
+                </span>
+              )}
             </div>
           )}
           {goal.done && goal.completed_at && !editing && (
@@ -178,7 +189,9 @@ export function GoalCard({
 
       {/* Slide-open detail */}
       <div className={`grid transition-all duration-200 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-        <div className="overflow-hidden">{everOpened && <GoalDetail goalId={goal.id} />}</div>
+        <div className="overflow-hidden">
+          {everOpened && <GoalDetail goalId={goal.id} countdown={countdown} initialCategory={goal.category} initialDue={goal.due_at} />}
+        </div>
       </div>
 
       {confirming && (

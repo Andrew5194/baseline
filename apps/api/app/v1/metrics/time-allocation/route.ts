@@ -4,7 +4,7 @@ import { eq, and, gte, lt, gt } from 'drizzle-orm';
 import { hoursByCategoryV1, computeDelta, recurringToEvents } from '@baseline/metrics';
 import type { EventInput } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../../lib/user';
-import { periodBounds, isPeriod } from '../../../../lib/period';
+import { periodBounds, isPeriod, offsetNow, parseOffset } from '../../../../lib/period';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -20,8 +20,9 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
+  const offset = parseOffset(request.nextUrl.searchParams.get('offset'));
   const tz = await getUserTimezone(userId);
-  const { start, end, prevStart, budgetHours } = periodBounds(periodParam, now, tz);
+  const { start, end, prevStart, budgetHours } = periodBounds(periodParam, offsetNow(periodParam, now, tz, offset), tz);
 
   const rows = await db
     .select({

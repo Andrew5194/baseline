@@ -17,7 +17,7 @@ import {
 } from '@baseline/metrics';
 import { dayKeyInTz, addLocalDays } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../../lib/user';
-import { periodBounds, periodBuckets, endOfToday, isPeriod } from '../../../../lib/period';
+import { periodBounds, periodBuckets, endOfToday, isPeriod, offsetNow, parseOffset } from '../../../../lib/period';
 
 const WINDOW_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
@@ -81,7 +81,8 @@ export async function GET(request: NextRequest) {
     if (!isPeriod(periodParam)) {
       return NextResponse.json({ error: 'Invalid period', code: 'INVALID_PERIOD' }, { status: 400 });
     }
-    const b = periodBounds(periodParam, now, tz);
+    const offset = parseOffset(params.get('offset'));
+    const b = periodBounds(periodParam, offsetNow(periodParam, now, tz, offset), tz);
     label = periodParam;
     if (bucket === 'day') {
       fetchStart = b.start;

@@ -5,6 +5,7 @@ import { Group } from '@visx/group';
 import { scaleBand, scaleLinear } from '@visx/scale';
 import { useTooltip, TooltipWithBounds } from '@visx/tooltip';
 import { colorForCategory, FREE_COLOR, FREE_FOCUS_SWATCH, adjustLightness } from '../../lib/categories';
+import { type TimeUnit, fmtDuration } from '../../lib/time-units';
 import { useChartWidth } from './use-chart-width';
 import { RecurringIcon } from './recurring-icon';
 import { barLabel, fullLabel } from './chart-axis';
@@ -22,6 +23,11 @@ interface DailyAllocationBarsProps {
   recurringCategories?: string[];
   // When true, recurring routines are hidden and free time is shown in green.
   freeFocus?: boolean;
+  // A live, unsaved timer session accumulating on `date` — drawn as a translucent
+  // segment growing into that day's free time.
+  pending?: { date: string; category: string; hours: number; running: boolean } | null;
+  // Display unit for hour figures (axis labels, totals, tooltip).
+  unit?: TimeUnit;
 }
 
 const FREE_KEY = 'Free';
@@ -46,7 +52,7 @@ interface TooltipRow {
   segments: Array<{ key: string; value: number; color: string }>;
 }
 
-export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories, freeFocus }: DailyAllocationBarsProps) {
+export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories, freeFocus, pending, unit = 'hr' }: DailyAllocationBarsProps) {
   const color = colorOf ?? ((c: string) => colorForCategory(c));
   const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
   const recurringSet = new Set(recurringCategories ?? []);
@@ -144,7 +150,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
             ))}
             {yTicks.map((t) => (
               <text key={`l${t}`} x={-8} y={yScale(t)} dy={4} textAnchor="end" fontSize={11} fill="#9ca3af">
-                {t}h
+                {fmtDuration(t, unit)}
               </text>
             ))}
 
@@ -171,6 +177,11 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                 });
               const total = acc;
               const clipId = `clip-${iso}`;
+              // Live timer overlay: a translucent slab growing up from where free time
+              // begins, into the free zone of this day's bar.
+              const pend = pending && pending.date === iso && total > 0 ? pending : null;
+              const trackedTop = segs.find((s) => s.key === FREE_KEY)?.y0 ?? total;
+              const pendEnd = pend ? Math.min(total, trackedTop + pend.hours) : trackedTop;
 
               return (
                 <Group
@@ -198,6 +209,17 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                         )
                       );
                     })}
+                    {/* Live, unsaved timer time growing into free space */}
+                    {pend && pendEnd > trackedTop && (
+                      <rect
+                        x={bx}
+                        y={yScale(pendEnd)}
+                        width={bw}
+                        height={Math.max(0, yScale(trackedTop) - yScale(pendEnd))}
+                        fill={color(pend.category)}
+                        opacity={0.4}
+                      />
+                    )}
                   </Group>
                   {/* Transparent hover target */}
                   <rect
@@ -217,6 +239,9 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                           segments: segs
                             .slice()
                             .reverse()
+                            // When focusing on free time, recurring routines are hidden
+                            // from the bar — so drop them from the tooltip too.
+                            .filter((s) => !(freeFocus && recurringSet.has(s.key)))
                             .map((s) => ({
                               key: s.key,
                               value: s.value,
@@ -241,7 +266,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                       fill="currentColor"
                       className="text-neutral-700 dark:text-neutral-200"
                     >
-                      {Math.round(total * 10) / 10}h
+                      {fmtDuration(total, unit)}
                     </text>
                   )}
                 </Group>
@@ -277,7 +302,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
           <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
             <div className="flex items-center justify-between gap-4 mb-1.5">
               <span className="font-medium text-neutral-900 dark:text-white">{fullLabel(tooltipData.iso)}</span>
-              <span className="text-neutral-400 dark:text-neutral-500 tabular-nums">{tooltipData.total}h</span>
+              <span className="text-neutral-400 dark:text-neutral-500 tabular-nums">{fmtDuration(tooltipData.total, unit)}</span>
             </div>
             {tooltipData.segments.map((s) => {
               const isFree = s.key === FREE_KEY;
@@ -295,7 +320,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                       <RecurringIcon className="w-2.5 h-2.5" />
                     </span>
                   )}
-                  <span className="ml-auto pl-4 font-medium text-neutral-900 dark:text-white tabular-nums">{s.value}h</span>
+                  <span className="ml-auto pl-4 font-medium text-neutral-900 dark:text-white tabular-nums">{fmtDuration(s.value, unit)}</span>
                 </div>
               );
             })}

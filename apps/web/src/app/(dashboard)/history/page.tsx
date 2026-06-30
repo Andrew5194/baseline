@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../../lib/api';
 import { useTimezone } from '../../../lib/use-timezone';
+import { fmtDuration } from '../../../lib/time-units';
+import { useTimeUnit } from '../../../lib/use-time-unit';
 
 interface EventItem {
   id: string;
@@ -63,9 +65,31 @@ const dayKey = (iso: string, timeZone: string) =>
   new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone });
 const timeOf = (iso: string, timeZone: string) =>
   new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone });
+// Full date + time for the saved-time tooltip.
+const fullStamp = (iso: string, timeZone: string) =>
+  new Date(iso).toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone,
+  });
+// "0 days, 8 hours, and 30 minutes" breakdown for the duration tooltip.
+const durationBreakdown = (ms: number): string => {
+  const totalMin = Math.round(ms / 60000);
+  const days = Math.floor(totalMin / 1440);
+  const hours = Math.floor((totalMin % 1440) / 60);
+  const mins = totalMin % 60;
+  const part = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  return `${part(days, 'day')}, ${part(hours, 'hour')}, and ${part(mins, 'minute')}`;
+};
 
 export default function History() {
   const tz = useTimezone();
+  const [unit] = useTimeUnit();
   const [source, setSource] = useState<SourceFilter>('all');
   const [items, setItems] = useState<EventItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -159,7 +183,7 @@ export default function History() {
                 {g.items.map((ev) => {
                   const meta = eventMeta(ev.event_type);
                   const repo = repoOf(ev.payload);
-                  const hours = ev.duration_ms ? Math.round((ev.duration_ms / 3_600_000) * 100) / 100 : null;
+                  const hours = ev.duration_ms != null ? ev.duration_ms / 3_600_000 : null;
                   const isManual = ev.source === 'manual';
                   return (
                     <div key={ev.id} className="flex items-start gap-3 px-4 py-3 group">
@@ -177,14 +201,19 @@ export default function History() {
                         </div>
                         <p className="text-sm text-neutral-700 dark:text-neutral-300 truncate">{summary(ev)}</p>
                       </div>
-                      {hours !== null && (
-                        <span className="text-sm font-medium text-neutral-900 dark:text-white tabular-nums flex-shrink-0">
-                          {hours}h
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                        <span className="text-xs text-neutral-400 dark:text-neutral-500 cursor-default" title={fullStamp(ev.occurred_at, tz)}>
+                          {timeOf(ev.occurred_at, tz)}
                         </span>
-                      )}
-                      <span className="text-xs text-neutral-400 dark:text-neutral-500 w-16 text-right flex-shrink-0">
-                        {timeOf(ev.occurred_at, tz)}
-                      </span>
+                        {hours !== null && ev.duration_ms != null && (
+                          <span
+                            className="text-sm font-medium text-neutral-900 dark:text-white tabular-nums cursor-default"
+                            title={durationBreakdown(ev.duration_ms)}
+                          >
+                            {fmtDuration(hours, unit)}
+                          </span>
+                        )}
+                      </div>
                       {isManual ? (
                         <button
                           onClick={() => deleteEntry(ev.id)}

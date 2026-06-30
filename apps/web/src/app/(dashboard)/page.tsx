@@ -1,12 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PeriodSelector, periodRangeLabel, type Period } from '../components/period-selector';
+import Link from 'next/link';
+import { PeriodSelector, PeriodNav, periodRangeLabel, type Period } from '../components/period-selector';
 import { BudgetDonut, type BudgetCategory } from '../components/budget-donut';
 import { DailyAllocationBars } from '../components/daily-allocation-bars';
 import { CalendarAllocation } from '../components/calendar-allocation';
 import { AddTimeEntryForm } from '../components/add-time-entry-form';
 import { FocusTimerBar } from '../components/focus-timer-bar';
+import { useFocusTimer, elapsedMs } from '../../lib/focus-timer';
+import { fmtDuration } from '../../lib/time-units';
+import { useTimeUnit } from '../../lib/use-time-unit';
 import { RecurringAllocations } from '../components/recurring-allocations';
 import { ManageCategoriesModal } from '../components/manage-categories-modal';
 import { Modal } from '../components/modal';
@@ -27,6 +31,7 @@ interface Entry {
   category: string;
   note: string | null;
   timed?: boolean;
+  task_id?: string | null;
 }
 interface EntriesResponse {
   data: Entry[];
@@ -59,6 +64,7 @@ const PERIOD_LABEL: Record<Period, string> = { week: 'This week', month: 'This m
 export default function Overview() {
   const tz = useTimezone();
   const [period, setPeriod] = useState<Period>('week');
+  const [offset, setOffset] = useState(0); // periods back from now (0 = current)
   const [budget, setBudget] = useState<BudgetResponse | null>(null);
   const [entries, setEntries] = useState<EntriesResponse | null>(null);
   const [daily, setDaily] = useState<TrendResponse | null>(null);
@@ -68,17 +74,20 @@ export default function Overview() {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [hideRecurring, setHideRecurring] = useState(false);
   const [allocView, setAllocView] = useState<'bars' | 'calendar'>('bars');
+  const [unit, setUnit] = useTimeUnit();
   // 'new' = add modal; an Entry = edit modal; null = closed.
   const [editing, setEditing] = useState<Entry | 'new' | null>(null);
+  // The live focus timer — drives the "growing" pending block (re-renders each second).
+  const activeTimer = useFocusTimer();
 
   // Always fetch the full picture (incl. recurring). Hiding routines is applied
   // client-side so the donut/bars can animate recurring → free smoothly.
   const loadBudget = useCallback(
     () =>
-      apiFetch<BudgetResponse>(`/v1/metrics/time-allocation?period=${period}`)
+      apiFetch<BudgetResponse>(`/v1/metrics/time-allocation?period=${period}&offset=${offset}`)
         .then(setBudget)
         .catch(console.error),
-    [period],
+    [period, offset],
   );
   const loadColors = useCallback(
     () =>
@@ -96,11 +105,11 @@ export default function Overview() {
     [],
   );
   const loadPeriod = useCallback(() => {
-    apiFetch<EntriesResponse>(`/v1/time-entries?period=${period}`).then(setEntries).catch(console.error);
-    apiFetch<TrendResponse>(`/v1/metrics/time-allocation/timeseries?period=${period}`)
+    apiFetch<EntriesResponse>(`/v1/time-entries?period=${period}&offset=${offset}`).then(setEntries).catch(console.error);
+    apiFetch<TrendResponse>(`/v1/metrics/time-allocation/timeseries?period=${period}&offset=${offset}`)
       .then(setDaily)
       .catch(console.error);
-  }, [period]);
+  }, [period, offset]);
 
   useEffect(() => {
     loadColors();
@@ -110,15 +119,23 @@ export default function Overview() {
     loadBudget();
     loadPeriod();
   }, [loadBudget, loadPeriod]);
-  // Restore the persisted "Hide recurring" choice (after mount → no hydration clash).
+  // Restore persisted UI choices (after mount → no hydration clash).
   useEffect(() => {
     if (window.localStorage.getItem('baseline:hide-recurring') === 'true') setHideRecurring(true);
+    if (window.localStorage.getItem('baseline:alloc-view') === 'calendar') setAllocView('calendar');
   }, []);
 
   const refreshAll = () => {
     loadBudget();
     loadPeriod();
     loadRecurring();
+  };
+
+  // Clicking the donut center cycles the display unit (min → hr → day). The hook
+  // persists it and broadcasts to every other page (History, Metrics, …).
+  const cycleUnit = () => {
+    const order = ['min', 'hr', 'day'] as const;
+    setUnit(order[(order.indexOf(unit) + 1) % order.length]);
   };
 
   async function deleteEntry(id: string) {
@@ -171,6 +188,16 @@ export default function Overview() {
   }).format(new Date()); // YYYY-MM-DD
   const todayKey = granularity === 'month' ? `${todayLocal.slice(0, 7)}-01` : todayLocal;
 
+  // A running/paused timer shows as a live "pending" block that accumulates on
+  // today's bar and calendar. Only meaningful on the current period (offset 0).
+  // Raw (unrounded) so the figures step at the display unit's precision (the formatter
+  // rounds). Pre-rounding to 0.001 h would force coarse 0.06-minute jumps.
+  const pendingHours = activeTimer ? elapsedMs(activeTimer) / 3_600_000 : 0;
+  const pending =
+    offset === 0 && activeTimer && pendingHours > 0
+      ? { date: todayLocal, category: activeTimer.category, hours: pendingHours, running: activeTimer.startedAt !== null }
+      : null;
+
   // Stack recurring routines (sleep, meals) together at the bottom of each bar so
   // the variable, one-off categories sit on top — making day-to-day changes obvious.
   const RECURRING_STACK_PRIORITY = ['Breakfast', 'Lunch', 'Dinner', 'Sleep'];
@@ -213,13 +240,19 @@ export default function Overview() {
 
   return (
     <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
-          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz)}</p>
+          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
         </div>
         <div className="flex items-center gap-3">
-          <PeriodSelector value={period} onChange={setPeriod} />
+          <PeriodSelector
+            value={period}
+            onChange={(p) => {
+              setPeriod(p);
+              setOffset(0);
+            }}
+          />
           <div className="flex items-center gap-2">
             <button
               onClick={() => setEditing('new')}
@@ -236,6 +269,10 @@ export default function Overview() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="mb-2">
+        <PeriodNav offset={offset} onChange={setOffset} />
       </div>
 
       <FocusTimerBar onLogged={refreshAll} />
@@ -283,34 +320,36 @@ export default function Overview() {
           <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
             {PERIOD_LABEL[period]}
           </p>
-          <button
-            role="switch"
-            aria-checked={hideRecurring}
-            onClick={() =>
-              setHideRecurring((v) => {
-                const next = !v;
-                try {
-                  window.localStorage.setItem('baseline:hide-recurring', next ? 'true' : 'false');
-                } catch {}
-                return next;
-              })
-            }
-            title="Hide recurring routines to focus on free time"
-            className="flex items-center gap-2"
-          >
-            <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Hide recurring</span>
-            <span
-              className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                hideRecurring ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-600'
-              }`}
+          <div className="flex items-center gap-3">
+            <button
+              role="switch"
+              aria-checked={hideRecurring}
+              onClick={() =>
+                setHideRecurring((v) => {
+                  const next = !v;
+                  try {
+                    window.localStorage.setItem('baseline:hide-recurring', next ? 'true' : 'false');
+                  } catch {}
+                  return next;
+                })
+              }
+              title="Hide recurring routines to focus on free time"
+              className="flex items-center gap-2"
             >
+              <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Hide recurring</span>
               <span
-                className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                  hideRecurring ? 'translate-x-3.5' : 'translate-x-0.5'
+                className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                  hideRecurring ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-600'
                 }`}
-              />
-            </span>
-          </button>
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
+                    hideRecurring ? 'translate-x-3.5' : 'translate-x-0.5'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
         </div>
         {ready && budget ? (
           <BudgetDonut
@@ -322,6 +361,9 @@ export default function Overview() {
             onRecolor={recolor}
             recurringCategories={recurringCats}
             freeFocus={hideRecurring}
+            unit={unit}
+            onCycleUnit={cycleUnit}
+            pending={pending}
           />
         ) : (
           <div className="h-[200px] bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
@@ -338,7 +380,17 @@ export default function Overview() {
             {(['bars', 'calendar'] as const).map((v) => (
               <button
                 key={v}
-                onClick={() => setAllocView(v)}
+                // Toggle to the other view on any click — so clicking the active icon
+                // again flips back to the other side. Persist the choice.
+                onClick={() =>
+                  setAllocView((cur) => {
+                    const next = cur === 'bars' ? 'calendar' : 'bars';
+                    try {
+                      window.localStorage.setItem('baseline:alloc-view', next);
+                    } catch {}
+                    return next;
+                  })
+                }
                 aria-label={v === 'bars' ? 'Bar view' : 'Calendar view'}
                 aria-pressed={allocView === v}
                 className={`p-1.5 rounded-md transition-colors ${
@@ -362,9 +414,9 @@ export default function Overview() {
         </div>
         {ready && daily ? (
           allocView === 'calendar' ? (
-            <CalendarAllocation data={barRows} categories={stackCategories} colorOf={colorOf} granularity={granularity} recurringCategories={recurringCats} freeFocus={hideRecurring} todayISO={todayKey} />
+            <CalendarAllocation data={barRows} categories={stackCategories} colorOf={colorOf} granularity={granularity} recurringCategories={recurringCats} freeFocus={hideRecurring} todayISO={todayKey} entries={entries?.data ?? []} tz={tz} pending={pending} unit={unit} />
           ) : (
-            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} />
+            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} unit={unit} />
           )
         ) : (
           <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
@@ -406,7 +458,20 @@ export default function Overview() {
                     {timeRange(e.occurred_at, e.hours, tz)}
                   </span>
                 )}
-                <span className="text-sm font-medium text-neutral-900 dark:text-white tabular-nums">{e.hours}h</span>
+                {e.task_id && (
+                  <Link
+                    href={`/goals?task=${e.task_id}`}
+                    onClick={(ev) => ev.stopPropagation()}
+                    aria-label="Go to task"
+                    title="Open this task in Goals"
+                    className="flex-shrink-0 text-neutral-300 dark:text-neutral-600 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 5h5m0 0v5m0-5L9.5 14.5M18 13v5a1 1 0 01-1 1H6a1 1 0 01-1-1V7a1 1 0 011-1h5" />
+                    </svg>
+                  </Link>
+                )}
+                <span className="text-sm font-medium text-neutral-900 dark:text-white tabular-nums">{fmtDuration(e.hours, unit)}</span>
                 <button
                   onClick={(ev) => {
                     ev.stopPropagation();

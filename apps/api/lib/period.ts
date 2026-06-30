@@ -16,6 +16,23 @@ export function isPeriod(v: string): v is Period {
   return v === 'week' || v === 'month' || v === 'year';
 }
 
+// A reference instant inside the period that sits `offset` periods before the one
+// containing `now` (offset 0 = current). Feed the result to periodBounds() to look
+// at past weeks/months/years; keep the real `now` for any period-to-date clamping.
+export function offsetNow(period: Period, now: Date, tz: string, offset: number): Date {
+  if (!offset || offset < 0) return now;
+  const { year, month } = partsInTz(now, tz);
+  if (period === 'week') return addLocalDays(now, -7 * offset, tz);
+  if (period === 'month') return zonedCivilToUtc(year, month - offset, 15, 0, tz);
+  return zonedCivilToUtc(year - offset, 7, 1, 0, tz);
+}
+
+// Parse a non-negative integer `offset` query param (0 when absent/invalid).
+export function parseOffset(raw: string | null): number {
+  const n = raw ? parseInt(raw, 10) : 0;
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 // UTC instant of the start of the next local day after `now` (exclusive end of "today").
 export function endOfToday(now: Date, tz: string): Date {
   return addLocalDays(startOfDayInTz(now, tz), 1, tz);

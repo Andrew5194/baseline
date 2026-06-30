@@ -37,19 +37,47 @@ function localToday(timeZone: string): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
-// Human label for the current period in the user's timezone: a date range for the
-// week, the month name, or the year — e.g. "June 1st – June 7th", "June", "2026".
-export function periodRangeLabel(period: Period, timeZone = 'UTC'): string {
+// Human label for a period in the user's timezone, `offset` periods back from now
+// (0 = current): a date range for the week, the month name, or the year — e.g.
+// "June 1st – June 7th", "May" / "December 2025", "2026".
+export function periodRangeLabel(period: Period, timeZone = 'UTC', offset = 0): string {
   const today = localToday(timeZone);
-  if (period === 'year') return String(today.getUTCFullYear());
-  if (period === 'month') return MONTHS_FULL[today.getUTCMonth()];
-  const start = new Date(today);
-  const sinceMonday = (today.getUTCDay() + 6) % 7;
-  start.setUTCDate(today.getUTCDate() - sinceMonday);
+  if (period === 'year') return String(today.getUTCFullYear() - offset);
+  if (period === 'month') {
+    const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - offset, 1));
+    const month = MONTHS_FULL[d.getUTCMonth()];
+    return d.getUTCFullYear() === today.getUTCFullYear() ? month : `${month} ${d.getUTCFullYear()}`;
+  }
+  const base = new Date(today);
+  base.setUTCDate(today.getUTCDate() - offset * 7);
+  const sinceMonday = (base.getUTCDay() + 6) % 7;
+  const start = new Date(base);
+  start.setUTCDate(base.getUTCDate() - sinceMonday);
   const end = new Date(start);
   end.setUTCDate(start.getUTCDate() + 6);
   const fmt = (d: Date) => `${MONTHS_FULL[d.getUTCMonth()]} ${ordinal(d.getUTCDate())}`;
   return `${fmt(start)} – ${fmt(end)}`;
+}
+
+// Prev/next stepper pinned to the two ends of its own full-width row. The period
+// label lives separately under the page title (via periodRangeLabel). Going back
+// increases the offset; "next" is disabled at the current period (offset 0).
+export function PeriodNav({ offset, onChange }: { offset: number; onChange: (offset: number) => void }) {
+  const arrow = 'p-1 rounded-md text-neutral-400 dark:text-neutral-500 enabled:hover:text-neutral-700 dark:enabled:hover:text-neutral-200 enabled:hover:bg-neutral-100 dark:enabled:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-default transition-colors';
+  return (
+    <div className="flex items-center justify-between">
+      <button onClick={() => onChange(offset + 1)} aria-label="Previous period" className={arrow}>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <button onClick={() => onChange(Math.max(0, offset - 1))} disabled={offset === 0} aria-label="Next period" className={arrow}>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  );
 }
 
 

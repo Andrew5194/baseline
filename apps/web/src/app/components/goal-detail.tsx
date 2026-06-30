@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '../../lib/api';
 import { PRESET_CATEGORIES } from '../../lib/categories';
 
 const CUSTOM = '__custom__';
+
+// How long to wait after the last keystroke before autosaving notes. Deliberately roomy
+// so a slip (or an accidental clear) can be undone before it's committed.
+const AUTOSAVE_MS = 2500;
 
 interface DetailTodo {
   id: string;
@@ -18,7 +22,7 @@ interface DetailRecurring {
   days_mask: number;
 }
 interface GoalDetailData {
-  goal: { id: string; title: string; category: string | null; color: string | null; notes: string | null; done: boolean; completed_at: string | null };
+  goal: { id: string; title: string; category: string | null; color: string | null; notes: string | null; due_at: string | null; done: boolean; completed_at: string | null };
   todos: DetailTodo[];
   recurring: DetailRecurring[];
 }
@@ -43,23 +47,51 @@ function fmtDate(date: string): string {
 
 // Inline detail panel that slides open under a goal card: editable notes + the
 // tasks (one-off and recurring) tagged to this goal's category.
-export function GoalDetail({ goalId }: { goalId: string }) {
+export function GoalDetail({
+  goalId,
+  countdown = false,
+  initialCategory = null,
+  initialDue = null,
+}: {
+  goalId: string;
+  countdown?: boolean;
+  initialCategory?: string | null;
+  initialDue?: string | null;
+}) {
   const [detail, setDetail] = useState<GoalDetailData | null>(null);
   const [notes, setNotes] = useState('');
   const [savedNotes, setSavedNotes] = useState('');
   const [saving, setSaving] = useState(false);
-  const [cat, setCat] = useState<string | null>(null);
+  const [notesError, setNotesError] = useState(false);
+  // Seed category + due from the card's already-loaded data so the selects populate
+  // instantly on open, instead of flashing empty until the detail fetch returns.
+  const [cat, setCat] = useState<string | null>(initialCategory);
+  const [due, setDue] = useState(initialDue ?? '');
   const [customizing, setCustomizing] = useState(false);
   const [customCat, setCustomCat] = useState('');
+  const [known, setKnown] = useState<string[]>([]);
+
+  // Every category the user already uses, so the picker isn't limited to presets.
+  useEffect(() => {
+    apiFetch<{ categories: Array<{ name: string }> }>('/v1/categories')
+      .then((r) => setKnown((r.categories ?? []).map((c) => c.name)))
+      .catch(() => {});
+  }, []);
+  // Notes are seeded once from the fetch (they're not in the goal list payload).
+  // Category + due come from props, so a later reload (or an in-flight fetch that
+  // resolves after an edit) can't reset them or steal the textarea's focus.
+  const seeded = useRef(false);
 
   const load = useCallback(
     () =>
       apiFetch<GoalDetailData>(`/v1/goals/${goalId}`)
         .then((d) => {
           setDetail(d);
-          setNotes((prev) => (prev === '' ? d.goal.notes ?? '' : prev));
-          setSavedNotes(d.goal.notes ?? '');
-          setCat((prev) => (prev === null ? d.goal.category : prev));
+          if (!seeded.current) {
+            setNotes(d.goal.notes ?? '');
+            setSavedNotes(d.goal.notes ?? '');
+            seeded.current = true;
+          }
         })
         .catch(console.error),
     [goalId],
@@ -69,6 +101,13 @@ export function GoalDetail({ goalId }: { goalId: string }) {
     setCat(value);
     await apiFetch(`/v1/goals/${goalId}`, { method: 'PATCH', body: JSON.stringify({ category: value }) }).catch(console.error);
     // Refresh the goal card chip + any rolled-up category views.
+    window.dispatchEvent(new CustomEvent('baseline:goals-changed'));
+  }
+
+  async function saveDue(value: string) {
+    setDue(value);
+    await apiFetch(`/v1/goals/${goalId}`, { method: 'PATCH', body: JSON.stringify({ due_at: value || null }) }).catch(console.error);
+    // Refresh the goal card's due badge.
     window.dispatchEvent(new CustomEvent('baseline:goals-changed'));
   }
 
@@ -88,13 +127,48 @@ export function GoalDetail({ goalId }: { goalId: string }) {
     return () => window.removeEventListener('baseline:goals-changed', onChange);
   }, [load]);
 
+  const savingRef = useRef(false);
+  const notesRef = useRef({ notes: '', savedNotes: '' });
+  notesRef.current = { notes, savedNotes };
+
+  // Only commit `savedNotes` once the request succeeds, so a failure keeps the editor
+  // "dirty" and surfaces an error instead of silently dropping text. Reads the latest
+  // text from a ref so the debounce timer / unmount flush never use stale content.
   async function saveNotes() {
-    if (notes === savedNotes) return;
+    const { notes: n, savedNotes: s } = notesRef.current;
+    if (n === s || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
-    setSavedNotes(notes);
-    await apiFetch(`/v1/goals/${goalId}`, { method: 'PATCH', body: JSON.stringify({ notes }) }).catch(console.error);
-    setSaving(false);
+    setNotesError(false);
+    try {
+      await apiFetch(`/v1/goals/${goalId}`, { method: 'PATCH', body: JSON.stringify({ notes: n }) });
+      setSavedNotes(n);
+    } catch (e) {
+      console.error(e);
+      setNotesError(true);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
+
+  const notesDirty = notes !== savedNotes;
+
+  // Debounced autosave — persist ~800ms after the last keystroke.
+  useEffect(() => {
+    if (!notesDirty) return;
+    const t = setTimeout(saveNotes, AUTOSAVE_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, notesDirty, saving]);
+
+  // Flush a pending edit if the panel unmounts (e.g. the goal card collapses).
+  useEffect(() => {
+    return () => {
+      saveNotes();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const totalTasks = detail ? detail.todos.length + detail.recurring.length : 0;
   // Completion is counted only over the tasks tagged to this goal (one-off tasks;
@@ -134,7 +208,7 @@ export function GoalDetail({ goalId }: { goalId: string }) {
             className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
           >
             <option value="">Uncategorized</option>
-            {[...new Set([...PRESET_CATEGORIES, ...(cat && !PRESET_CATEGORIES.includes(cat) ? [cat] : [])])].map((c) => (
+            {[...new Set([...PRESET_CATEGORIES, ...known, ...(cat ? [cat] : [])])].map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -144,19 +218,44 @@ export function GoalDetail({ goalId }: { goalId: string }) {
         )}
       </div>
 
+      {/* Target / expiration date */}
+      <div className="pt-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Target date</span>
+          {due && (
+            <button onClick={() => saveDue('')} className="text-[10px] text-neutral-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400">
+              Clear
+            </button>
+          )}
+        </div>
+        <input
+          type="date"
+          value={due}
+          onChange={(e) => saveDue(e.target.value)}
+          className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+        />
+      </div>
+
       {/* Notes */}
       <div className="pt-3">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Notes</span>
-          {saving && <span className="text-[10px] text-neutral-400">Saving…</span>}
+          {saving ? (
+            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">Saving…</span>
+          ) : notesError ? (
+            <span className="text-[10px] text-red-500">Couldn’t save</span>
+          ) : notesDirty ? (
+            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">Unsaved…</span>
+          ) : savedNotes ? (
+            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">Saved</span>
+          ) : null}
         </div>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          onBlur={saveNotes}
           placeholder="Add notes about this goal — the why, the plan, anything…"
           rows={3}
-          className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 resize-none"
+          className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-emerald-500 focus:border-emerald-500 resize-none"
         />
       </div>
 
@@ -165,7 +264,13 @@ export function GoalDetail({ goalId }: { goalId: string }) {
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Tasks in this category</span>
           {countedTasks > 0 && (
-            <span className="text-[11px] text-neutral-400 dark:text-neutral-500">{doneTasks} / {countedTasks} tasks completed</span>
+            <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+              {countdown
+                ? countedTasks - doneTasks === 0
+                  ? 'All tasks done'
+                  : `${countedTasks - doneTasks} task${countedTasks - doneTasks === 1 ? '' : 's'} to go`
+                : `${doneTasks} / ${countedTasks} tasks completed`}
+            </span>
           )}
         </div>
 

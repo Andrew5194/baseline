@@ -10,8 +10,28 @@ import { TodoSection } from '../../components/todo-section';
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[] | null>(null);
   const [adding, setAdding] = useState(false);
+  // Count-down mode (sticky) — reframes due dates and task counts as "time/tasks left".
+  // Initialise false so the server-rendered and first client render agree (no hydration
+  // mismatch), then restore the saved value right after mount.
+  const [countdown, setCountdown] = useState(false);
   const dragIndex = useRef<number | null>(null);
   const orderRef = useRef<Goal[]>([]);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('baseline:goals-countdown') === '1') setCountdown(true);
+    } catch {}
+  }, []);
+
+  function toggleCountdown() {
+    setCountdown((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem('baseline:goals-countdown', next ? '1' : '0');
+      } catch {}
+      return next;
+    });
+  }
 
   const load = useCallback(
     () => apiFetch<{ data: Goal[] }>('/v1/goals').then((r) => setGoals(r.data)).catch(console.error),
@@ -64,13 +84,35 @@ export default function Goals() {
           <h1 className="text-xl font-semibold tracking-tight">Goals</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Things you want to accomplish</p>
         </div>
-        <button
-          onClick={() => setAdding(true)}
-          className="flex flex-shrink-0 items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-medium whitespace-nowrap hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
-        >
-          <span className="text-sm leading-none">+</span>
-          New goal
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-3">
+          <button
+            role="switch"
+            aria-checked={countdown}
+            onClick={toggleCountdown}
+            title="Show time & tasks remaining"
+            className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
+          >
+            Count down
+            <span
+              className={`relative inline-flex h-4 w-7 flex-shrink-0 items-center rounded-full transition-colors ${
+                countdown ? 'bg-emerald-600' : 'bg-neutral-300 dark:bg-neutral-700'
+              }`}
+            >
+              <span
+                className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
+                  countdown ? 'translate-x-[14px]' : 'translate-x-0.5'
+                }`}
+              />
+            </span>
+          </button>
+          <button
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-medium whitespace-nowrap hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
+          >
+            <span className="text-sm leading-none">+</span>
+            New goal
+          </button>
+        </div>
       </div>
 
       {adding && (
@@ -107,6 +149,7 @@ export default function Goals() {
                   <GoalCard
                     goal={g}
                     onChange={load}
+                    countdown={countdown}
                     drag={{
                       onStart: (e) => {
                         dragIndex.current = i;
@@ -123,7 +166,7 @@ export default function Goals() {
             </div>
           )}
 
-          <TodoSection />
+          <TodoSection countdown={countdown} />
         </>
       )}
     </div>

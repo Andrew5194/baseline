@@ -5,9 +5,21 @@ import { API_URL } from '../../lib/api';
 import { PRESET_CATEGORIES } from '../../lib/categories';
 import { startTimer } from '../../lib/focus-timer';
 
-// Local calendar date (YYYY-MM-DD) of an instant in the given timezone.
-const localDate = (d: Date, timeZone: string) =>
-  d.toLocaleDateString('en-CA', { timeZone });
+// Local "YYYY-MM-DDTHH:mm" (a datetime-local input value) of an instant in `timeZone`.
+const toLocalInput = (d: Date, timeZone: string): string => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? '00';
+  const hour = get('hour') === '24' ? '00' : get('hour');
+  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}`;
+};
 
 export interface EditableEntry {
   id: string;
@@ -15,6 +27,7 @@ export interface EditableEntry {
   hours: number;
   category: string;
   note: string | null;
+  timed?: boolean;
 }
 
 interface AddTimeEntryFormProps {
@@ -33,15 +46,30 @@ interface AddTimeEntryFormProps {
 const CUSTOM = '__custom__';
 const inputClass =
   'w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500';
+// Tighter font/padding so a full datetime value sits flush beside the native
+// calendar icon in a half-width field.
+const dtInputClass =
+  'w-full px-2 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500';
 
 export function AddTimeEntryForm({ knownCategories, onClose, onSuccess, tz, entry, onDelete }: AddTimeEntryFormProps) {
   const isEdit = !!entry;
   const options = [...new Set([...PRESET_CATEGORIES, ...knownCategories, ...(entry ? [entry.category] : [])])];
-  const today = localDate(new Date(), tz);
+
+  // Default a new entry to the past hour; prefill an edit from its real start/end.
+  const now = new Date();
+  const initEnd = entry ? new Date(entry.occurred_at) : now;
+  const initStart = entry ? new Date(initEnd.getTime() - entry.hours * 3_600_000) : new Date(now.getTime() - 3_600_000);
+
+  const today = toLocalInput(now, tz).slice(0, 10);
 
   const [mode, setMode] = useState<'log' | 'timer'>('log');
-  const [date, setDate] = useState(entry ? localDate(new Date(entry.occurred_at), tz) : today);
-  const [hours, setHours] = useState(entry ? String(entry.hours) : '');
+  // 'hours' = type the number of hours (default); 'range' = pick start/end and derive
+  // it. Editing a timer/range entry opens in range mode to match how it was logged.
+  const [inputMode, setInputMode] = useState<'range' | 'hours'>(entry?.timed ? 'range' : 'hours');
+  const [from, setFrom] = useState(toLocalInput(initStart, tz));
+  const [to, setTo] = useState(toLocalInput(initEnd, tz));
+  const [date, setDate] = useState(toLocalInput(initEnd, tz).slice(0, 10));
+  const [hours, setHours] = useState(entry ? String(entry.hours) : '1');
   const [category, setCategory] = useState(entry?.category ?? options[0] ?? 'Deep Work');
   const [customCategory, setCustomCategory] = useState('');
   const [note, setNote] = useState(entry?.note ?? '');
@@ -50,13 +78,28 @@ export function AddTimeEntryForm({ knownCategories, onClose, onSuccess, tz, entr
 
   const resolvedCategory = () => (category === CUSTOM ? customCategory.trim() : category);
 
+  // In range mode, hours are derived from the two wall-clocks (the difference is
+  // tz-agnostic, so parsing them as local is fine for the readout).
+  const fromMs = Date.parse(from);
+  const toMs = Date.parse(to);
+  const validRange = !isNaN(fromMs) && !isNaN(toMs) && toMs > fromMs;
+  const computedHours = validRange ? Math.round(((toMs - fromMs) / 3_600_000) * 100) / 100 : null;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     const cat = resolvedCategory();
     if (!cat) return setError('Enter a category name');
-    const h = parseFloat(hours);
-    if (!(h > 0)) return setError('Enter hours greater than 0');
+
+    let timing: Record<string, unknown>;
+    if (inputMode === 'range') {
+      if (!validRange) return setError('End time must be after start time');
+      timing = { from, to };
+    } else {
+      const h = parseFloat(hours);
+      if (!(h > 0)) return setError('Enter hours greater than 0');
+      timing = { date, hours: h };
+    }
 
     setLoading(true);
     try {
@@ -65,8 +108,7 @@ export function AddTimeEntryForm({ knownCategories, onClose, onSuccess, tz, entr
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          date,
-          hours: h,
+          ...timing,
           category: cat,
           note: note.trim() || undefined,
         }),
@@ -173,31 +215,65 @@ export function AddTimeEntryForm({ knownCategories, onClose, onSuccess, tz, entr
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label htmlFor="te-date" className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                Date
+          <div className="flex items-center gap-5">
+            {(
+              [
+                ['hours', 'Hours'],
+                ['range', 'Start & end'],
+              ] as const
+            ).map(([val, label]) => (
+              <label key={val} className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                <input
+                  type="radio"
+                  name="te-input-mode"
+                  checked={inputMode === val}
+                  onChange={() => setInputMode(val)}
+                  className="w-3.5 h-3.5 accent-emerald-600"
+                />
+                {label}
               </label>
-              <input id="te-date" type="date" required value={date} max={today} onChange={(e) => setDate(e.target.value)} className={inputClass} />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="te-hours" className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                Hours
-              </label>
-              <input
-                id="te-hours"
-                type="number"
-                step="any"
-                min="0.01"
-                max="24"
-                required
-                placeholder="e.g. 2.5"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                className={inputClass}
-              />
-            </div>
+            ))}
           </div>
+
+          {inputMode === 'range' ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="te-from" className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                    From
+                  </label>
+                  <input id="te-from" type="datetime-local" required value={from} onChange={(e) => setFrom(e.target.value)} className={dtInputClass} />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="te-to" className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                    To
+                  </label>
+                  <input id="te-to" type="datetime-local" required value={to} onChange={(e) => setTo(e.target.value)} className={dtInputClass} />
+                </div>
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Duration:{' '}
+                <span className={`font-medium ${computedHours == null ? 'text-red-500' : 'text-neutral-700 dark:text-neutral-300'}`}>
+                  {computedHours == null ? 'End must be after start' : `${computedHours}h`}
+                </span>
+              </p>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="te-date" className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                  Date
+                </label>
+                <input id="te-date" type="date" required value={date} max={today} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="te-hours" className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                  Hours
+                </label>
+                <input id="te-hours" type="number" step="any" min="0.01" max="168" required placeholder="e.g. 2.5" value={hours} onChange={(e) => setHours(e.target.value)} className={inputClass} />
+              </div>
+            </div>
+          )}
 
           {categoryField}
           {noteField}
@@ -207,7 +283,7 @@ export function AddTimeEntryForm({ knownCategories, onClose, onSuccess, tz, entr
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (inputMode === 'range' && !validRange)}
               className="flex-1 px-3 py-2 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors disabled:opacity-50"
             >
               {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Add entry'}
