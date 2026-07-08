@@ -1,0 +1,57 @@
+name: Docker build (PR)
+
+# Validates that the web + api images still build when app/package/Dockerfile files
+# change. amd64 only and push: false — fast, no registry writes, no credentials needed
+# (safe for fork PRs). This catches Dockerfile/packaging drift (e.g. a workspace dep not
+# copied into the image) that a plain `turbo build` can't — surfacing it on the PR
+# instead of at release time. Full multi-arch build + push happens only on v* tags.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/docker-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/docker-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [web, api]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (amd64, no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/${{ matrix.app }}/Dockerfile
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha,scope=pr-${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=pr-${{ matrix.app }}
