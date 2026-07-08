@@ -11,6 +11,7 @@ COPY packages/db/package.json ./packages/db/package.json
 COPY packages/events/package.json ./packages/events/package.json
 COPY packages/metrics/package.json ./packages/metrics/package.json
 COPY packages/integrations/github/package.json ./packages/integrations/github/package.json
+COPY packages/integrations/google-calendar/package.json ./packages/integrations/google-calendar/package.json
 
 RUN pnpm install --frozen-lockfile --filter @baseline/api...
 
@@ -23,6 +24,7 @@ COPY packages/db ./packages/db
 COPY packages/events ./packages/events
 COPY packages/metrics ./packages/metrics
 COPY packages/integrations/github ./packages/integrations/github
+COPY packages/integrations/google-calendar ./packages/integrations/google-calendar
 COPY tsconfig.base.json turbo.json ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
