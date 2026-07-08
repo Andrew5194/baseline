@@ -14,8 +14,6 @@ on:
     paths:
       - 'apps/marketing/**'
       - 'docker-compose.yml'
-  release:
-    types: [published]
   workflow_dispatch:
 
 env:

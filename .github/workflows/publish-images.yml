@@ -1,12 +1,11 @@
 name: Publish images
 
 # Publishes the open-core web + api images to Docker Hub so anyone can pull them.
-# Release-tag driven: cut a GitHub Release (or push a v* tag) and both images build
-# multi-arch (amd64 + arm64) and push. workflow_dispatch is available for a manual run.
+# Tag-driven: pushing a v* tag builds both images multi-arch (amd64 + arm64) and pushes.
+# A GitHub Release also creates a tag, so this fires once for either flow (no double runs).
+# workflow_dispatch is available for a manual run.
 
 on:
-  release:
-    types: [published]
   push:
     tags: ['v*.*.*']
   workflow_dispatch:
