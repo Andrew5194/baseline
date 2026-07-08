@@ -19,9 +19,11 @@ export function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-60 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 flex flex-col">
-      <div className="px-5 h-16 flex items-center gap-2.5 border-b border-neutral-200 dark:border-neutral-800">
-        <Logo className="w-6 h-6" />
-        <span className="text-base font-semibold tracking-tight">Baseline</span>
+      <div className="px-5 h-16 flex items-center border-b border-neutral-200 dark:border-neutral-800">
+        <Link href="/" aria-label="Go to Overview" className="flex items-center gap-2.5 -mx-1 px-1 py-1 rounded-lg hover:opacity-80 transition-opacity">
+          <Logo className="w-6 h-6" />
+          <span className="text-base font-semibold tracking-tight">Baseline</span>
+        </Link>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">

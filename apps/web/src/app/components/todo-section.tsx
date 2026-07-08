@@ -108,11 +108,15 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   const [catColors, setCatColors] = useState<Record<string, string>>({});
   // A task id from a `?task=` deep link (e.g. the "go to task" link on a time entry).
   const [pendingTask, setPendingTask] = useState<string | null>(null);
+  // Which month the completion heatmap shows — 0 = current, 1 = last month, …
+  const [heatmapOffset, setHeatmapOffset] = useState(0);
   const activeTimer = useFocusTimer();
 
   const load = useCallback(
     () =>
-      apiFetch<{ data: Todo[]; heatmap: HeatmapCell[]; recurring: RecurringDef[]; completions: Completion[] }>('/v1/todos')
+      apiFetch<{ data: Todo[]; heatmap: HeatmapCell[]; recurring: RecurringDef[]; completions: Completion[] }>(
+        `/v1/todos?month_offset=${heatmapOffset}`,
+      )
         .then((r) => {
           setTodos(r.data);
           setHeatmap(r.heatmap ?? []);
@@ -120,7 +124,7 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
           setCompletions(r.completions ?? []);
         })
         .catch(console.error),
-    [],
+    [heatmapOffset],
   );
   const loadGoals = useCallback(
     () =>
@@ -322,7 +326,18 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
 
       {showRecurring && <RecurringTodos goals={goalsList} categories={categories} categoryColorOf={categoryColorOf} onChange={load} />}
 
-      {hasData && <CompletionHeatmap cells={heatmap} onSelectDay={setSelectedDay} selected={day} countdown={countdown} />}
+      {hasData && (
+        <CompletionHeatmap
+          cells={heatmap}
+          onSelectDay={setSelectedDay}
+          selected={day}
+          countdown={countdown}
+          onPrevMonth={() => setHeatmapOffset((o) => o + 1)}
+          onNextMonth={() => setHeatmapOffset((o) => Math.max(0, o - 1))}
+          canNextMonth={heatmapOffset > 0}
+          focusStat={{ date: day, completed: dayItems.filter((t) => t.done).length, total: dayItems.length }}
+        />
+      )}
 
       <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
         {/* Day header */}

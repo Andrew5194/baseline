@@ -39,7 +39,7 @@ export function AssistantDock() {
           open ? 'opacity-0 pointer-events-none translate-y-1' : 'opacity-100'
         }`}
       >
-        <BaselineAIMark className="w-5 h-5" />
+        <BaselineAIMark className="w-6 h-6" />
         Ask AI
       </button>
 

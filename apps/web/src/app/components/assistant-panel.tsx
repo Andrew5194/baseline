@@ -2,31 +2,27 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Baseline AI mark: a monochrome, boxy robot head (the 🤖 emoji) in the Baseline
-// logo's line style — currentColor panel outlines (theme-adaptive) with solid eyes
-// and a friendly smile, echoing the logo's outlined squircle + filled dots.
+// Baseline AI mark: the pixel-art wizard logo. The outline uses currentColor (so it's
+// theme-adaptive — dark in light mode, white in dark mode); the fill + flame keep their
+// fixed colours.
 export function BaselineAIMark({ className = 'w-7 h-7' }: { className?: string }) {
   return (
-    <svg className={`${className} text-neutral-900 dark:text-white`} viewBox="2.2 0.3 23.6 23.6" fill="none" aria-hidden="true">
-      {/* antenna */}
-      <path d="M14 4.8V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="14" cy="2.1" r="1" fill="currentColor" />
-      {/* ears */}
-      <rect x="2" y="11.2" width="2.4" height="4.6" rx="1" stroke="currentColor" strokeWidth="1.4" />
-      <rect x="23.6" y="11.2" width="2.4" height="4.6" rx="1" stroke="currentColor" strokeWidth="1.4" />
-      {/* head */}
-      <rect x="4.6" y="4.8" width="18.8" height="17.4" rx="3.2" stroke="currentColor" strokeWidth="1.6" />
-      {/* happy anime eyes (^ ^) */}
-      <path d="M9.2 12.9 L10.6 11.4 L12 12.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M16 12.9 L17.4 11.4 L18.8 12.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      {/* happy smile */}
+    <svg
+      className={`${className} text-neutral-900 dark:text-white`}
+      viewBox="0 0 18 17"
+      fill="none"
+      shapeRendering="crispEdges"
+      role="img"
+      aria-label="Baseline wizard"
+    >
       <path
-        d="M10.6 16.9 C 12.1 18.9, 15.9 18.9, 17.4 16.9"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        shapeRendering="geometricPrecision"
+        d="M2 1h1v1h-1zM15 2h2v1h-2zM1 3h1v1h-1zM3 3h1v1h-1zM13 3h4v1h-4zM2 4h1v1h-1zM11 4h6v1h-6zM9 5h8v1h-8zM7 6h10v1h-10zM8 7h1v1h-1zM11 7h1v1h-1zM14 7h2v1h-2zM7 8h10v1h-10zM7 9h10v1h-10zM2 10h1v1h-1zM6 10h11v1h-11zM6 11h11v1h-11zM7 12h10v1h-10zM7 13h10v1h-10zM8 14h2v1h-2zM12 14h3v1h-3zM8 15h1v1h-1zM13 15h1v1h-1z"
+        fill="#bcb3a3"
+      />
+      <path d="M2 2h1v1h-1zM2 3h1v1h-1z" fill="#efe7d4" />
+      <path
+        d="M2 0h1v1h-1zM17 0h1v1h-1zM1 1h1v1h-1zM3 1h1v1h-1zM15 1h3v1h-3zM1 2h1v1h-1zM3 2h1v1h-1zM13 2h2v1h-2zM17 2h1v1h-1zM0 3h1v1h-1zM4 3h1v1h-1zM11 3h2v1h-2zM17 3h1v1h-1zM1 4h1v1h-1zM3 4h1v1h-1zM9 4h2v1h-2zM17 4h1v1h-1zM1 5h2v1h-2zM7 5h2v1h-2zM17 5h1v1h-1zM1 6h2v1h-2zM6 6h1v1h-1zM17 6h1v1h-1zM1 7h2v1h-2zM7 7h1v1h-1zM9 7h2v1h-2zM12 7h2v1h-2zM16 7h1v1h-1zM1 8h2v1h-2zM6 8h1v1h-1zM17 8h1v1h-1zM1 9h2v1h-2zM6 9h1v1h-1zM17 9h1v1h-1zM1 10h1v1h-1zM3 10h3v1h-3zM17 10h1v1h-1zM1 11h2v1h-2zM5 11h1v1h-1zM17 11h1v1h-1zM1 12h2v1h-2zM6 12h1v1h-1zM17 12h1v1h-1zM1 13h2v1h-2zM6 13h1v1h-1zM17 13h1v1h-1zM1 14h2v1h-2zM7 14h1v1h-1zM10 14h2v1h-2zM15 14h2v1h-2zM1 15h2v1h-2zM7 15h1v1h-1zM9 15h1v1h-1zM12 15h1v1h-1zM14 15h1v1h-1zM7 16h3v1h-3zM12 16h3v1h-3z"
+        fill="currentColor"
       />
     </svg>
   );
@@ -52,7 +48,7 @@ const SEED: Msg[] = [
   {
     id: 1,
     role: 'assistant',
-    text: "Hi — I'm Baseline AI. I can set up goals, surface trends, and keep your streaks alive. Tell me what you want to focus on, or pick a starter below.",
+    text: "Welcome traveler, I'm Max, your Baseline AI. I can conjure up goals, surface your trends, and keep your streaks alive. Tell me what you want to focus on, or pick a starter below.",
   },
 ];
 
@@ -133,7 +129,7 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
     <div className="flex flex-col h-full bg-white dark:bg-neutral-900 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex-shrink-0">
-        <BaselineAIMark className="w-7 h-7 flex-shrink-0" />
+        <BaselineAIMark className="w-8 h-8 flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-neutral-900 dark:text-white leading-tight">Baseline AI</p>
           <p className="text-[10px] text-neutral-400 dark:text-neutral-500 leading-tight">Goal setting &amp; insights</p>
