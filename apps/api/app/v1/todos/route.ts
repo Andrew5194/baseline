@@ -38,10 +38,12 @@ const toDto = (r: {
 
 // GET /v1/todos — one-off tasks (with their scheduled day), the user's recurring
 // tasks + completions, and a monthly heatmap of completed/total tasks per day.
-export async function GET() {
+export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
   const tz = await getUserTimezone(userId);
   const now = new Date();
+  // Which month the heatmap covers — 0 = current, 1 = last month, … (clamped).
+  const monthOffset = Math.min(600, Math.max(0, parseInt(request.nextUrl.searchParams.get('month_offset') || '0', 10) || 0));
 
   const rows = await db
     .select({
@@ -113,7 +115,7 @@ export async function GET() {
   const recDoneByDay = new Map<string, number>();
   for (const c of completions) recDoneByDay.set(c.date, (recDoneByDay.get(c.date) ?? 0) + 1);
 
-  const heatmap = monthDayKeys(now, tz).map((date) => {
+  const heatmap = monthDayKeys(now, tz, monthOffset).map((date) => {
     const wd = weekdayOf(date);
     const recScheduled = recurring.filter((r) => (r.daysMask & (1 << wd)) !== 0 && r.since <= date).length;
     const reg = regByDay.get(date) ?? { total: 0, done: 0 };

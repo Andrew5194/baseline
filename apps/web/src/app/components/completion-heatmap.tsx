@@ -39,11 +39,22 @@ export function CompletionHeatmap({
   onSelectDay,
   selected,
   countdown = false,
+  onPrevMonth,
+  onNextMonth,
+  canNextMonth = true,
+  focusStat = null,
 }: {
   cells: HeatmapCell[];
   onSelectDay?: (date: string) => void;
   selected?: string | null;
   countdown?: boolean;
+  onPrevMonth?: () => void;
+  onNextMonth?: () => void;
+  canNextMonth?: boolean;
+  // The active (selected) day's stat, shown in the header regardless of which month is
+  // on screen — so browsing to another month doesn't change the headline until you
+  // pick a day there. A hovered cell temporarily overrides it.
+  focusStat?: HeatmapCell | null;
 }) {
   const tz = useTimezone();
   const [hover, setHover] = useState<number | null>(null);
@@ -59,13 +70,17 @@ export function CompletionHeatmap({
   const markedDate = selected ?? todayKey;
   // The day whose count we feature: the hovered cell, otherwise the selected day
   // (or today). Lets the user see "completed / scheduled" for the day at a glance.
-  const focus = hover !== null ? cells[hover] : cells.find((cell) => cell.date === markedDate) ?? null;
+  const focus = hover !== null ? cells[hover] : focusStat ?? cells.find((cell) => cell.date === markedDate) ?? null;
   const [yy, mm] = cells[0].date.split('-').map(Number);
   const monthName = `${MONTHS_FULL[mm - 1]} ${yy}`;
+  // Month rollup — shown when no day is focused (e.g. a past month with no hover), so
+  // the header keeps the same height as the per-day stat and doesn't jitter on hover.
+  const monthDone = cells.reduce((a, c) => a + c.completed, 0);
+  const monthTotal = cells.reduce((a, c) => a + c.total, 0);
 
   return (
     <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
-      <div className="flex items-end justify-between mb-4">
+      <div className="flex items-start justify-between mb-4">
         <div className="min-w-0">
           {focus ? (
             <>
@@ -92,10 +107,54 @@ export function CompletionHeatmap({
               </p>
             </>
           ) : (
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">{monthName}</p>
+            <>
+              <p className="text-2xl font-semibold tracking-tight text-neutral-800 dark:text-neutral-100 tabular-nums leading-none">
+                {countdown ? (
+                  <>
+                    {Math.max(0, monthTotal - monthDone)}
+                    <span className="ml-2 align-middle text-sm font-semibold">
+                      task{monthTotal - monthDone === 1 ? '' : 's'} to go
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {monthDone} / {monthTotal}
+                    <span className="ml-2 align-middle text-sm font-semibold">
+                      task{monthTotal === 1 ? '' : 's'} completed
+                    </span>
+                  </>
+                )}
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1.5">{monthName}</p>
+            </>
           )}
         </div>
-        <p className="text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{monthName}</p>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {onPrevMonth && (
+            <button
+              onClick={onPrevMonth}
+              aria-label="Previous month"
+              className="p-0.5 rounded text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          <p className="text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums text-center min-w-[84px]">{monthName}</p>
+          {onNextMonth && (
+            <button
+              onClick={onNextMonth}
+              disabled={!canNextMonth}
+              aria-label="Next month"
+              className="p-0.5 rounded text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-neutral-400"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {cells.map((cell, i) => (
