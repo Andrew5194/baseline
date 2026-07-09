@@ -20,6 +20,17 @@ export async function register() {
       console.log(JSON.stringify({ msg: 'cron_end', job: 'sync_all_integrations' }));
     });
 
-    console.log('Cron: sync_all_integrations scheduled every 15 minutes');
+    // Sweep expired rate-limit buckets (Postgres has no TTL, so we clean them up).
+    const { cleanupRateLimits } = await import('./lib/rate-limit');
+    cron.default.schedule('*/10 * * * *', async () => {
+      try {
+        const deleted = await cleanupRateLimits();
+        if (deleted) console.log(JSON.stringify({ msg: 'cron', job: 'rate_limit_cleanup', deleted }));
+      } catch (e) {
+        console.error('rate_limit_cleanup failed:', e);
+      }
+    });
+
+    console.log('Cron: sync_all_integrations (15m) + rate_limit_cleanup (10m) scheduled');
   }
 }

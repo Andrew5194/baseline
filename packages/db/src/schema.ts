@@ -273,3 +273,18 @@ export const dayNotes = pgTable(
   },
   (table) => [uniqueIndex('day_notes_user_date_idx').on(table.userId, table.date)],
 );
+
+// ── Rate limits ──────────────────────────────────────────────────────────────
+// Fixed-window counters for auth-abuse control. One row per (action, IP, time
+// bucket); the count is bumped atomically per request and expired rows are swept
+// by the rate_limit_cleanup cron. Not tied to a user.
+export const rateLimits = pgTable(
+  'rate_limits',
+  {
+    // "<action>:<ip>:<windowBucket>" — same bucket → same row within the window.
+    key: text('key').primaryKey(),
+    count: integer('count').notNull().default(0),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [index('rate_limits_expires_idx').on(table.expiresAt)],
+);

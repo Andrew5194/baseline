@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, users } from '@baseline/db';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { allow, clientIp } from '../../../../lib/rate-limit';
 
 export async function POST(request: NextRequest) {
+  if (!(await allow('signup', clientIp(request.headers)))) {
+    return NextResponse.json(
+      { error: 'Too many sign-up attempts. Please try again later.', code: 'RATE_LIMITED' },
+      { status: 429 },
+    );
+  }
+
   let body: { email?: string; password?: string; name?: string };
   try {
     body = await request.json();
