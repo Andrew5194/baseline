@@ -2,12 +2,11 @@
 # "Publish images" workflow finishes pushing images for a v* tag. Auth is keyless
 # via Workload Identity Federation (no JSON keys).
 #
-# Requires these GitHub Actions *variables* (Settings → Secrets and variables →
-# Actions → Variables) in the baseline repo, from `terraform output` in envs/prod:
-#   GCP_WORKLOAD_IDENTITY_PROVIDER  = <workload_identity_provider output>
-#   GCP_DEPLOYER_SA                 = <deployer_service_account output>
-#   GCP_REGION                      = us-east1
-#   DOCKERHUB_NAMESPACE             = andrew5194
+# Config (Settings → Secrets and variables → Actions), from `terraform output` in
+# envs/prod. The GCP identifiers are SECRETS so GitHub masks them in these public
+# logs (project id/number, SA); the rest are variables.
+#   Secrets:   GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_DEPLOYER_SA, GCP_PROJECT
+#   Variables: GCP_REGION, DOCKERHUB_NAMESPACE
 
 name: Deploy to Cloud Run
 
@@ -49,8 +48,8 @@ jobs:
       - name: Authenticate to GCP (keyless)
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SA }}
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -68,8 +67,10 @@ jobs:
           echo "api=docker.io/$NS/baseline-api@$api_dig" >> "$GITHUB_OUTPUT"
           echo "web=docker.io/$NS/baseline-web@$web_dig" >> "$GITHUB_OUTPUT"
 
+      # --project registers the project id as a used secret so it's masked in the
+      # log everywhere it appears (including gcloud's own "…in project [x]" output).
       - name: Deploy api
-        run: gcloud run deploy baseline-api --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.api }}"
+        run: gcloud run deploy baseline-api --project "${{ secrets.GCP_PROJECT }}" --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.api }}"
 
       - name: Deploy web
-        run: gcloud run deploy baseline-web --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.web }}"
+        run: gcloud run deploy baseline-web --project "${{ secrets.GCP_PROJECT }}" --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.web }}"
