@@ -8,7 +8,11 @@ export async function runMigrations(migrationsFolder: string) {
     throw new Error('DATABASE_URL environment variable is required');
   }
 
-  const sql = postgres(connectionString, { max: 1 });
+  const socketPath = process.env.DATABASE_SOCKET_PATH;
+  const sql = postgres(connectionString, {
+    max: 1,
+    ...(socketPath ? { host: socketPath } : {}),
+  });
 
   // Read the journal to get ordered migrations
   const journalPath = path.join(migrationsFolder, 'meta', '_journal.json');

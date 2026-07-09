@@ -18,11 +18,16 @@ export function getDb(): PostgresJsDatabase<typeof schema> {
     if (!connectionString) {
       throw new Error('DATABASE_URL environment variable is required');
     }
+    // On Cloud Run the DB is reached over a unix socket (/cloudsql/<instance>),
+    // which postgres.js only accepts via the `host` option, not the URL (its URL
+    // parser can't hold a socket path). DATABASE_URL then carries only credentials.
+    const socketPath = process.env.DATABASE_SOCKET_PATH;
     const sql =
       globalForDb.__pgSql ??
       postgres(connectionString, {
         max: 10,
         idle_timeout: 20, // close idle connections after 20s
+        ...(socketPath ? { host: socketPath } : {}),
       });
     globalForDb.__pgSql = sql;
     globalForDb.__db = drizzle(sql, { schema });
