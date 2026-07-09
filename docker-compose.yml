@@ -1,40 +1,34 @@
+# Baseline — self-host stack. Runs the images published to Docker Hub (no build step):
+#
+#       cp .env.example .env      # then set AUTH_SECRET + GitHub OAuth
+#       docker compose pull       # fetch the published images
+#       docker compose up -d      # then open http://localhost:3002
+#
+# Runs :latest by default — edit the image tags below to pin a release (e.g. :v0.0.2).
+# To develop against source, use `make dev` (host apps + this postgres); the images
+# themselves are built and validated in CI, not here.
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: baseline-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: baseline
-      POSTGRES_PASSWORD: baseline
-      POSTGRES_DB: baseline
+      POSTGRES_USER: ${POSTGRES_USER:-baseline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-baseline}
+      POSTGRES_DB: ${POSTGRES_DB:-baseline}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U baseline"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-baseline}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - baseline
 
-  redis:
-    image: redis:7-alpine
-    container_name: baseline-redis
-    restart: unless-stopped
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    networks:
-      - baseline
-
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: andrew5194/baseline-api:latest
     container_name: baseline-api
     restart: unless-stopped
     depends_on:
@@ -42,8 +36,8 @@ services:
         condition: service_healthy
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://baseline:baseline@postgres:5432/baseline
-      - AUTH_SECRET=${AUTH_SECRET:-change-me}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-baseline}:${POSTGRES_PASSWORD:-baseline}@postgres:5432/${POSTGRES_DB:-baseline}
+      - AUTH_SECRET=${AUTH_SECRET:?set AUTH_SECRET in .env — generate one with openssl rand -base64 32}
       # AUTH_URL intentionally unset: with AUTH_TRUST_HOST, Auth.js derives the
       # origin from the request, so there is no per-environment URL to hardcode.
       - AUTH_TRUST_HOST=true
@@ -56,9 +50,7 @@ services:
       - baseline
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    image: andrew5194/baseline-web:latest
     container_name: baseline-web
     restart: unless-stopped
     depends_on:
@@ -68,34 +60,14 @@ services:
       # No NEXT_PUBLIC_API_URL: the browser calls the web origin and Next.js
       # rewrites proxy /api/auth/* and /v1/* to the API over the docker network.
       - API_INTERNAL_URL=http://api:3001
-      - AUTH_SECRET=${AUTH_SECRET:-change-me}
+      - AUTH_SECRET=${AUTH_SECRET:?set AUTH_SECRET in .env — generate one with openssl rand -base64 32}
     ports:
-      - "3002:3002"
-    networks:
-      - baseline
-
-  marketing:
-    build:
-      context: .
-      dockerfile: apps/marketing/Dockerfile
-      args:
-        NEXT_PUBLIC_GITHUB_USERNAME: ${GITHUB_USERNAME:-}
-    container_name: baseline-marketing
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_GITHUB_USERNAME=${GITHUB_USERNAME:-}
-      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
-      - RESEND_API_KEY=${RESEND_API_KEY:-}
-      - CONTACT_EMAIL=${CONTACT_EMAIL:-}
-    ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3002}:3002"
     networks:
       - baseline
 
 volumes:
   postgres-data:
-  redis-data:
 
 networks:
   baseline:
