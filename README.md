@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="apps/marketing/public/baseline-logo.svg" alt="" width="32" height="32" style="vertical-align: middle;" />
+  <img src="apps/web/public/baseline-logo.svg" alt="" width="32" height="32" style="vertical-align: middle;" />
   Baseline
 </h1>
 
@@ -85,13 +85,12 @@ make dev         # start all apps
 
 Each app reads its own `.env.local` (Next.js loads env from the app directory), so add one per app you run using the variables from `.env.example`.
 
-Apps will start on marketing (3000), API (3001), dashboard (3002).
+Apps will start on API (3001) and dashboard (3002).
 
 ## Project Structure
 
 ```
 apps/
-  marketing/              Public website (landing page, contact, GitHub heatmap)
   web/                    Product dashboard (metrics, heatmap, activity feed)
   api/                    HTTP API server
 packages/
@@ -106,6 +105,8 @@ docker-compose.yml        Self-hosting configuration
 turbo.json                Turborepo pipeline config
 pnpm-workspace.yaml       Workspace definitions
 ```
+
+The marketing website lives in its own repo: [baseline-website](https://github.com/Andrew5194/baseline-website) (deployed on Vercel).
 
 ## Contributing
 
