@@ -5,6 +5,11 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import type { NextAuthConfig } from 'next-auth';
 
+// A precomputed cost-12 bcrypt hash (same cost as signup). We compare against it
+// when an account doesn't exist so login response time is identical whether or not
+// the email is registered — closing the account-enumeration timing side channel.
+const TIMING_SAFE_HASH = '$2b$12$iyjEJG0VjmPnVZmKrDLnRuQDLaW/jIHjsCktzqr3FPx6XFOA.pEYW';
+
 export const authConfig: NextAuthConfig = {
   providers: [
     Credentials({
@@ -22,13 +27,13 @@ export const authConfig: NextAuthConfig = {
           .where(eq(users.email, credentials.email as string))
           .limit(1);
 
-        if (!user || !user.passwordHash) return null;
-
+        // Always run a bcrypt comparison — even when the account/hash is missing —
+        // so timing doesn't reveal whether the email is registered.
         const valid = await bcrypt.compare(
           credentials.password as string,
-          user.passwordHash,
+          user?.passwordHash ?? TIMING_SAFE_HASH,
         );
-        if (!valid) return null;
+        if (!user || !user.passwordHash || !valid) return null;
 
         return {
           id: user.id,
@@ -41,14 +46,19 @@ export const authConfig: NextAuthConfig = {
   ],
   // Accept the forwarded host behind the proxy.
   trustHost: true,
-  // Fixed, non-Secure cookie name: behind the proxy Auth.js can't tell the scheme,
-  // so its default `__Secure-` prefix is unpredictable. A stable name lets the web
-  // middleware match it on both localhost and the proxy; Secure is omitted so the
-  // cookie also survives plain-HTTP localhost (the proxy's TLS covers transport).
+  // Fixed cookie name (not the default `__Secure-` prefix, which Auth.js picks
+  // unpredictably behind the proxy) so the web middleware matches it on both
+  // localhost and the proxy. Secure is set in production (Cloud Run is HTTPS-only)
+  // so the session cookie never rides plain HTTP; relaxed on localhost for dev.
   cookies: {
     sessionToken: {
       name: 'authjs.session-token',
-      options: { httpOnly: true, sameSite: 'lax', path: '/', secure: false },
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
     },
   },
   session: {
