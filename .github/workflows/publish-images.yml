@@ -1,12 +1,13 @@
 name: Publish images
 
 # Publishes the open-core web + api images to Docker Hub so anyone can pull them.
-# Tag-driven: pushing a v* tag builds both images multi-arch (amd64 + arm64) and pushes.
-# A GitHub Release also creates a tag, so this fires once for either flow (no double runs).
-# workflow_dispatch is available for a manual run.
+# Pre-1.0 flow: every push to main builds both images multi-arch (amd64 + arm64) and
+# pushes `latest` + `sha-<commit>`. Pushing a v* tag additionally stamps the semver
+# tags. workflow_dispatch is available for a manual run.
 
 on:
   push:
+    branches: [main]
     tags: ['v*.*.*']
   workflow_dispatch:
 
@@ -49,7 +50,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref_type == 'tag' }}
             type=sha,format=short
 
       - name: Build and push
