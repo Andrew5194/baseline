@@ -1,0 +1,71 @@
+# Deploys new Cloud Run revisions of baseline-api and baseline-web after the
+# "Publish images" workflow finishes pushing images for a v* tag. Auth is keyless
+# via Workload Identity Federation (no JSON keys).
+#
+# Requires these GitHub Actions *variables* (Settings → Secrets and variables →
+# Actions → Variables) in the baseline repo, from `terraform output` in envs/prod:
+#   GCP_WORKLOAD_IDENTITY_PROVIDER  = <workload_identity_provider output>
+#   GCP_DEPLOYER_SA                 = <deployer_service_account output>
+#   GCP_REGION                      = us-east1
+#   DOCKERHUB_NAMESPACE             = andrew5194
+
+name: Deploy to Cloud Run
+
+on:
+  workflow_run:
+    workflows: ["Publish images"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to deploy (e.g. v0.0.2)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # required for WIF
+
+jobs:
+  deploy:
+    # Only run when the publish workflow succeeded (or on a manual dispatch).
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Authenticate to GCP (keyless)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Resolve the tag to an immutable digest and deploy THAT. Cloud Run pulls
+      # docker.io images through mirror.gcr.io (a pull-through cache); a mutable
+      # tag like :latest can serve a stale cached digest. A digest never does.
+      - name: Resolve image digests
+        id: img
+        run: |
+          NS="${{ vars.DOCKERHUB_NAMESPACE }}"
+          TAG="${{ steps.tag.outputs.tag }}"
+          api_dig=$(docker buildx imagetools inspect "docker.io/$NS/baseline-api:$TAG" --format '{{.Manifest.Digest}}')
+          web_dig=$(docker buildx imagetools inspect "docker.io/$NS/baseline-web:$TAG" --format '{{.Manifest.Digest}}')
+          echo "api=docker.io/$NS/baseline-api@$api_dig" >> "$GITHUB_OUTPUT"
+          echo "web=docker.io/$NS/baseline-web@$web_dig" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy api
+        run: gcloud run deploy baseline-api --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.api }}"
+
+      - name: Deploy web
+        run: gcloud run deploy baseline-web --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.web }}"
