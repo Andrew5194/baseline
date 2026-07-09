@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # Attach this workspace to the Baseline docker network and start socat forwarders
-# so localhost:3000/3002 reach the sibling web/marketing containers (the Coder proxy
-# forwards this workspace's localhost). Run via `make remote`.
+# so localhost:3002 reaches the sibling web container (the Coder proxy forwards
+# this workspace's localhost). Run via `make remote`.
 set -u
 
 NETWORK="baseline_baseline"
 MAPPINGS=(
-  "3000 baseline-marketing 3000"   # Marketing site
   "3002 baseline-web 3002"         # Web app
 )
 # Note: the API (3001) is intentionally NOT forwarded. The browser reaches it
