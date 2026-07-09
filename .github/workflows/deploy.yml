@@ -33,13 +33,17 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
+      # On workflow_run, use the source run's commit sha → the immutable `sha-<short>`
+      # image tag (metadata-action type=sha). More reliable than head_branch, which
+      # is ambiguous for tag-triggered runs. On manual dispatch, use the given tag.
       - name: Resolve image tag
         id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+            short="$(echo '${{ github.event.workflow_run.head_sha }}' | cut -c1-7)"
+            echo "tag=sha-${short}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Authenticate to GCP (keyless)
