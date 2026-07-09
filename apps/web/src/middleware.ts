@@ -4,6 +4,16 @@ import { getToken } from 'next-auth/jwt';
 
 const publicPaths = ['/sign-in', '/sign-up'];
 
+// Where to forward same-origin API/auth traffic. Read per-request so one image
+// works in any environment (Docker network, Cloud Run, …) via the runtime
+// API_INTERNAL_URL — the destination is NOT baked at build time.
+function apiInternalUrl(): string {
+  return (
+    process.env.API_INTERNAL_URL ||
+    (process.env.NODE_ENV === 'production' ? 'http://api:3001' : 'http://localhost:3001')
+  );
+}
+
 // The scheme the browser actually used, from real evidence — most authoritative first.
 function detectScheme(request: NextRequest): string {
   const norm = (v?: string | null) => {
@@ -53,15 +63,27 @@ function publicOrigin(request: NextRequest): string {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Hand the API the resolved origin (it can't see forwarded headers behind the
-  // rewrite) so OAuth redirects stay browser-reachable. Authorize + callback.
-  if (
-    pathname.startsWith('/v1/integrations/github/') ||
-    pathname.startsWith('/v1/integrations/google/')
-  ) {
-    const headers = new Headers(request.headers);
-    headers.set('x-public-origin', publicOrigin(request));
-    return NextResponse.next({ request: { headers } });
+  // Same-origin proxy: forward /api/auth/* and /v1/* to the API server-side at
+  // runtime (keeps cookies/CSRF same-origin, no CORS). Done here rather than via
+  // next.config rewrites so the target honors the runtime API_INTERNAL_URL.
+  if (pathname.startsWith('/api/auth/') || pathname.startsWith('/v1/')) {
+    const target = new URL(apiInternalUrl());
+    const url = request.nextUrl.clone();
+    url.protocol = target.protocol;
+    url.hostname = target.hostname;
+    url.port = target.port;
+
+    // OAuth paths: hand the API the browser-reachable origin (it can't see the
+    // forwarded headers behind the rewrite) so redirects stay correct.
+    if (
+      pathname.startsWith('/v1/integrations/github/') ||
+      pathname.startsWith('/v1/integrations/google/')
+    ) {
+      const headers = new Headers(request.headers);
+      headers.set('x-public-origin', publicOrigin(request));
+      return NextResponse.rewrite(url, { request: { headers } });
+    }
+    return NextResponse.rewrite(url);
   }
 
   if (publicPaths.some((p) => pathname.startsWith(p))) {
@@ -88,13 +110,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Gate page navigations only — /api/auth/* and /v1/* are proxied to the API,
-  // which does its own auth. The github paths re-enter solely for header injection.
-  // The `.*\\.` clause excludes any static asset with a file extension (icon.svg,
-  // baseline-logo.svg, favicon.ico, …) so they aren't redirected to /sign-in.
+  // Page navigations hit the auth gate; /api/auth/* and /v1/* hit the runtime
+  // proxy above (the API does its own auth). The `.*\\.` clause excludes any
+  // static asset with a file extension (icon.svg, favicon.ico, …) so they aren't
+  // redirected to /sign-in.
   matcher: [
     '/((?!_next/static|_next/image|api/auth|v1|.*\\.).*)',
-    '/v1/integrations/github/:path*',
-    '/v1/integrations/google/:path*',
+    '/api/auth/:path*',
+    '/v1/:path*',
   ],
 };
