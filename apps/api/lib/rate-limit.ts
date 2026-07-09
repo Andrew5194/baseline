@@ -22,7 +22,9 @@ export async function allow(kind: Kind, ip: string): Promise<boolean> {
   const { limit, windowMs } = CONFIG[kind];
   const bucket = Math.floor(Date.now() / windowMs);
   const key = `${kind}:${ip}:${bucket}`;
-  const expiresAt = new Date((bucket + 1) * windowMs);
+  // ISO string, not a Date: drizzle's execute() can't bind a Date param (Postgres
+  // casts the ISO string to timestamptz).
+  const expiresAt = new Date((bucket + 1) * windowMs).toISOString();
   try {
     const rows = (await getDb().execute(sql`
       INSERT INTO rate_limits (key, count, expires_at)
