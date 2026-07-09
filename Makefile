@@ -1,4 +1,4 @@
-.PHONY: local remote down logs ps dev build install migrate clean lint type-check help
+.PHONY: setup local remote down logs ps dev build install migrate clean lint type-check help
 
 # === Stack (Coder workspace) ===
 #
@@ -10,11 +10,23 @@
 
 NETWORK := baseline_baseline
 
-local: ## Start the stack (localhost access)
-	docker compose up -d --build
+setup: ## Create .env and generate AUTH_SECRET if it isn't set
+	@test -f .env || cp .env.example .env
+	@if grep -qE '^AUTH_SECRET=.+' .env; then \
+		echo "✓ AUTH_SECRET already set in .env"; \
+	else \
+		secret=$$(openssl rand -base64 32); \
+		awk -v s="$$secret" '/^AUTH_SECRET=/{print "AUTH_SECRET=" s; next} {print}' .env > .env.tmp && mv .env.tmp .env; \
+		echo "✓ Generated AUTH_SECRET in .env"; \
+	fi
 
-remote: ## Start the stack + Coder port forwarders
-	docker compose up -d --build
+local: setup ## Start the published stack (localhost access)
+	docker compose pull
+	docker compose up -d
+
+remote: setup ## Start the published stack + Coder port forwarders
+	docker compose pull
+	docker compose up -d
 	./coder-connect.sh
 
 down: ## Stop the stack and tear down the forwarders

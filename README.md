@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml"><img src="https://github.com/Andrew5194/baseline/actions/workflows/docker-build.yml/badge.svg" alt="Build and Push Docker Image" /></a>
+  <a href="https://github.com/Andrew5194/baseline/actions/workflows/docker-ci.yml"><img src="https://github.com/Andrew5194/baseline/actions/workflows/docker-ci.yml/badge.svg" alt="Build" /></a>
   <a href="https://github.com/Andrew5194/baseline"><img src="https://visitor-badge.laobi.icu/badge?page_id=Andrew5194.baseline" alt="Visitors" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue?logo=gnu&logoColor=white" alt="License: AGPL v3" /></a>
 </p>
@@ -27,31 +27,29 @@ Baseline integrates with your existing development and project management tools,
 
 #### Configuration
 
-All configuration lives in a single `.env` file at the project root. Copy the `.env.example` to `.env`:
+All configuration lives in a single `.env` file at the project root. Run `make setup` to create it from `.env.example` and generate a secure `AUTH_SECRET` automatically (`make local`/`remote` do this for you on first run):
 
 ```bash
-cp .env.example .env
+make setup
 ```
 
-Then, fill in the following environment variables:
-
-> **Note:** Create an OAuth app at [https://github.com/settings/developers](https://github.com/settings/developers) to generate `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` and set the callback URL accordingly if you are deploying Baseline locally or remotely: `<your-url>/v1/integrations/github/callback`
+`AUTH_SECRET` is the only required variable, and `make setup` fills it in. Baseline signs in with **email and password**, so it runs without any third-party keys — the integrations below are opt-in.
 
 ```bash
 # === Required ===
 AUTH_SECRET=            # signing key for login sessions — generate: openssl rand -base64 32
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
 
-# === Optional ===
-GITHUB_USERNAME=        # username for the marketing landing-page heatmap
-GITHUB_TOKEN=           # PAT for higher GitHub API limits (5000/hr vs 60/hr)
-RESEND_API_KEY=         # enables the contact form (resend.com)
-CONTACT_EMAIL=          # contact-form recipient
+# === Optional (integrations) ===
+GITHUB_CLIENT_ID=       # GitHub activity integration (not a sign-in method)
+GITHUB_CLIENT_SECRET=
+GOOGLE_CLIENT_ID=       # Google Calendar integration
+GOOGLE_CLIENT_SECRET=
 WEB_URL=                # auto-detected; set only to pin a fixed public origin
 ```
 
-Everything else is configured automatically. Advanced overrides (`API_INTERNAL_URL`, `NEXT_PUBLIC_API_URL` for split-origin deployments) are documented in `.env.example`.
+> **GitHub integration:** to connect your GitHub activity from the Sources page, create an OAuth app at [github.com/settings/developers](https://github.com/settings/developers) with the callback URL `<your-url>/v1/integrations/github/callback`.
+
+Everything else is configured automatically. Postgres and ports have working defaults, and advanced overrides (`API_INTERNAL_URL`, `NEXT_PUBLIC_API_URL` for split-origin deployments) are documented in `.env.example`.
 
 ### Docker Compose (recommended)
 
@@ -67,14 +65,13 @@ If running on a remote environment (such as a Cloud Developer Environment), exec
 make remote
 ```
 
-This builds and starts the Docker containers. The database is created automatically on first boot. Follow logs with `make logs` and stop with `make down`. Two URLs are exposed:
+This pulls the published images from Docker Hub and starts them. The database is created automatically on first boot. Follow logs with `make logs` and stop with `make down`. The images run `:latest` — edit the tags in `docker-compose.yml` to pin a release. One URL is exposed:
 
 | Service | URL | Description |
 |---|---|---|
 | Dashboard | http://localhost:3002 | Product dashboard — your entry point |
-| Marketing | http://localhost:3000 | Public landing page |
 
-Sign up at http://localhost:3002/sign-up, then connect GitHub from the Sources page. The API, database, and Redis run internally (the dashboard proxies API calls), so there are no other URLs to manage.
+Sign up at http://localhost:3002/sign-up, then connect GitHub from the Sources page. The API and database run internally (the dashboard proxies API calls), so there are no other URLs to manage.
 
 ### Building from Source
 
