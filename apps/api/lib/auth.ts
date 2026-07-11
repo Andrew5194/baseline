@@ -2,7 +2,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { getDb, users } from '@baseline/db';
 import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
+import { verify } from '@node-rs/bcrypt';
 import type { NextAuthConfig } from 'next-auth';
 
 // A precomputed cost-12 bcrypt hash (same cost as signup). We compare against it
@@ -29,7 +29,7 @@ export const authConfig: NextAuthConfig = {
 
         // Always run a bcrypt comparison — even when the account/hash is missing —
         // so timing doesn't reveal whether the email is registered.
-        const valid = await bcrypt.compare(
+        const valid = await verify(
           credentials.password as string,
           user?.passwordHash ?? TIMING_SAFE_HASH,
         );
