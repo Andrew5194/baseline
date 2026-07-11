@@ -17,7 +17,13 @@ function isValidTimeZone(tz: string): boolean {
 export async function GET() {
   const userId = await getCurrentUserId();
   const [user] = await db
-    .select({ id: users.id, email: users.email, name: users.name, timezone: users.timezone })
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      timezone: users.timezone,
+      timezoneSet: users.timezoneSet,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -32,7 +38,10 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   const userId = await getCurrentUserId();
 
-  let body: { timezone?: string };
+  // `explicit` marks a deliberate user selection (vs. the client auto-persisting the
+  // browser-detected zone). Only an explicit save locks in `timezone_set = true`; an
+  // auto-persist updates the zone but leaves it "unset" so it keeps tracking the browser.
+  let body: { timezone?: string; explicit?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -48,9 +57,15 @@ export async function PATCH(request: NextRequest) {
 
   const [user] = await db
     .update(users)
-    .set({ timezone: body.timezone })
+    .set({ timezone: body.timezone, ...(body.explicit ? { timezoneSet: true } : {}) })
     .where(eq(users.id, userId))
-    .returning({ id: users.id, email: users.email, name: users.name, timezone: users.timezone });
+    .returning({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      timezone: users.timezone,
+      timezoneSet: users.timezoneSet,
+    });
 
   return NextResponse.json(user);
 }

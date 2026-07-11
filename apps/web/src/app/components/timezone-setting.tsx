@@ -4,29 +4,115 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { browserTimezone } from '../../lib/use-timezone';
 
-// All IANA zones when the runtime supports it; otherwise a sensible fallback list.
-function allTimeZones(): string[] {
-  const intl = Intl as unknown as { supportedValuesOf?: (k: string) => string[] };
-  if (typeof intl.supportedValuesOf === 'function') {
-    try {
-      return intl.supportedValuesOf('timeZone');
-    } catch {
-      /* fall through */
-    }
+// A curated list of one representative zone per region — instead of the full
+// ~400-entry IANA database, which is dominated by granular near-duplicates. Ordered
+// west→east; the UI re-sorts by the current UTC offset. The user's own saved/detected
+// zone is always appended if it isn't already here (see `zones` below), so no one is
+// stuck without their zone.
+const CURATED_ZONES: string[] = [
+  'Pacific/Pago_Pago', 'Pacific/Honolulu', 'America/Anchorage',
+  'America/Los_Angeles', 'America/Tijuana', 'America/Denver', 'America/Phoenix',
+  'America/Chicago', 'America/Mexico_City', 'America/Guatemala',
+  'America/New_York', 'America/Toronto', 'America/Bogota', 'America/Lima',
+  'America/Caracas', 'America/Halifax', 'America/Santiago', 'America/Sao_Paulo',
+  'America/Argentina/Buenos_Aires', 'America/St_Johns',
+  'Atlantic/South_Georgia', 'Atlantic/Azores', 'Atlantic/Cape_Verde',
+  'UTC', 'Europe/London', 'Europe/Lisbon', 'Africa/Casablanca',
+  'Europe/Paris', 'Europe/Berlin', 'Europe/Madrid', 'Europe/Rome',
+  'Europe/Amsterdam', 'Africa/Lagos',
+  'Europe/Athens', 'Europe/Helsinki', 'Europe/Bucharest', 'Africa/Cairo',
+  'Asia/Jerusalem', 'Africa/Johannesburg',
+  'Europe/Moscow', 'Europe/Istanbul', 'Asia/Riyadh', 'Africa/Nairobi',
+  'Asia/Tehran', 'Asia/Dubai', 'Asia/Baku', 'Asia/Kabul',
+  'Asia/Karachi', 'Asia/Tashkent', 'Asia/Kolkata', 'Asia/Colombo',
+  'Asia/Kathmandu', 'Asia/Almaty', 'Asia/Dhaka', 'Asia/Yangon',
+  'Asia/Bangkok', 'Asia/Jakarta', 'Asia/Ho_Chi_Minh',
+  'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Taipei',
+  'Asia/Manila', 'Australia/Perth',
+  'Asia/Tokyo', 'Asia/Seoul', 'Australia/Adelaide', 'Australia/Darwin',
+  'Australia/Sydney', 'Australia/Brisbane', 'Pacific/Guam',
+  'Pacific/Noumea', 'Pacific/Auckland', 'Pacific/Fiji',
+  'Pacific/Chatham', 'Pacific/Tongatapu',
+];
+
+// A zone the runtime can actually use. We validate by constructing a formatter (which
+// accepts alias names like 'Asia/Kolkata') rather than checking `supportedValuesOf`,
+// which only lists *canonical* ids and varies by ICU version — so it would wrongly
+// drop valid aliased zones.
+function isUsableZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
   }
-  return [
-    'UTC',
-    'America/New_York',
-    'America/Chicago',
-    'America/Denver',
-    'America/Los_Angeles',
-    'Europe/London',
-    'Europe/Berlin',
-    'Asia/Kolkata',
-    'Asia/Shanghai',
-    'Asia/Tokyo',
-    'Australia/Sydney',
-  ];
+}
+
+// Curated zones the current runtime actually knows about (drops any the tz data lacks).
+function curatedZones(): string[] {
+  return CURATED_ZONES.filter(isUsableZone);
+}
+
+// A zone's current offset from UTC, in minutes (accounts for DST at "now").
+function offsetMinutes(tz: string, at: Date = new Date()): number {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    }).formatToParts(at);
+    const p: Record<string, string> = {};
+    for (const { type, value } of parts) p[type] = value;
+    // 24:00 shows up as hour '24' in some engines — normalize to 0.
+    const hour = p.hour === '24' ? '00' : p.hour;
+    const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +hour, +p.minute, +p.second);
+    return Math.round((asUTC - at.getTime()) / 60000);
+  } catch {
+    return 0;
+  }
+}
+
+// Format a minute offset as "GMT+04:00" / "GMT-05:30" (the common picker convention).
+function formatOffset(min: number): string {
+  const sign = min < 0 ? '-' : '+';
+  const abs = Math.abs(min);
+  const h = String(Math.floor(abs / 60)).padStart(2, '0');
+  const m = String(abs % 60).padStart(2, '0');
+  return `GMT${sign}${h}:${m}`;
+}
+
+// The city/last segment of an IANA id: 'America/Argentina/Buenos_Aires' → 'Buenos Aires'.
+function cityName(tz: string): string {
+  return (tz.split('/').pop() || tz).replace(/_/g, ' ');
+}
+
+// A human, DST-neutral zone name from Intl ('Eastern Time', 'India Standard Time').
+// Returns null for zones that only resolve to a bare GMT offset (e.g. Etc/*), so we
+// don't render a redundant "(UTC+04:00) GMT+4".
+function friendlyName(tz: string): string | null {
+  try {
+    const name = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'longGeneric' })
+      .formatToParts(new Date())
+      .find((p) => p.type === 'timeZoneName')?.value;
+    if (!name || /^(GMT|UTC)/i.test(name)) return null;
+    return name;
+  } catch {
+    return null;
+  }
+}
+
+// "(UTC-04:00) Eastern Time · New York" — the conventional picker format (offset +
+// friendly name + city). `min` is passed in so callers can reuse a computed offset.
+function zoneLabelFrom(tz: string, min: number): string {
+  const name = friendlyName(tz);
+  return name
+    ? `(${formatOffset(min)}) ${name} - ${cityName(tz)}`
+    : `(${formatOffset(min)}) ${cityName(tz)}`;
+}
+
+function zoneLabel(tz: string): string {
+  return zoneLabelFrom(tz, offsetMinutes(tz));
 }
 
 export function TimezoneSetting() {
@@ -34,13 +120,47 @@ export function TimezoneSetting() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Resolved only after mount — calling browserTimezone() during render would differ
+  // between the server (UTC) and the client, causing a hydration mismatch.
+  const [detectedTz, setDetectedTz] = useState<string | null>(null);
 
-  const zones = useMemo(() => allTimeZones(), []);
+  // Curated zones, plus the user's own saved/detected zone if it's not in the list,
+  // sorted by current offset (then name) — the usual ordering for tz pickers.
+  const zones = useMemo(() => {
+    const ids = curatedZones();
+    if (current && !ids.includes(current)) ids.push(current);
+    return ids
+      .map((id) => {
+        const offset = offsetMinutes(id);
+        return { id, offset, label: zoneLabelFrom(id, offset) };
+      })
+      .sort((a, b) => a.offset - b.offset || a.id.localeCompare(b.id));
+  }, [current]);
 
   useEffect(() => {
-    apiFetch<{ timezone: string }>('/v1/me')
-      .then((m) => setCurrent(m?.timezone || 'UTC'))
-      .catch(() => setCurrent('UTC'));
+    const detected = browserTimezone();
+    setDetectedTz(detected);
+    apiFetch<{ timezone: string; timezoneSet: boolean }>('/v1/me')
+      .then((m) => {
+        // An explicit selection always wins.
+        if (m?.timezoneSet && m.timezone) {
+          setCurrent(m.timezone);
+          return;
+        }
+        // Not yet chosen — default to the browser's zone, and persist it (without
+        // marking it explicit) so the server buckets activity in the same timezone
+        // the user sees, while it keeps tracking the browser until a manual choice.
+        setCurrent(detected);
+        if (detected !== m?.timezone) {
+          apiFetch('/v1/me', {
+            method: 'PATCH',
+            body: JSON.stringify({ timezone: detected }),
+          }).catch(() => {
+            /* best-effort; the user can still change it manually */
+          });
+        }
+      })
+      .catch(() => setCurrent(detected));
   }, []);
 
   async function onChange(tz: string) {
@@ -49,7 +169,10 @@ export function TimezoneSetting() {
     setSaved(false);
     setError(null);
     try {
-      await apiFetch('/v1/me', { method: 'PATCH', body: JSON.stringify({ timezone: tz }) });
+      await apiFetch('/v1/me', {
+        method: 'PATCH',
+        body: JSON.stringify({ timezone: tz, explicit: true }),
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
@@ -58,8 +181,6 @@ export function TimezoneSetting() {
       setSaving(false);
     }
   }
-
-  const detected = browserTimezone();
 
   return (
     <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
@@ -82,15 +203,17 @@ export function TimezoneSetting() {
           <option>Loading…</option>
         ) : (
           zones.map((z) => (
-            <option key={z} value={z}>
-              {z.replace(/_/g, ' ')}
+            <option key={z.id} value={z.id}>
+              {z.label}
             </option>
           ))
         )}
       </select>
-      <p className="text-[11px] text-neutral-400 mt-2">
-        Detected from your browser: <span className="font-medium">{detected.replace(/_/g, ' ')}</span>
-      </p>
+      {detectedTz && (
+        <p className="text-[11px] text-neutral-400 mt-2">
+          Detected from your browser: <span className="font-medium">{zoneLabel(detectedTz)}</span>
+        </p>
+      )}
     </div>
   );
 }
