@@ -1,5 +1,5 @@
 import { db, integrations, events } from '@baseline/db';
-import { eq, type InferSelectModel } from 'drizzle-orm';
+import { eq, sql, type InferSelectModel } from 'drizzle-orm';
 import {
   fetchUserCommits,
   fetchUserPullRequests,
@@ -199,17 +199,89 @@ async function syncGoogleCalendar(integration: Integration): Promise<number> {
   }
 }
 
-export async function syncAllIntegrations(): Promise<void> {
-  const activeIntegrations = await db
-    .select()
-    .from(integrations)
-    .where(eq(integrations.status, 'connected'));
+export interface SyncBatchOptions {
+  /** Max integrations synced at once. Keeps DB/GitHub load bounded. */
+  concurrency?: number;
+  /** Wall-clock ceiling for the whole pass. Must stay under the Cloud Run
+   *  request timeout (300s) so the batch returns cleanly instead of being killed
+   *  mid-flight. Integrations not reached before the deadline are deferred to the
+   *  next tick (and logged, never silently dropped). */
+  timeBudgetMs?: number;
+}
 
-  for (const integration of activeIntegrations) {
-    try {
-      await syncIntegration(integration.id);
-    } catch {
-      // Individual sync failure logged inside syncIntegration, continue to next
+export interface SyncBatchResult {
+  total: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  deferred: number;
+  durationMs: number;
+}
+
+// Sync every connected integration through a bounded worker pool with a wall-clock
+// budget. Ordered oldest-synced-first (NULLS FIRST = never-synced go first) so that
+// when the budget is exhausted it's the *freshest* integrations that get deferred —
+// deferral rotates fairly instead of permanently starving the tail of the list.
+// Never throws: per-integration failures are logged inside syncIntegration and only
+// counted here. This is invoked by POST /v1/internal/cron on the worker service,
+// not from an in-process timer.
+export async function runSyncBatch(opts: SyncBatchOptions = {}): Promise<SyncBatchResult> {
+  const concurrency = Math.max(1, opts.concurrency ?? 3);
+  const timeBudgetMs = opts.timeBudgetMs ?? 4 * 60 * 1000;
+  const startTime = Date.now();
+  const deadline = startTime + timeBudgetMs;
+
+  const pending = await db
+    .select({ id: integrations.id })
+    .from(integrations)
+    .where(eq(integrations.status, 'connected'))
+    .orderBy(sql`${integrations.lastSyncedAt} asc nulls first`);
+
+  let cursor = 0;
+  let processed = 0;
+  let succeeded = 0;
+  let failed = 0;
+
+  // Node runs this on one thread, so cursor/counter increments between awaits are
+  // atomic — no locking needed despite the shared state across pool workers.
+  async function poolWorker(): Promise<void> {
+    while (cursor < pending.length && Date.now() < deadline) {
+      const { id } = pending[cursor++];
+      processed++;
+      try {
+        await syncIntegration(id);
+        succeeded++;
+      } catch {
+        // Already logged inside syncIntegration; keep the batch going.
+        failed++;
+      }
     }
   }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, pending.length) }, () => poolWorker()),
+  );
+
+  const result: SyncBatchResult = {
+    total: pending.length,
+    processed,
+    succeeded,
+    failed,
+    deferred: pending.length - processed,
+    durationMs: Date.now() - startTime,
+  };
+
+  console.log(JSON.stringify({ msg: 'sync_batch_complete', ...result }));
+  if (result.deferred > 0) {
+    console.warn(
+      JSON.stringify({
+        msg: 'sync_batch_deferred',
+        deferred: result.deferred,
+        reason: 'time_budget_exhausted',
+        time_budget_ms: timeBudgetMs,
+      }),
+    );
+  }
+
+  return result;
 }

@@ -72,5 +72,10 @@ jobs:
       - name: Deploy api
         run: gcloud run deploy baseline-api --project "${{ secrets.GCP_PROJECT }}" --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.api }}"
 
+      # The worker runs the SAME image as the api (it just executes the scheduled
+      # sync batch). Deploy the same digest so its sync logic never drifts from the api.
+      - name: Deploy worker
+        run: gcloud run deploy baseline-worker --project "${{ secrets.GCP_PROJECT }}" --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.api }}"
+
       - name: Deploy web
         run: gcloud run deploy baseline-web --project "${{ secrets.GCP_PROJECT }}" --region "${{ vars.GCP_REGION }}" --image "${{ steps.img.outputs.web }}"
