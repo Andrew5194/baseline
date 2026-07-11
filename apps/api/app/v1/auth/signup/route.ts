@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, users } from '@baseline/db';
 import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
+import { hash } from '@node-rs/bcrypt';
 import { allow, clientIp } from '../../../../lib/rate-limit';
 
 export async function POST(request: NextRequest) {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const passwordHash = await bcrypt.hash(body.password, 12);
+  const passwordHash = await hash(body.password, 12);
 
   const [user] = await db
     .insert(users)

@@ -31,7 +31,7 @@ export function middleware(request: NextRequest) {
       headers: {
         'Access-Control-Allow-Origin': isAllowed ? origin : '',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, X-Auth-Return-Redirect',
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Max-Age': '86400',
       },
