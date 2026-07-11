@@ -305,7 +305,9 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
       })),
   ].sort((a, b) => Number(a.done) - Number(b.done));
 
-  const hasData = todos !== null && (todos.length > 0 || recurring.length > 0);
+  // Show the heatmap as soon as the month has loaded — even with no tasks yet, so a
+  // fresh account still sees the empty grid (the API always returns a full month).
+  const loaded = todos !== null;
 
   return (
     <>
@@ -326,7 +328,7 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
 
       {showRecurring && <RecurringTodos goals={goalsList} categories={categories} categoryColorOf={categoryColorOf} onChange={load} />}
 
-      {hasData && (
+      {loaded && (
         <CompletionHeatmap
           cells={heatmap}
           onSelectDay={setSelectedDay}

@@ -24,6 +24,10 @@ export const users = pgTable('users', {
   // IANA timezone (e.g. 'America/New_York') used to bucket the user's activity
   // into local calendar days/weeks/months on the dashboard.
   timezone: text('timezone').notNull().default('UTC'),
+  // Whether the user has explicitly chosen a timezone. Until true, the client
+  // treats `timezone` as unset and defaults to the browser's detected zone (and
+  // tracks it), rather than letting the 'UTC' default win.
+  timezoneSet: boolean('timezone_set').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
