@@ -25,25 +25,35 @@ export async function runMigrations(migrationsFolder: string) {
     created_at BIGINT
   )`;
 
-  const applied = await sql`SELECT hash FROM __drizzle_migrations`;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const appliedHashes = new Set(applied.map((r: any) => r.hash as string));
+  try {
+    const applied = await sql`SELECT hash FROM __drizzle_migrations`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const appliedHashes = new Set(applied.map((r: any) => r.hash as string));
 
-  for (const entry of journal.entries) {
-    if (appliedHashes.has(entry.tag)) continue;
+    for (const entry of journal.entries) {
+      if (appliedHashes.has(entry.tag)) continue;
 
-    const sqlFile = path.join(migrationsFolder, `${entry.tag}.sql`);
-    const migration = fs.readFileSync(sqlFile, 'utf-8');
+      const sqlFile = path.join(migrationsFolder, `${entry.tag}.sql`);
+      const migration = fs.readFileSync(sqlFile, 'utf-8');
 
-    // Split on statement boundaries and execute each
-    const statements = migration.split('--> statement-breakpoint').map((s: string) => s.trim()).filter(Boolean);
-    for (const stmt of statements) {
-      await sql.unsafe(stmt);
+      // Split on statement boundaries and execute each
+      const statements = migration.split('--> statement-breakpoint').map((s: string) => s.trim()).filter(Boolean);
+      for (const stmt of statements) {
+        try {
+          await sql.unsafe(stmt);
+        } catch (e) {
+          // Surface which migration (and statement) failed — the raw driver error
+          // alone doesn't say. Rethrow so the caller can abort loudly rather than
+          // continue on a half-applied schema.
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(`Migration ${entry.tag} failed: ${msg}\n  statement: ${stmt.slice(0, 200)}`, { cause: e });
+        }
+      }
+
+      await sql`INSERT INTO __drizzle_migrations (hash, created_at) VALUES (${entry.tag}, ${Date.now()})`;
+      console.log(`Applied migration: ${entry.tag}`);
     }
-
-    await sql`INSERT INTO __drizzle_migrations (hash, created_at) VALUES (${entry.tag}, ${Date.now()})`;
-    console.log(`Applied migration: ${entry.tag}`);
+  } finally {
+    await sql.end();
   }
-
-  await sql.end();
 }
