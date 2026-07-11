@@ -1,6 +1,11 @@
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Run database migrations on startup (creates tables on first boot)
+  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
+
+  // Run database migrations on startup (creates tables on first boot). Gated so
+  // only the api service migrates: the baseline-worker service runs this SAME image
+  // but must not race the api applying DDL during a deploy, so it sets
+  // RUN_MIGRATIONS=false.
+  if (process.env.RUN_MIGRATIONS !== 'false') {
     try {
       const path = await import('path');
       const { runMigrations } = await import('@baseline/db');
@@ -10,27 +15,43 @@ export async function register() {
     } catch (e) {
       console.error('Migration failed:', e);
     }
+  }
 
-    const cron = await import('node-cron');
-    const { syncAllIntegrations } = await import('./lib/ingestion');
+  // Sync + rate-limit cleanup.
+  //
+  // On GCP these run on the dedicated baseline-worker service, triggered by Cloud
+  // Scheduler → POST /v1/internal/cron (one trigger per interval, on compute
+  // isolated from request serving), so the api/worker set INPROCESS_CRON=false.
+  //
+  // Everywhere else — self-host and local `make dev` — there is no external
+  // scheduler, so an in-process timer is the right driver and it stays ON by
+  // default. A self-host box is a single long-lived container, so the "duplicated
+  // per instance" / "scale-to-zero skips ticks" problems that motivated moving off
+  // the timer on GCP simply don't apply here.
+  if (process.env.INPROCESS_CRON !== 'false') {
+    const INTERVAL_MS = 15 * 60 * 1000;
+    let running = false;
 
-    cron.default.schedule('*/15 * * * *', async () => {
-      console.log(JSON.stringify({ msg: 'cron_start', job: 'sync_all_integrations' }));
-      await syncAllIntegrations();
-      console.log(JSON.stringify({ msg: 'cron_end', job: 'sync_all_integrations' }));
-    });
-
-    // Sweep expired rate-limit buckets (Postgres has no TTL, so we clean them up).
-    const { cleanupRateLimits } = await import('./lib/rate-limit');
-    cron.default.schedule('*/10 * * * *', async () => {
-      try {
-        const deleted = await cleanupRateLimits();
-        if (deleted) console.log(JSON.stringify({ msg: 'cron', job: 'rate_limit_cleanup', deleted }));
-      } catch (e) {
-        console.error('rate_limit_cleanup failed:', e);
+    setInterval(async () => {
+      if (running) {
+        // Previous tick still going (slow sync / many integrations) — skip this one
+        // rather than overlapping runs on the same box.
+        console.warn(JSON.stringify({ msg: 'inprocess_cron_skip', reason: 'previous_still_running' }));
+        return;
       }
-    });
+      running = true;
+      try {
+        const { runSyncBatch } = await import('./lib/ingestion');
+        const { cleanupRateLimits } = await import('./lib/rate-limit');
+        await runSyncBatch();
+        await cleanupRateLimits();
+      } catch (e) {
+        console.error('inprocess_cron failed:', e);
+      } finally {
+        running = false;
+      }
+    }, INTERVAL_MS);
 
-    console.log('Cron: sync_all_integrations (15m) + rate_limit_cleanup (10m) scheduled');
+    console.log('In-process cron enabled (sync + rate-limit cleanup every 15m). Set INPROCESS_CRON=false to disable.');
   }
 }

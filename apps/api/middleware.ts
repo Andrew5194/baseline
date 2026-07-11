@@ -12,9 +12,10 @@ const allowedOrigins = [
 // Session cookie names (the non-Secure pinned name + its Secure variant).
 const SESSION_COOKIES = ['authjs.session-token', '__Secure-authjs.session-token'];
 
-// /v1 paths that don't require a session: health check, sign-up, and the GitHub
-// OAuth dance (which manages its own auth and must not be 401'd mid-redirect).
-const PUBLIC_V1_PREFIXES = ['/v1/healthz', '/v1/auth', '/v1/integrations/github'];
+// /v1 paths that don't require a session: health check, sign-up, the GitHub OAuth
+// dance (which manages its own auth and must not be 401'd mid-redirect), and the
+// internal cron endpoint (guarded by CRON_SECRET + Cloud Run IAM, not a cookie).
+const PUBLIC_V1_PREFIXES = ['/v1/healthz', '/v1/auth', '/v1/integrations/github', '/v1/internal'];
 
 function requiresAuth(pathname: string): boolean {
   if (!pathname.startsWith('/v1')) return false;
