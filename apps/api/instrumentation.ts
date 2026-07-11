@@ -18,7 +18,12 @@ export async function register() {
         await runMigrations(path.resolve(process.cwd(), '..', '..', 'packages', 'db', 'drizzle'));
         console.log('Database migrations applied');
       } catch (e) {
-        console.error('Migration failed:', e);
+        // Fail loudly: a failed migration must NOT serve traffic on a mismatched
+        // schema. Exiting non-zero aborts startup so the process never begins serving
+        // on a bad schema, instead of silently continuing. (Swallowing this error is
+        // what previously masked an unmigrated schema and broke sign-in.)
+        console.error('FATAL: database migration failed, aborting startup:', e);
+        process.exit(1);
       }
     }
 
