@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../lib/api';
 import { AssistantPanel, BaselineAIMark } from './assistant-panel';
 
@@ -13,6 +13,7 @@ const STORAGE_KEY = 'baseline.assistant.open';
 export function AssistantDock() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
 
   // Restore persisted open/closed state on first mount.
   useEffect(() => {
@@ -22,6 +23,17 @@ export function AssistantDock() {
   useEffect(() => {
     if (mounted) window.localStorage.setItem(STORAGE_KEY, open ? '1' : '0');
   }, [open, mounted]);
+
+  // Close when clicking anywhere outside the drawer. Only armed while open; the
+  // launcher is pointer-events-none when open, so it can't re-trigger.
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
 
   async function createGoal(payload: Record<string, unknown>) {
     await apiFetch('/v1/goals', { method: 'POST', body: JSON.stringify(payload) }).catch(console.error);
@@ -45,6 +57,7 @@ export function AssistantDock() {
 
       {/* Drawer */}
       <aside
+        ref={drawerRef}
         className="fixed top-0 right-0 h-full z-50 transition-transform duration-300 ease-out will-change-transform"
         style={{ width: WIDTH, transform: open ? 'translateX(0)' : `translateX(${WIDTH}px)` }}
         aria-hidden={!open}

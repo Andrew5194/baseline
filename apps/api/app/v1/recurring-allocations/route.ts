@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, recurringAllocations } from '@baseline/db';
+import { db, recurringAllocations, categories, resolveCategoryId } from '@baseline/db';
 import { eq, asc } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../lib/user';
 
@@ -7,7 +7,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const ALL_DAYS = 127; // every weekday
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-const toDto = (r: { id: string; category: string; durationMs: number; daysMask: number; note: string | null }) => ({
+const toDto = (r: { id: string; category: string | null; durationMs: number; daysMask: number; note: string | null }) => ({
   id: r.id,
   category: r.category,
   hours: round2(r.durationMs / HOUR_MS),
@@ -21,12 +21,13 @@ export async function GET() {
   const rows = await db
     .select({
       id: recurringAllocations.id,
-      category: recurringAllocations.category,
+      category: categories.name,
       durationMs: recurringAllocations.durationMs,
       daysMask: recurringAllocations.daysMask,
       note: recurringAllocations.note,
     })
     .from(recurringAllocations)
+    .leftJoin(categories, eq(recurringAllocations.categoryId, categories.id))
     .where(eq(recurringAllocations.userId, userId))
     .orderBy(asc(recurringAllocations.createdAt));
 
@@ -44,10 +45,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
+  // Category is now optional (no longer rejected when missing).
   const category = typeof body.category === 'string' ? body.category.trim() : '';
-  if (!category) {
-    return NextResponse.json({ error: 'category is required', code: 'INVALID_CATEGORY' }, { status: 400 });
-  }
   if (typeof body.hours !== 'number' || !(body.hours > 0) || body.hours > 24) {
     return NextResponse.json({ error: 'hours must be between 0 and 24', code: 'INVALID_HOURS' }, { status: 400 });
   }
@@ -55,22 +54,24 @@ export async function POST(request: NextRequest) {
   const daysMask =
     Number.isInteger(body.days_mask) && body.days_mask! > 0 ? body.days_mask! & ALL_DAYS : ALL_DAYS;
 
+  // Resolve the typed name to a category id (find-or-create); null when blank.
+  const categoryId = await resolveCategoryId(userId, category);
+
   const [row] = await db
     .insert(recurringAllocations)
     .values({
       userId,
-      category,
+      categoryId,
       durationMs: Math.round(body.hours * HOUR_MS),
       daysMask,
       note: typeof body.note === 'string' && body.note.trim() ? body.note.trim() : null,
     })
     .returning({
       id: recurringAllocations.id,
-      category: recurringAllocations.category,
       durationMs: recurringAllocations.durationMs,
       daysMask: recurringAllocations.daysMask,
       note: recurringAllocations.note,
     });
 
-  return NextResponse.json(toDto(row), { status: 201 });
+  return NextResponse.json(toDto({ ...row, category: category || null }), { status: 201 });
 }

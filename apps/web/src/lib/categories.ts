@@ -1,30 +1,31 @@
 // Preset activity categories offered when adding a time entry. Users may also
 // type their own; both flow through the same string-based category field.
-export const PRESET_CATEGORIES = [
-  'Deep Work',
-  'Meetings',
-  'Code Review',
-  'Learning',
-  'Admin',
-  'Break',
-];
+export const PRESET_CATEGORIES = ['Coding', 'Work', 'Essentials', 'Health', 'Household'];
 
 // Common life routines, surfaced as one-click presets for recurring allocations.
 export const ROUTINE_PRESETS: Array<{ category: string; hours: number }> = [
   { category: 'Sleep', hours: 8 },
-  { category: 'Breakfast', hours: 0.5 },
-  { category: 'Lunch', hours: 1 },
-  { category: 'Dinner', hours: 1 },
+  { category: 'Meals', hours: 2 },
 ];
 
 // Hand-picked, spread across the hue wheel so adjacent categories stay distinct.
+// The first six match the seeded defaults (see DEFAULT_CATEGORIES in @baseline/db);
+// the last two are kept so any legacy "Code Review"/"Break" categories keep their hue.
 const PRESET_COLORS: Record<string, string> = {
-  'Deep Work': '#10b981', // emerald (green)
-  Meetings: '#6366f1', // indigo
-  'Code Review': '#a855f7', // purple
-  Learning: '#f59e0b', // amber (orange)
-  Admin: '#64748b', // slate
-  Break: '#f43f5e', // rose
+  Coding: '#10b981', // emerald (green)
+  Work: '#6366f1', // indigo
+  Essentials: '#f59e0b', // amber (orange)
+  Health: '#f43f5e', // rose
+  Household: '#0ea5e9', // sky
+  // Legacy defaults kept so any older categories retain their hue.
+  'Deep Work': '#10b981',
+  Meetings: '#6366f1',
+  Learning: '#f59e0b',
+  Admin: '#64748b',
+  Sleep: '#0ea5e9',
+  Meals: '#f97316',
+  'Code Review': '#a855f7',
+  Break: '#f43f5e',
 };
 
 // The unallocated remainder — a faint translucent track so it recedes behind the

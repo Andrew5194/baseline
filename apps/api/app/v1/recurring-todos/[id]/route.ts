@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, recurringTodos, goals } from '@baseline/db';
+import { db, recurringTodos, goals, categories, resolveCategoryId } from '@baseline/db';
 import { eq, and } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../../lib/user';
 
@@ -20,7 +20,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const updates: { title?: string; daysMask?: number; goalId?: string | null; category?: string | null } = {};
+  const updates: { title?: string; daysMask?: number; goalId?: string | null; categoryId?: string | null } = {};
   if (typeof body.title === 'string') {
     const t = body.title.trim();
     if (!t) return NextResponse.json({ error: 'title is required', code: 'INVALID_TITLE' }, { status: 400 });
@@ -31,12 +31,13 @@ export async function PATCH(
   if ('goal_id' in body) {
     const gid = typeof body.goal_id === 'string' && body.goal_id ? body.goal_id : null;
     updates.goalId = gid;
-    if (gid) updates.category = null;
+    if (gid) updates.categoryId = null;
   }
   if ('category' in body) {
-    const c = typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 120) : null;
-    updates.category = c;
-    if (c) updates.goalId = null;
+    const name = typeof body.category === 'string' && body.category.trim() ? body.category.trim() : null;
+    const cid = await resolveCategoryId(userId, name);
+    updates.categoryId = cid;
+    if (cid) updates.goalId = null;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -47,7 +48,7 @@ export async function PATCH(
     .update(recurringTodos)
     .set(updates)
     .where(and(eq(recurringTodos.id, id), eq(recurringTodos.userId, userId)))
-    .returning({ id: recurringTodos.id, title: recurringTodos.title, daysMask: recurringTodos.daysMask, goalId: recurringTodos.goalId, category: recurringTodos.category });
+    .returning({ id: recurringTodos.id, title: recurringTodos.title, daysMask: recurringTodos.daysMask, goalId: recurringTodos.goalId, categoryId: recurringTodos.categoryId });
 
   if (!row) {
     return NextResponse.json({ error: 'Not found', code: 'NOT_FOUND' }, { status: 404 });
@@ -57,10 +58,22 @@ export async function PATCH(
   let goalColor: string | null = null;
   let goalCategory: string | null = null;
   if (row.goalId) {
-    const [g] = await db.select({ title: goals.title, color: goals.color, category: goals.category }).from(goals).where(eq(goals.id, row.goalId)).limit(1);
+    const [g] = await db
+      .select({ title: goals.title, color: goals.color, category: categories.name })
+      .from(goals)
+      .leftJoin(categories, eq(goals.categoryId, categories.id))
+      .where(eq(goals.id, row.goalId))
+      .limit(1);
     goalTitle = g?.title ?? null;
     goalColor = g?.color ?? null;
     goalCategory = g?.category ?? null;
+  }
+
+  // Resolve the recurring task's own category id back to its name for the response.
+  let category: string | null = null;
+  if (row.categoryId) {
+    const [c] = await db.select({ name: categories.name }).from(categories).where(eq(categories.id, row.categoryId)).limit(1);
+    category = c?.name ?? null;
   }
   return NextResponse.json({
     id: row.id,
@@ -70,7 +83,7 @@ export async function PATCH(
     goal_title: goalTitle,
     goal_color: goalColor,
     goal_category: goalCategory,
-    category: row.category,
+    category,
   });
 }
 

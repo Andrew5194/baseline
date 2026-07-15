@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, users } from '@baseline/db';
+import { db, users, seedDefaultCategories } from '@baseline/db';
 import { eq } from 'drizzle-orm';
 import { hash } from '@node-rs/bcrypt';
 import { allow, clientIp } from '../../../../lib/rate-limit';
@@ -56,6 +56,14 @@ export async function POST(request: NextRequest) {
       name: body.name || null,
     })
     .returning({ id: users.id, email: users.email });
+
+  // Give the new account the default starter categories. Best-effort: a seeding
+  // hiccup shouldn't fail account creation.
+  try {
+    await seedDefaultCategories(user.id);
+  } catch (e) {
+    console.error('seedDefaultCategories failed for', user.id, e);
+  }
 
   return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
 }

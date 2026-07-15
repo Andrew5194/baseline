@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, events, goals, todos } from '@baseline/db';
+import { db, events, goals, todos, categories } from '@baseline/db';
 import { eq, and, gte, lt, asc } from 'drizzle-orm';
 import { zonedCivilToUtc } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
@@ -34,8 +34,9 @@ export async function GET(request: NextRequest) {
   if (metric === 'goals_completed' || metric === 'tasks_completed') {
     const table = metric === 'goals_completed' ? goals : todos;
     const rows = await db
-      .select({ id: table.id, title: table.title, completedAt: table.completedAt, category: table.category })
+      .select({ id: table.id, title: table.title, completedAt: table.completedAt, category: categories.name })
       .from(table)
+      .leftJoin(categories, eq(table.categoryId, categories.id))
       .where(and(eq(table.userId, userId), gte(table.completedAt, since), lt(table.completedAt, until)))
       .orderBy(asc(table.completedAt));
     const items = rows.map((r) => ({ id: r.id, title: r.title, completed_at: r.completedAt, category: r.category }));

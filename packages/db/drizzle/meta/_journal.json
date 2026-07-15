@@ -148,6 +148,13 @@
       "when": 1783806218215,
       "tag": "0020_user_timezone_set",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1784500000000,
+      "tag": "0021_categories_fk",
+      "breakpoints": true
     }
   ]
 }

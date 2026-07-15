@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, goals, todos } from '@baseline/db';
+import { db, goals, todos, categories, resolveCategoryId } from '@baseline/db';
 import { eq, asc, desc, and } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../lib/user';
 
@@ -9,8 +9,9 @@ export async function GET() {
   const userId = await getCurrentUserId();
 
   const rows = await db
-    .select({ id: goals.id, title: goals.title, category: goals.category, color: goals.color, dueAt: goals.dueAt, done: goals.done, completedAt: goals.completedAt, createdAt: goals.createdAt })
+    .select({ id: goals.id, title: goals.title, category: categories.name, color: goals.color, dueAt: goals.dueAt, done: goals.done, completedAt: goals.completedAt, createdAt: goals.createdAt })
     .from(goals)
+    .leftJoin(categories, eq(goals.categoryId, categories.id))
     .where(eq(goals.userId, userId))
     .orderBy(asc(goals.done), asc(goals.position), desc(goals.createdAt));
 
@@ -56,16 +57,17 @@ export async function POST(request: NextRequest) {
   }
 
   const color = typeof body.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.color) ? body.color : null;
-  const category = typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 120) : null;
+  const categoryName = typeof body.category === 'string' && body.category.trim() ? body.category.trim() : null;
+  const categoryId = await resolveCategoryId(userId, body.category);
   const dueAt = typeof body.due_at === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.due_at) ? body.due_at : null;
 
   const [row] = await db
     .insert(goals)
-    .values({ userId, title, category, color, dueAt })
-    .returning({ id: goals.id, title: goals.title, category: goals.category, color: goals.color, dueAt: goals.dueAt, done: goals.done, completedAt: goals.completedAt });
+    .values({ userId, title, categoryId, color, dueAt })
+    .returning({ id: goals.id, title: goals.title, color: goals.color, dueAt: goals.dueAt, done: goals.done, completedAt: goals.completedAt });
 
   return NextResponse.json(
-    { id: row.id, title: row.title, category: row.category, color: row.color, due_at: row.dueAt, done: row.done, completed_at: row.completedAt, task_total: 0, task_done: 0 },
+    { id: row.id, title: row.title, category: categoryName, color: row.color, due_at: row.dueAt, done: row.done, completed_at: row.completedAt, task_total: 0, task_done: 0 },
     { status: 201 },
   );
 }

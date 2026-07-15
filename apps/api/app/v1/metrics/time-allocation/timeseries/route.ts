@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, events, recurringAllocations } from '@baseline/db';
+import { db, events, recurringAllocations, categories } from '@baseline/db';
 import { eq, and, gte, lt, gt } from 'drizzle-orm';
 import { hoursByCategoryV1, recurringToEvents, dayKeyInTz } from '@baseline/metrics';
 import type { EventInput } from '@baseline/metrics';
@@ -50,14 +50,17 @@ export async function GET(request: NextRequest) {
 
   // Skip standing routines when the caller asks to focus on free time.
   if (request.nextUrl.searchParams.get('recurring') !== 'exclude') {
-    const recurring = await db
+    const recurringRows = await db
       .select({
-        category: recurringAllocations.category,
+        category: categories.name,
         durationMs: recurringAllocations.durationMs,
         daysMask: recurringAllocations.daysMask,
       })
       .from(recurringAllocations)
+      .leftJoin(categories, eq(recurringAllocations.categoryId, categories.id))
       .where(eq(recurringAllocations.userId, userId));
+    // Uncategorized allocations trim to the "Other" bucket (via categoryOf).
+    const recurring = recurringRows.map((r) => ({ ...r, category: r.category ?? '' }));
     ei.push(...recurringToEvents(recurring, start, end, tz));
   }
 
