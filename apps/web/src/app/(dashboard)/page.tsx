@@ -60,6 +60,7 @@ const timeRange = (iso: string, hours: number, timeZone: string) => {
 
 type Panel = 'recurring' | 'categories';
 const PERIOD_LABEL: Record<Period, string> = { week: 'This week', month: 'This month', year: 'This year' };
+const ALLOCATION_LABEL: Record<Period, string> = { week: 'Next 7 days', month: 'Next 30 days', year: 'Next 12 months' };
 
 export default function Overview() {
   const tz = useTimezone();
@@ -374,7 +375,7 @@ export default function Overview() {
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
-            {isYear ? 'Monthly allocation' : 'Daily allocation'}
+            {ALLOCATION_LABEL[period]}
           </p>
           <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
             {(['bars', 'calendar'] as const).map((v) => (
@@ -426,7 +427,7 @@ export default function Overview() {
       {/* Entries list */}
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
         <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-4">
-          Entries · {PERIOD_LABEL[period].toLowerCase()}
+          Entries {PERIOD_LABEL[period].toLowerCase()}
         </p>
         {!ready || !entries ? (
           <div className="space-y-2">
