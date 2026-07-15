@@ -17,10 +17,12 @@ export function Modal({ children, onClose }: { children: React.ReactNode; onClos
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div role="dialog" aria-modal="true" className="relative z-10 w-full max-w-md my-8">
-        {children}
+      <div className="relative flex min-h-full items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" className="relative z-10 w-full max-w-md">
+          {children}
+        </div>
       </div>
     </div>
   );

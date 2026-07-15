@@ -50,7 +50,7 @@ export function SourceDropdown({ value, onChange, sources }: SourceDropdownProps
       {open && (
         <div
           role="listbox"
-          className="absolute right-0 mt-1.5 z-30 min-w-[170px] py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg"
+          className="absolute left-0 sm:left-auto sm:right-0 mt-1.5 z-30 min-w-[170px] py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg"
         >
           {options.map((o) => (
             <button

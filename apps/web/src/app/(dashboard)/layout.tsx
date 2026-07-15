@@ -38,7 +38,7 @@ export default async function DashboardLayout({
   return (
     <>
       <Sidebar />
-      <main className="ml-60 min-h-screen">{children}</main>
+      <main className="md:ml-60 min-h-screen pt-14 md:pt-0">{children}</main>
       <AssistantDock />
       <SessionToast />
     </>

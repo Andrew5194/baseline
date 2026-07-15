@@ -115,7 +115,7 @@ export default function Sources() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-3xl">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
         <h1 className="text-xl font-semibold tracking-tight mb-6">Sources</h1>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -127,7 +127,7 @@ export default function Sources() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
       <h1 className="text-xl font-semibold tracking-tight mb-6">Sources</h1>
 
       <div className="space-y-3">
@@ -138,15 +138,15 @@ export default function Sources() {
               key={src.provider}
               className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
                     {src.icon}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium">{src.name}</p>
                     {integration ? (
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-xs text-neutral-500 break-words">
                         {integration.external_account_id ? `${integration.external_account_id} · ` : ''}Last sync:{' '}
                         {integration.last_synced_at ? new Date(integration.last_synced_at).toLocaleString() : 'never'}
                       </p>
@@ -156,7 +156,7 @@ export default function Sources() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {integration ? (
                     <>
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -195,11 +195,11 @@ export default function Sources() {
             className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 opacity-60"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 flex-shrink-0">
                   {source.icon}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">{source.name}</p>
                     <span className="text-[10px] font-medium text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">

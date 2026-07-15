@@ -117,26 +117,30 @@ export function GoalCard({
               className="w-full text-sm rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1 -my-1 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
             />
           ) : (
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 min-w-0">
               <span
-                className={`block text-sm truncate ${
+                className={`order-2 md:order-1 min-w-0 block text-sm break-words md:truncate ${
                   goal.done ? 'line-through text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-white'
                 }`}
               >
                 {goal.title}
               </span>
-              {goal.category && (
-                <span
-                  className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
-                  title="Time on this goal rolls up to this category"
-                >
-                  {goal.category}
-                </span>
-              )}
-              {due && (
-                <span className={`flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${DUE_TONE_CLASS[due.tone]}`} title="Target date">
-                  {due.label}
-                </span>
+              {(goal.category || due) && (
+                <div className="order-1 md:order-2 flex flex-wrap items-center gap-1.5">
+                  {goal.category && (
+                    <span
+                      className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+                      title="Time on this goal rolls up to this category"
+                    >
+                      {goal.category}
+                    </span>
+                  )}
+                  {due && (
+                    <span className={`flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${DUE_TONE_CLASS[due.tone]}`} title="Target date">
+                      {due.label}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -149,7 +153,7 @@ export function GoalCard({
           <div
             onClick={(e) => e.stopPropagation()}
             className={`flex items-center gap-2 flex-shrink-0 transition-opacity ${
-              pickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              pickerOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
             }`}
           >
             <GoalColorPicker current={color} onPick={setColor} onOpenChange={setPickerOpen} />
