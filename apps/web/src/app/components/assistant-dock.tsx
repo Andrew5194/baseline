@@ -47,18 +47,18 @@ export function AssistantDock() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Open Baseline AI"
-        className={`fixed top-5 right-6 z-40 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm font-medium text-neutral-700 dark:text-neutral-200 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all duration-200 ${
+        className={`fixed right-4 bottom-5 md:right-6 md:top-5 md:bottom-auto z-40 inline-flex items-center gap-1.5 p-2.5 rounded-full md:px-3 md:py-1.5 md:rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm font-medium text-neutral-700 dark:text-neutral-200 shadow-md md:shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all duration-200 ${
           open ? 'opacity-0 pointer-events-none translate-y-1' : 'opacity-100'
         }`}
       >
         <BaselineAIMark className="w-6 h-6" />
-        Ask AI
+        <span className="hidden md:inline">Ask AI</span>
       </button>
 
       {/* Drawer */}
       <aside
         ref={drawerRef}
-        className="fixed top-0 right-0 h-full z-50 transition-transform duration-300 ease-out will-change-transform"
+        className="fixed top-0 right-0 h-full max-w-full z-50 transition-transform duration-300 ease-out will-change-transform"
         style={{ width: WIDTH, transform: open ? 'translateX(0)' : `translateX(${WIDTH}px)` }}
         aria-hidden={!open}
       >

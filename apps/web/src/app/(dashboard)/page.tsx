@@ -99,8 +99,8 @@ export default function Overview() {
   );
   const loadRecurring = useCallback(
     () =>
-      apiFetch<{ data: Array<{ category: string }> }>('/v1/recurring-allocations')
-        .then((d) => setRecurringCats([...new Set((d.data ?? []).map((r) => r.category))]))
+      apiFetch<{ data: Array<{ category: string | null }> }>('/v1/recurring-allocations')
+        .then((d) => setRecurringCats([...new Set((d.data ?? []).map((r) => r.category).filter((c): c is string => !!c))]))
         .catch(console.error),
     [],
   );
@@ -239,13 +239,13 @@ export default function Overview() {
     }`;
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-2">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
           <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <PeriodSelector
             value={period}
             onChange={(p) => {

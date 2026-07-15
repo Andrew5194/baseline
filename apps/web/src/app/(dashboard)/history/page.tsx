@@ -139,13 +139,13 @@ export default function History() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">History</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Everything that&apos;s happened, most recent first</p>
         </div>
-        <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+        <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 self-start sm:self-auto">
           {FILTERS.map((f) => (
             <button
               key={f.key}

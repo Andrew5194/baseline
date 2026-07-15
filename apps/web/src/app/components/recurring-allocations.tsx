@@ -6,7 +6,7 @@ import { PRESET_CATEGORIES, ROUTINE_PRESETS } from '../../lib/categories';
 
 interface RecurringAllocation {
   id: string;
-  category: string;
+  category: string | null;
   hours: number;
   days_mask: number;
   note: string | null;
@@ -101,7 +101,7 @@ export function RecurringAllocations({ knownCategories, colorOf, onChange }: Rec
     onChange();
   }
 
-  const existing = new Set(items.map((i) => i.category.toLowerCase()));
+  const existing = new Set(items.filter((i) => i.category).map((i) => (i.category as string).toLowerCase()));
 
   return (
     <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 space-y-4">
@@ -133,8 +133,8 @@ export function RecurringAllocations({ knownCategories, colorOf, onChange }: Rec
         <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {items.map((it) => (
             <div key={it.id} className="flex items-center gap-3 py-2 group">
-              <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: colorOf(it.category) }} />
-              <span className="text-sm text-neutral-900 dark:text-white w-32 truncate">{it.category}</span>
+              <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: it.category ? colorOf(it.category) : '#9ca3af' }} />
+              <span className={`text-sm w-32 truncate ${it.category ? 'text-neutral-900 dark:text-white' : 'text-neutral-400 dark:text-neutral-500 italic'}`}>{it.category ?? 'Uncategorized'}</span>
               <span className="text-xs text-neutral-400 dark:text-neutral-500 flex-1">{describeDays(it.days_mask)}</span>
               <span className="text-sm font-medium text-neutral-900 dark:text-white tabular-nums">{it.hours}h<span className="text-neutral-400 dark:text-neutral-500 font-normal">/day</span></span>
               <button

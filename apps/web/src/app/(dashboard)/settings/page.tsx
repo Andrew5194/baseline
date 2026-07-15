@@ -2,7 +2,7 @@ import { TimezoneSetting } from '../../components/timezone-setting';
 
 export default function Settings() {
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
       <h1 className="text-xl font-semibold tracking-tight mb-6">Settings</h1>
 
       <div className="space-y-4">
