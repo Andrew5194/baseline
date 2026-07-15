@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, events, recurringAllocations } from '@baseline/db';
+import { db, events, recurringAllocations, categories } from '@baseline/db';
 import { eq, and, gte, lt, gt } from 'drizzle-orm';
 import { hoursByCategoryV1, computeDelta, recurringToEvents } from '@baseline/metrics';
 import type { EventInput } from '@baseline/metrics';
@@ -55,19 +55,20 @@ export async function GET(request: NextRequest) {
   if (request.nextUrl.searchParams.get('recurring') !== 'exclude') {
     const recurring = await db
       .select({
-        category: recurringAllocations.category,
+        category: categories.name,
         durationMs: recurringAllocations.durationMs,
         daysMask: recurringAllocations.daysMask,
       })
       .from(recurringAllocations)
+      .leftJoin(categories, eq(recurringAllocations.categoryId, categories.id))
       .where(eq(recurringAllocations.userId, userId));
-    ei.push(...recurringToEvents(recurring, prevStart, end, tz));
+    ei.push(...recurringToEvents(recurring.map((r) => ({ ...r, category: r.category ?? '' })), prevStart, end, tz));
   }
 
   const curr = hoursByCategoryV1(ei, start, end);
   const prev = hoursByCategoryV1(ei, prevStart, start);
 
-  const categories = Object.entries(curr)
+  const catStats = Object.entries(curr)
     .map(([category, hours]) => ({
       category,
       hours,
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     }))
     .sort((a, b) => b.hours - a.hours);
 
-  const tracked = round1(categories.reduce((s, c) => s + c.hours, 0));
+  const tracked = round1(catStats.reduce((s, c) => s + c.hours, 0));
   const free = round1(Math.max(budgetHours - tracked, 0));
 
   return NextResponse.json({
@@ -84,6 +85,6 @@ export async function GET(request: NextRequest) {
     budget: budgetHours,
     tracked_hours: tracked,
     free_hours: free,
-    categories,
+    categories: catStats,
   });
 }

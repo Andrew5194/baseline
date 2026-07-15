@@ -134,7 +134,9 @@ export const recurringAllocations = pgTable(
     userId: uuid('user_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
-    category: text('category').notNull(),
+    // The category this recurring allocation counts toward (FK). Nullable: an
+    // allocation can be uncategorized, and is set null when its category is deleted.
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
     durationMs: bigint('duration_ms', { mode: 'number' }).notNull(),
     // Bitmask of weekdays the allocation applies to: bit i (0=Sun … 6=Sat).
     // 127 = every day.
@@ -161,6 +163,31 @@ export const categoryColors = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.category] })],
 );
 
+// ── Categories ───────────────────────────────────────────────────────────────
+// First-class per-user categories. Goals, tasks, and recurring allocations
+// reference a row here by id (FK, ON DELETE SET NULL — deleting a category
+// uncategorizes its items rather than destroying them). Seeded with a default
+// set on signup; defaults are ordinary rows, so they're editable/deletable like
+// any other. Colors still live in `category_colors` (keyed by name).
+
+export const categories = pgTable(
+  'categories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: text('name').notNull(),
+    // Manual sort order in the manage-categories list; lower sorts first.
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('categories_user_name_idx').on(table.userId, table.name),
+    index('categories_user_idx').on(table.userId),
+  ],
+);
+
 // ── Goals ────────────────────────────────────────────────────────────────────
 // A finite thing the user wants to accomplish, in their own words (e.g. "Ship the
 // billing page", "Read Designing Data-Intensive Applications"). Checked off when
@@ -174,9 +201,9 @@ export const goals = pgTable(
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
     title: text('title').notNull(),
-    // The time-allocation category this goal rolls up into, so tracked time on a
-    // goal's tasks aggregates from goals → categories. Null = uncategorized.
-    category: text('category'),
+    // The category this goal rolls up into (FK to categories). Null = uncategorized;
+    // set null automatically when the category is deleted.
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
     // User-chosen color (hex). Null falls back to a deterministic palette color.
     color: text('color'),
     // Free-text notes about the goal.
@@ -211,8 +238,8 @@ export const todos = pgTable(
     // The goal this task advances (tag). Null when untagged.
     goalId: uuid('goal_id').references(() => goals.id, { onDelete: 'set null' }),
     // A category tagged directly on the task (when not tagged to a goal). The task's
-    // effective category is its goal's category if tagged, else this.
-    category: text('category'),
+    // effective category is its goal's category if tagged, else this. FK to categories.
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
     done: boolean('done').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -234,8 +261,8 @@ export const recurringTodos = pgTable(
     daysMask: integer('days_mask').notNull().default(127),
     // The goal this recurring task advances (tag). Null when untagged.
     goalId: uuid('goal_id').references(() => goals.id, { onDelete: 'set null' }),
-    // A category tagged directly on the task (when not tagged to a goal).
-    category: text('category'),
+    // A category tagged directly on the task (when not tagged to a goal). FK to categories.
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index('recurring_todos_user_idx').on(table.userId)],

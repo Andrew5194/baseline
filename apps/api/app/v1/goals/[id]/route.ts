@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, goals, todos, recurringTodos } from '@baseline/db';
+import { db, goals, todos, recurringTodos, categories, resolveCategoryId } from '@baseline/db';
 import { eq, and, asc, desc } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../../lib/user';
 
@@ -16,7 +16,7 @@ export async function GET(
     .select({
       id: goals.id,
       title: goals.title,
-      category: goals.category,
+      category: categories.name,
       color: goals.color,
       notes: goals.notes,
       dueAt: goals.dueAt,
@@ -24,6 +24,7 @@ export async function GET(
       completedAt: goals.completedAt,
     })
     .from(goals)
+    .leftJoin(categories, eq(goals.categoryId, categories.id))
     .where(and(eq(goals.id, id), eq(goals.userId, userId)))
     .limit(1);
 
@@ -74,7 +75,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const updates: { done?: boolean; completedAt?: Date | null; title?: string; category?: string | null; color?: string; notes?: string; dueAt?: string | null } = {};
+  const updates: { done?: boolean; completedAt?: Date | null; title?: string; categoryId?: string | null; color?: string; notes?: string; dueAt?: string | null } = {};
   if (typeof body.done === 'boolean') {
     updates.done = body.done;
     updates.completedAt = body.done ? new Date() : null;
@@ -90,10 +91,9 @@ export async function PATCH(
     updates.color = body.color;
   }
   if (body.category === null) {
-    updates.category = null;
+    updates.categoryId = null;
   } else if (typeof body.category === 'string') {
-    const c = body.category.trim();
-    updates.category = c ? c.slice(0, 120) : null;
+    updates.categoryId = await resolveCategoryId(userId, body.category);
   }
   if (typeof body.notes === 'string') {
     updates.notes = body.notes.slice(0, 5000);

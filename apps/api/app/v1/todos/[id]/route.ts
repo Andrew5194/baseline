@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, todos } from '@baseline/db';
+import { db, todos, resolveCategoryId } from '@baseline/db';
 import { eq, and } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../../lib/user';
 
@@ -18,7 +18,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const updates: { done?: boolean; completedAt?: Date | null; title?: string; goalId?: string | null; category?: string | null } = {};
+  const updates: { done?: boolean; completedAt?: Date | null; title?: string; goalId?: string | null; categoryId?: string | null } = {};
   if (typeof body.done === 'boolean') {
     updates.done = body.done;
     updates.completedAt = body.done ? new Date() : null;
@@ -35,13 +35,14 @@ export async function PATCH(
   if ('goal_id' in body) {
     const gid = typeof body.goal_id === 'string' && body.goal_id ? body.goal_id : null;
     updates.goalId = gid;
-    if (gid) updates.category = null;
+    if (gid) updates.categoryId = null;
   }
   // category present (string → tag, null → clear). Tagging a category untags the goal.
   if ('category' in body) {
-    const c = typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 120) : null;
-    updates.category = c;
-    if (c) updates.goalId = null;
+    const name = typeof body.category === 'string' && body.category.trim() ? body.category.trim() : null;
+    const cid = await resolveCategoryId(userId, name);
+    updates.categoryId = cid;
+    if (cid) updates.goalId = null;
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'nothing to update', code: 'INVALID_BODY' }, { status: 400 });

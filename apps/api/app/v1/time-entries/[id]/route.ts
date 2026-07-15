@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, events } from '@baseline/db';
+import { db, events, resolveCategoryId } from '@baseline/db';
 import { eq, and } from 'drizzle-orm';
 import { manualTimeEntryPayload } from '@baseline/events';
 import { getCurrentUserId, getUserTimezone } from '../../../../lib/user';
@@ -63,6 +63,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!parsed.success) {
     return NextResponse.json({ error: 'category is required', code: 'INVALID_CATEGORY' }, { status: 400 });
   }
+
+  // Register the (possibly new) category so it appears in the categories list.
+  await resolveCategoryId(userId, parsed.data.category);
 
   const [row] = await db
     .update(events)

@@ -9,10 +9,12 @@ export {
   events,
   recurringAllocations,
   categoryColors,
+  categories,
   goals,
   todos,
   recurringTodos,
   recurringTodoCompletions,
   dayNotes,
 } from './schema';
+export { resolveCategoryId, seedDefaultCategories, DEFAULT_CATEGORIES } from './categories';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

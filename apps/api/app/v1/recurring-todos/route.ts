@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, recurringTodos, goals } from '@baseline/db';
+import { db, recurringTodos, goals, categories, resolveCategoryId } from '@baseline/db';
 import { eq, asc } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { getCurrentUserId } from '../../../lib/user';
 
 const ALL_DAYS = 127;
+
+// The recurring task's own category and its tagged goal's category, distinct joins.
+const todoCat = alias(categories, 'todo_cat');
+const goalCat = alias(categories, 'goal_cat');
 
 const toDto = (r: {
   id: string;
@@ -36,11 +41,13 @@ export async function GET() {
       goalId: recurringTodos.goalId,
       goalTitle: goals.title,
       goalColor: goals.color,
-      goalCategory: goals.category,
-      category: recurringTodos.category,
+      goalCategory: goalCat.name,
+      category: todoCat.name,
     })
     .from(recurringTodos)
     .leftJoin(goals, eq(recurringTodos.goalId, goals.id))
+    .leftJoin(goalCat, eq(goals.categoryId, goalCat.id))
+    .leftJoin(todoCat, eq(recurringTodos.categoryId, todoCat.id))
     .where(eq(recurringTodos.userId, userId))
     .orderBy(asc(recurringTodos.createdAt));
 
@@ -65,22 +72,28 @@ export async function POST(request: NextRequest) {
   const daysMask =
     Number.isInteger(body.days_mask) && body.days_mask! > 0 ? body.days_mask! & ALL_DAYS : ALL_DAYS;
   const goalId = typeof body.goal_id === 'string' && body.goal_id ? body.goal_id : null;
-  const category = !goalId && typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 120) : null;
+  const categoryName = !goalId && typeof body.category === 'string' && body.category.trim() ? body.category.trim() : null;
+  const categoryId = await resolveCategoryId(userId, categoryName);
 
   const [row] = await db
     .insert(recurringTodos)
-    .values({ userId, title, daysMask, goalId, category })
-    .returning({ id: recurringTodos.id, title: recurringTodos.title, daysMask: recurringTodos.daysMask, goalId: recurringTodos.goalId, category: recurringTodos.category });
+    .values({ userId, title, daysMask, goalId, categoryId })
+    .returning({ id: recurringTodos.id, title: recurringTodos.title, daysMask: recurringTodos.daysMask, goalId: recurringTodos.goalId });
 
   // Resolve the goal title/color/category for the response.
   let goalTitle: string | null = null;
   let goalColor: string | null = null;
   let goalCategory: string | null = null;
   if (row.goalId) {
-    const [g] = await db.select({ title: goals.title, color: goals.color, category: goals.category }).from(goals).where(eq(goals.id, row.goalId)).limit(1);
+    const [g] = await db
+      .select({ title: goals.title, color: goals.color, category: goalCat.name })
+      .from(goals)
+      .leftJoin(goalCat, eq(goals.categoryId, goalCat.id))
+      .where(eq(goals.id, row.goalId))
+      .limit(1);
     goalTitle = g?.title ?? null;
     goalColor = g?.color ?? null;
     goalCategory = g?.category ?? null;
   }
-  return NextResponse.json(toDto({ ...row, goalTitle, goalColor, goalCategory }), { status: 201 });
+  return NextResponse.json(toDto({ ...row, goalTitle, goalColor, goalCategory, category: categoryName }), { status: 201 });
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, events } from '@baseline/db';
+import { db, events, resolveCategoryId } from '@baseline/db';
 import { eq, and, gte, lt, desc, asc, sql } from 'drizzle-orm';
 import { EVENT_TYPES, manualTimeEntryPayload } from '@baseline/events';
 import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
@@ -114,6 +114,12 @@ export async function POST(request: NextRequest) {
       { error: 'category is required', code: 'INVALID_CATEGORY' },
       { status: 400 },
     );
+  }
+
+  // The category name lives in the event payload, but still register it in the
+  // categories table so it shows up in the category list (which reads from there).
+  if (typeof body.category === 'string' && body.category.trim()) {
+    await resolveCategoryId(userId, body.category);
   }
 
   const [row] = await db

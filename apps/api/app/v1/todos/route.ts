@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, todos, goals, recurringTodos, recurringTodoCompletions } from '@baseline/db';
+import { db, todos, goals, recurringTodos, recurringTodoCompletions, categories, resolveCategoryId } from '@baseline/db';
 import { eq, asc, desc } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { dayKeyInTz } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
 import { monthDayKeys } from '../../../lib/month-heatmap';
+
+// A task/recurring-task's own category and its tagged goal's category both resolve
+// to names via the categories table — two aliased joins keep them distinct.
+const todoCat = alias(categories, 'todo_cat');
+const goalCat = alias(categories, 'goal_cat');
 
 const weekdayOf = (dayKey: string): number => {
   const [y, m, d] = dayKey.split('-').map(Number);
@@ -56,11 +62,13 @@ export async function GET(request: NextRequest) {
       goalId: todos.goalId,
       goalTitle: goals.title,
       goalColor: goals.color,
-      goalCategory: goals.category,
-      category: todos.category,
+      goalCategory: goalCat.name,
+      category: todoCat.name,
     })
     .from(todos)
     .leftJoin(goals, eq(todos.goalId, goals.id))
+    .leftJoin(goalCat, eq(goals.categoryId, goalCat.id))
+    .leftJoin(todoCat, eq(todos.categoryId, todoCat.id))
     .where(eq(todos.userId, userId))
     .orderBy(asc(todos.done), desc(todos.createdAt));
 
@@ -73,11 +81,13 @@ export async function GET(request: NextRequest) {
       goalId: recurringTodos.goalId,
       goalTitle: goals.title,
       goalColor: goals.color,
-      goalCategory: goals.category,
-      category: recurringTodos.category,
+      goalCategory: goalCat.name,
+      category: todoCat.name,
     })
     .from(recurringTodos)
     .leftJoin(goals, eq(recurringTodos.goalId, goals.id))
+    .leftJoin(goalCat, eq(goals.categoryId, goalCat.id))
+    .leftJoin(todoCat, eq(recurringTodos.categoryId, todoCat.id))
     .where(eq(recurringTodos.userId, userId))
     .orderBy(asc(recurringTodos.createdAt));
   const recurring = recurringRows.map((r) => ({
@@ -163,22 +173,28 @@ export async function POST(request: NextRequest) {
     typeof body.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : dayKeyInTz(new Date(), tz);
   const goalId = typeof body.goal_id === 'string' && body.goal_id ? body.goal_id : null;
   // A direct category only applies when the task isn't tagged to a goal.
-  const category = !goalId && typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 120) : null;
+  const categoryName = !goalId && typeof body.category === 'string' && body.category.trim() ? body.category.trim() : null;
+  const categoryId = await resolveCategoryId(userId, categoryName);
 
   const [row] = await db
     .insert(todos)
-    .values({ userId, title, date, goalId, category })
-    .returning({ id: todos.id, title: todos.title, done: todos.done, date: todos.date, createdAt: todos.createdAt, completedAt: todos.completedAt, goalId: todos.goalId, category: todos.category });
+    .values({ userId, title, date, goalId, categoryId })
+    .returning({ id: todos.id, title: todos.title, done: todos.done, date: todos.date, createdAt: todos.createdAt, completedAt: todos.completedAt, goalId: todos.goalId });
 
   // Resolve the goal title/color/category for the response.
   let goalTitle: string | null = null;
   let goalColor: string | null = null;
   let goalCategory: string | null = null;
   if (row.goalId) {
-    const [g] = await db.select({ title: goals.title, color: goals.color, category: goals.category }).from(goals).where(eq(goals.id, row.goalId)).limit(1);
+    const [g] = await db
+      .select({ title: goals.title, color: goals.color, category: goalCat.name })
+      .from(goals)
+      .leftJoin(goalCat, eq(goals.categoryId, goalCat.id))
+      .where(eq(goals.id, row.goalId))
+      .limit(1);
     goalTitle = g?.title ?? null;
     goalColor = g?.color ?? null;
     goalCategory = g?.category ?? null;
   }
-  return NextResponse.json(toDto({ ...row, goalTitle, goalColor, goalCategory }), { status: 201 });
+  return NextResponse.json(toDto({ ...row, goalTitle, goalColor, goalCategory, category: categoryName }), { status: 201 });
 }
