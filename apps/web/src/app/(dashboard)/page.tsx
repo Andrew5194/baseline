@@ -176,6 +176,11 @@ export default function Overview() {
       row.Free = Math.round(Math.max(capacityFor(d.date) - sum, 0) * 10) / 10;
       return row;
     }) ?? [];
+  // Allocation-section label from the real bucket count: 7 for a week, the month's
+  // actual length (e.g. July → "Next 31 days"), 12 for a year. Falls back to the
+  // static label until data loads.
+  const allocationLabel =
+    barRows.length > 0 ? `Next ${barRows.length} ${isYear ? 'months' : 'days'}` : ALLOCATION_LABEL[period];
   // y-axis ceiling: 24h for day views, a full 31-day month (744h) for the year.
   const yMax = isYear ? DAY_HOURS * 31 : DAY_HOURS;
   // Key of the bucket containing today, used to emphasize today's bar. For the
@@ -375,7 +380,7 @@ export default function Overview() {
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
-            {ALLOCATION_LABEL[period]}
+            {allocationLabel}
           </p>
           <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
             {(['bars', 'calendar'] as const).map((v) => (
