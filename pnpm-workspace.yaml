@@ -2,3 +2,9 @@ packages:
   - "apps/*"
   - "packages/*"
   - "packages/integrations/*"
+
+# Single source of truth for versions shared across workspaces. Reference with
+# "catalog:" in a package.json (e.g. "postgres": "catalog:") so the version can
+# never drift between the db package and the app that externalizes it.
+catalog:
+  postgres: ^3.4.9
