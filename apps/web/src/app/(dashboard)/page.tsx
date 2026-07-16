@@ -130,6 +130,10 @@ export default function Overview() {
     loadBudget();
     loadPeriod();
     loadRecurring();
+    // A data change here (time entry added/deleted, session logged) can change a
+    // category's linked-item count. Tell the co-mounted categories panel to refresh
+    // so its "N linked" badges don't lag; it only reloads when actually open.
+    window.dispatchEvent(new CustomEvent('baseline:categories-changed'));
   };
 
   // Clicking the donut center cycles the display unit (min → hr → day). The hook
