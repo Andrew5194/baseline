@@ -274,12 +274,6 @@ export default function Goals() {
                   <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
                     Add a new goal to keep the momentum going.
                   </p>
-                  <button
-                    onClick={() => setAdding(true)}
-                    className="mt-4 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500"
-                  >
-                    New goal
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-2">
