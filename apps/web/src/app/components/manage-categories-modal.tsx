@@ -58,6 +58,13 @@ export function ManageCategoriesModal({ onChange }: { onChange: () => void }) {
   useEffect(() => {
     load();
   }, [load]);
+  // Refresh when categories/colors change elsewhere on the same page (e.g. a
+  // recolor from the budget donut) so this panel's swatches don't go stale.
+  useEffect(() => {
+    const onChanged = () => load();
+    window.addEventListener('baseline:categories-changed', onChanged);
+    return () => window.removeEventListener('baseline:categories-changed', onChanged);
+  }, [load]);
 
   const colorOf = (c: Cat) => c.color ?? colorForCategory(c.name);
 
@@ -83,13 +90,18 @@ export function ManageCategoriesModal({ onChange }: { onChange: () => void }) {
       setError('That category already exists');
       return;
     }
+    // Optimistic: show the new name and close the editor immediately (mirrors the
+    // optimistic recolor above); reconcile via load(). Roll back on failure.
+    const prev = cats;
+    setEditingId(null);
+    setCats((list) => list.map((x) => (x.id === c.id ? { ...x, name } : x)));
     try {
       await apiFetch(`/v1/categories?id=${encodeURIComponent(c.id)}`, { method: 'PATCH', body: JSON.stringify({ name }) });
-      setEditingId(null);
       await load();
       onChange();
     } catch (e) {
       console.error(e);
+      setCats(prev);
       setError('Could not rename the category');
     }
   }

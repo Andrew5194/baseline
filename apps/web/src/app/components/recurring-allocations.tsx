@@ -94,9 +94,17 @@ export function RecurringAllocations({ knownCategories, colorOf, onChange }: Rec
   }
 
   async function remove(id: string) {
-    await fetch(`${API_URL}/v1/recurring-allocations/${id}`, { method: 'DELETE', credentials: 'include' }).catch(
-      console.error,
-    );
+    // Optimistic: drop the row immediately; load()/onChange() reconcile. Roll back
+    // on failure.
+    const prev = items;
+    setItems((its) => its.filter((i) => i.id !== id));
+    try {
+      const res = await fetch(`${API_URL}/v1/recurring-allocations/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error(`DELETE failed: ${res.status}`);
+    } catch (e) {
+      console.error(e);
+      setItems(prev);
+    }
     load();
     onChange();
   }
