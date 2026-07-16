@@ -266,9 +266,21 @@ export default function Goals() {
           ) : (
             <>
               {active.length === 0 ? (
-                <p className="py-8 text-sm text-neutral-400 dark:text-neutral-500 text-center">
-                  No active goals — nice work.
-                </p>
+                // Shown only when there are completed goals but nothing active (a
+                // true first-time user with no goals sees the onboarding state above).
+                // Keep it neutral + actionable rather than presuming accomplishment.
+                <div className="py-8 text-center">
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">No active goals right now.</p>
+                  <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                    Add a new goal to keep the momentum going.
+                  </p>
+                  <button
+                    onClick={() => setAdding(true)}
+                    className="mt-4 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500"
+                  >
+                    New goal
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {active.map((g, i) => (
