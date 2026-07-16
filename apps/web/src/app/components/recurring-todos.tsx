@@ -80,13 +80,37 @@ export function RecurringTodos({
   }
 
   async function tag(id: string, sel: TagSel) {
-    await apiFetch(`/v1/recurring-todos/${id}`, { method: 'PATCH', body: JSON.stringify({ goal_id: sel.goalId, category: sel.category }) }).catch(console.error);
+    const goal = sel.goalId ? goals.find((g) => g.id === sel.goalId) ?? null : null;
+    // Optimistic: update the chip immediately (goal/category are mutually
+    // exclusive). Roll back on failure; load()/onChange() reconcile.
+    const prev = items;
+    setItems((its) =>
+      its.map((i) =>
+        i.id === id
+          ? { ...i, goal_id: sel.goalId, goal_title: goal?.title ?? null, goal_color: goal?.color ?? null, category: sel.category }
+          : i,
+      ),
+    );
+    try {
+      await apiFetch(`/v1/recurring-todos/${id}`, { method: 'PATCH', body: JSON.stringify({ goal_id: sel.goalId, category: sel.category }) });
+    } catch (e) {
+      console.error(e);
+      setItems(prev);
+    }
     load();
     onChange();
   }
 
   async function remove(id: string) {
-    await apiFetch(`/v1/recurring-todos/${id}`, { method: 'DELETE' }).catch(console.error);
+    // Optimistic: drop the row immediately. Roll back on failure.
+    const prev = items;
+    setItems((its) => its.filter((i) => i.id !== id));
+    try {
+      await apiFetch(`/v1/recurring-todos/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error(e);
+      setItems(prev);
+    }
     load();
     onChange();
   }

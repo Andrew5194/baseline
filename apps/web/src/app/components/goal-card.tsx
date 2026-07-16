@@ -25,11 +25,16 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { mon
 export function GoalCard({
   goal,
   onChange,
+  onOptimisticPatch,
   countdown = false,
   drag,
 }: {
   goal: Goal;
   onChange: () => void;
+  // Merge a partial update into this goal in the parent list immediately (optimistic
+  // UI), before the mutation round-trip resolves. Called again with the old values
+  // to roll back on failure.
+  onOptimisticPatch?: (id: string, patch: Partial<Goal>) => void;
   countdown?: boolean;
   drag?: { onStart: (e: React.DragEvent) => void; onEnd: (e: React.DragEvent) => void };
 }) {
@@ -43,23 +48,52 @@ export function GoalCard({
   // Show the target-date badge while the goal is open; once done, the "Completed" line takes over.
   const due = goal.done ? null : dueMeta(goal.due_at, false, countdown);
 
+  // Broadcast goal mutations so sibling views (e.g. the Tasks section's goal picker,
+  // which caches its own goal list) refresh without a manual page reload.
+  const notifyGoals = () => window.dispatchEvent(new CustomEvent('baseline:goals-changed'));
+
   function toggleExpand() {
     setEverOpened(true);
     setExpanded((v) => !v);
   }
 
   async function setColor(c: string) {
-    await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ color: c }) }).catch(console.error);
+    // Optimistic: recolor the swatch/card instantly; onChange() reconciles.
+    const prev = goal.color;
+    onOptimisticPatch?.(goal.id, { color: c });
+    try {
+      await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ color: c }) });
+    } catch (e) {
+      console.error(e);
+      onOptimisticPatch?.(goal.id, { color: prev });
+    }
     onChange();
+    notifyGoals();
   }
 
   async function toggle() {
-    await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ done: !goal.done }) }).catch(console.error);
+    const willBeDone = !goal.done;
+    // Optimistic: fill the checkbox instantly instead of waiting on the mutation +
+    // a full /v1/goals reload (two sequential round-trips). onChange() at the end
+    // reconciles server truth (completed_at, ordering, task counts) in the
+    // background; on failure we roll the checkbox back.
+    onOptimisticPatch?.(goal.id, {
+      done: willBeDone,
+      completed_at: willBeDone ? goal.completed_at ?? new Date().toISOString() : null,
+    });
+    try {
+      await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ done: willBeDone }) });
+    } catch (e) {
+      console.error(e);
+      onOptimisticPatch?.(goal.id, { done: goal.done, completed_at: goal.completed_at });
+    }
     onChange();
+    notifyGoals();
   }
   async function remove() {
     await apiFetch(`/v1/goals/${goal.id}`, { method: 'DELETE' }).catch(console.error);
     onChange();
+    notifyGoals();
   }
 
   function startEdit() {
@@ -70,8 +104,18 @@ export function GoalCard({
     setEditing(false);
     const t = draft.trim();
     if (!t || t === goal.title) return;
-    await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ title: t }) }).catch(console.error);
+    // Optimistic: show the new title immediately instead of reverting until the
+    // PATCH + reload land. Roll back on failure.
+    const prev = goal.title;
+    onOptimisticPatch?.(goal.id, { title: t });
+    try {
+      await apiFetch(`/v1/goals/${goal.id}`, { method: 'PATCH', body: JSON.stringify({ title: t }) });
+    } catch (e) {
+      console.error(e);
+      onOptimisticPatch?.(goal.id, { title: prev });
+    }
     onChange();
+    notifyGoals();
   }
 
   return (

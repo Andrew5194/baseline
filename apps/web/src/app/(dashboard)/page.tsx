@@ -130,6 +130,10 @@ export default function Overview() {
     loadBudget();
     loadPeriod();
     loadRecurring();
+    // A data change here (time entry added/deleted, session logged) can change a
+    // category's linked-item count. Tell the co-mounted categories panel to refresh
+    // so its "N linked" badges don't lag; it only reloads when actually open.
+    window.dispatchEvent(new CustomEvent('baseline:categories-changed'));
   };
 
   // Clicking the donut center cycles the display unit (min → hr → day). The hook
@@ -140,16 +144,36 @@ export default function Overview() {
   };
 
   async function deleteEntry(id: string) {
-    await apiFetch(`/v1/time-entries/${id}`, { method: 'DELETE' }).catch(console.error);
+    // Optimistic: drop the row immediately instead of waiting on the DELETE plus
+    // refreshAll()'s multi-fetch reload. Roll back on failure.
+    const prev = entries;
+    setEntries((e) => (e ? { ...e, data: e.data.filter((x) => x.id !== id) } : e));
+    try {
+      await apiFetch(`/v1/time-entries/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error(err);
+      setEntries(prev);
+    }
     refreshAll();
   }
 
   async function recolor(category: string, color: string) {
-    await apiFetch('/v1/category-colors', {
-      method: 'PUT',
-      body: JSON.stringify({ category, color }),
-    }).catch(console.error);
+    // Optimistic: recolor the donut/legend immediately; loadColors() reconciles.
+    const prev = colors;
+    setColors((c) => ({ ...c, [category]: color }));
+    try {
+      await apiFetch('/v1/category-colors', {
+        method: 'PUT',
+        body: JSON.stringify({ category, color }),
+      });
+    } catch (err) {
+      console.error(err);
+      setColors(prev);
+    }
     loadColors();
+    // Tell the co-mounted categories panel to refresh its swatches — it caches its
+    // own category list and would otherwise show the old color until reopened.
+    window.dispatchEvent(new CustomEvent('baseline:categories-changed'));
   }
 
   // The chart's scale follows the FETCHED data's granularity (daily.granularity),

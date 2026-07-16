@@ -125,8 +125,16 @@ export default function History() {
   }
 
   async function deleteEntry(id: string) {
-    await apiFetch(`/v1/time-entries/${id}`, { method: 'DELETE' }).catch(console.error);
-    setItems((prev) => prev.filter((e) => e.id !== id));
+    // Optimistic: drop the row immediately instead of after the round-trip. Roll
+    // back on failure.
+    const prev = items;
+    setItems((its) => its.filter((e) => e.id !== id));
+    try {
+      await apiFetch(`/v1/time-entries/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error(e);
+      setItems(prev);
+    }
   }
 
   // Group consecutive items by day for date headers.

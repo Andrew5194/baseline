@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
-import { browserTimezone } from '../../lib/use-timezone';
+import { browserTimezone, notifyTimezoneChanged } from '../../lib/use-timezone';
 
 // A curated list of one representative zone per region — instead of the full
 // ~400-entry IANA database, which is dominated by granular near-duplicates. Ordered
@@ -173,6 +173,9 @@ export function TimezoneSetting() {
         method: 'PATCH',
         body: JSON.stringify({ timezone: tz, explicit: true }),
       });
+      // Tell every mounted useTimezone() consumer to re-fetch so date math/labels
+      // update live rather than only on a remount.
+      notifyTimezoneChanged();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {

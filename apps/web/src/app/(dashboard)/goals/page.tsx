@@ -69,6 +69,13 @@ export default function Goals() {
     dragIndex.current = i;
   }
 
+  // Optimistically merge a partial update into a goal in local list state so its
+  // card (checkbox, color, title) updates instantly; GoalCard reconciles server
+  // truth via load() afterward.
+  const patchGoal = useCallback((id: string, patch: Partial<Goal>) => {
+    setGoals((gs) => gs?.map((g) => (g.id === id ? { ...g, ...patch } : g)) ?? null);
+  }, []);
+
   async function persistOrder() {
     dragIndex.current = null;
     const ids = orderRef.current.map((g) => g.id);
@@ -149,6 +156,7 @@ export default function Goals() {
                   <GoalCard
                     goal={g}
                     onChange={load}
+                    onOptimisticPatch={patchGoal}
                     countdown={countdown}
                     drag={{
                       onStart: (e) => {

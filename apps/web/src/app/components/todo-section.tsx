@@ -219,21 +219,65 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     const t = editDraft.trim();
     if (!t || t === item.title) return;
     const path = item.recurring ? `/v1/recurring-todos/${item.id}` : `/v1/todos/${item.id}`;
-    await apiFetch(path, { method: 'PATCH', body: JSON.stringify({ title: t }) }).catch(console.error);
+    // Optimistic: show the new title immediately instead of reverting until the
+    // PATCH + reload land. Roll back on failure.
+    const prevTodos = todos;
+    const prevRecurring = recurring;
+    if (item.recurring) {
+      setRecurring((rs) => rs.map((r) => (r.id === item.id ? { ...r, title: t } : r)));
+    } else {
+      setTodos((ts) => ts?.map((x) => (x.id === item.id ? { ...x, title: t } : x)) ?? null);
+    }
+    try {
+      await apiFetch(path, { method: 'PATCH', body: JSON.stringify({ title: t }) });
+    } catch (e) {
+      console.error(e);
+      setTodos(prevTodos);
+      setRecurring(prevRecurring);
+    }
     if (!item.recurring) notifyGoals();
     load();
   }
 
   async function toggle(item: DayItem) {
+    const willBeDone = !item.done;
+    const nowIso = new Date().toISOString();
+
+    // Optimistic update: flip the checkbox in local state immediately so the UI
+    // responds instantly, rather than waiting on the mutation + a full reload (two
+    // sequential API round-trips). The mutation runs in the background; on failure
+    // we roll back. `load()` at the end reconciles derived data (heatmap, goal
+    // counts) from the server but no longer gates the visual change.
     if (item.recurring) {
-      await apiFetch(`/v1/recurring-todos/${item.id}/complete`, {
-        method: 'POST',
-        body: JSON.stringify({ done: !item.done, date: day }),
-      }).catch(console.error);
+      // "Done" for a recurring task = a completion row exists for (id, day).
+      setCompletions((cs) => {
+        const without = cs.filter((c) => !(c.recurring_todo_id === item.id && c.date === day));
+        return willBeDone ? [...without, { recurring_todo_id: item.id, date: day, completed_at: nowIso }] : without;
+      });
+      try {
+        await apiFetch(`/v1/recurring-todos/${item.id}/complete`, {
+          method: 'POST',
+          body: JSON.stringify({ done: willBeDone, date: day }),
+        });
+      } catch (e) {
+        console.error(e);
+        // Roll back to the pre-click state.
+        setCompletions((cs) => {
+          const without = cs.filter((c) => !(c.recurring_todo_id === item.id && c.date === day));
+          return item.done ? [...without, { recurring_todo_id: item.id, date: day, completed_at: item.completedAt ?? nowIso }] : without;
+        });
+      }
     } else {
-      await apiFetch(`/v1/todos/${item.id}`, { method: 'PATCH', body: JSON.stringify({ done: !item.done }) }).catch(console.error);
-      notifyGoals();
+      setTodos((ts) => ts?.map((t) => (t.id === item.id ? { ...t, done: willBeDone, completed_at: willBeDone ? nowIso : null } : t)) ?? null);
+      try {
+        await apiFetch(`/v1/todos/${item.id}`, { method: 'PATCH', body: JSON.stringify({ done: willBeDone }) });
+        notifyGoals();
+      } catch (e) {
+        console.error(e);
+        setTodos((ts) => ts?.map((t) => (t.id === item.id ? { ...t, done: item.done, completed_at: item.completedAt ?? null } : t)) ?? null);
+      }
     }
+    // Background reconcile (heatmap + goal counts). No longer blocks the checkbox.
     load();
   }
 
@@ -241,12 +285,35 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   // the other). Works for one-off and recurring tasks.
   async function tagItem(item: DayItem, sel: { goalId: string | null; category: string | null }) {
     const path = item.recurring ? `/v1/recurring-todos/${item.id}` : `/v1/todos/${item.id}`;
-    await apiFetch(path, { method: 'PATCH', body: JSON.stringify({ goal_id: sel.goalId, category: sel.category }) }).catch(console.error);
+    const goal = sel.goalId ? goalsList.find((g) => g.id === sel.goalId) ?? null : null;
+    // Optimistic: apply the tag to local state so the chip updates instantly (goal
+    // and category are mutually exclusive — the API clears the other). Roll back on
+    // failure; load() reconciles server truth in the background.
+    const prevTodos = todos;
+    const prevRecurring = recurring;
+    const patch = {
+      goal_id: sel.goalId,
+      goal_title: goal?.title ?? null,
+      goal_color: goal?.color ?? null,
+      goal_category: goal?.category ?? null,
+      category: sel.category,
+    };
+    if (item.recurring) {
+      setRecurring((rs) => rs.map((r) => (r.id === item.id ? { ...r, ...patch } : r)));
+    } else {
+      setTodos((ts) => ts?.map((t) => (t.id === item.id ? { ...t, ...patch } : t)) ?? null);
+    }
     // Keep a running timer for this task in sync with its new category (a goal's
     // category wins, else the directly-tagged one, else Uncategorized).
     if (activeTimer?.taskId === item.id) {
-      const goalCat = sel.goalId ? goalsList.find((g) => g.id === sel.goalId)?.category ?? null : null;
-      updateTimer({ category: goalCat ?? sel.category ?? 'Uncategorized' });
+      updateTimer({ category: goal?.category ?? sel.category ?? 'Uncategorized' });
+    }
+    try {
+      await apiFetch(path, { method: 'PATCH', body: JSON.stringify({ goal_id: sel.goalId, category: sel.category }) });
+    } catch (e) {
+      console.error(e);
+      setTodos(prevTodos);
+      setRecurring(prevRecurring);
     }
     notifyGoals();
     load();
