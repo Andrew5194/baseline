@@ -14,12 +14,15 @@ export default function Goals() {
   // Initialise false so the server-rendered and first client render agree (no hydration
   // mismatch), then restore the saved value right after mount.
   const [countdown, setCountdown] = useState(false);
+  // Completed goals collapse into a disclosure at the bottom; remember open/closed.
+  const [showCompleted, setShowCompleted] = useState(false);
   const dragIndex = useRef<number | null>(null);
   const orderRef = useRef<Goal[]>([]);
 
   useEffect(() => {
     try {
       if (localStorage.getItem('baseline:goals-countdown') === '1') setCountdown(true);
+      if (localStorage.getItem('baseline:goals-show-completed') === '1') setShowCompleted(true);
     } catch {}
   }, []);
 
@@ -28,6 +31,16 @@ export default function Goals() {
       const next = !v;
       try {
         localStorage.setItem('baseline:goals-countdown', next ? '1' : '0');
+      } catch {}
+      return next;
+    });
+  }
+
+  function toggleCompleted() {
+    setShowCompleted((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem('baseline:goals-show-completed', next ? '1' : '0');
       } catch {}
       return next;
     });
@@ -59,12 +72,15 @@ export default function Goals() {
     const rect = e.currentTarget.getBoundingClientRect();
     const past = e.clientY - rect.top > rect.height / 2;
     if ((from < i && !past) || (from > i && past)) return;
+    // Reorder within the active goals only (completed goals live in their own
+    // collapsed section and aren't draggable); keep completed appended at the end.
     setGoals((gs) => {
       if (!gs) return gs;
-      const next = [...gs];
-      const [moved] = next.splice(from, 1);
-      next.splice(i, 0, moved);
-      return next;
+      const active = gs.filter((g) => !g.done);
+      const done = gs.filter((g) => g.done);
+      const [moved] = active.splice(from, 1);
+      active.splice(i, 0, moved);
+      return [...active, ...done];
     });
     dragIndex.current = i;
   }
@@ -78,11 +94,20 @@ export default function Goals() {
 
   async function persistOrder() {
     dragIndex.current = null;
-    const ids = orderRef.current.map((g) => g.id);
+    // Only active goals carry a manual order; the reorder endpoint sets position by
+    // index for the ids sent and leaves completed goals' positions untouched.
+    const ids = orderRef.current.filter((g) => !g.done).map((g) => g.id);
     if (ids.length) {
       await apiFetch('/v1/goals/reorder', { method: 'POST', body: JSON.stringify({ ids }) }).catch(console.error);
     }
   }
+
+  // Active goals keep their manual order; completed goals go into the collapsed
+  // section, newest completion first.
+  const active = goals?.filter((g) => !g.done) ?? [];
+  const completed = (goals?.filter((g) => g.done) ?? [])
+    .slice()
+    .sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? ''));
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
@@ -150,28 +175,70 @@ export default function Goals() {
               </button>
             </div>
           ) : (
-            <div className="space-y-2">
-              {goals.map((g, i) => (
-                <div key={g.id} onDragOver={(e) => onDragOver(e, i)} onDrop={(e) => e.preventDefault()}>
-                  <GoalCard
-                    goal={g}
-                    onChange={load}
-                    onOptimisticPatch={patchGoal}
-                    countdown={countdown}
-                    drag={{
-                      onStart: (e) => {
-                        dragIndex.current = i;
-                        e.dataTransfer.effectAllowed = 'move';
-                        e.dataTransfer.setData('text/plain', g.id);
-                        const card = (e.currentTarget as HTMLElement).closest('[data-goal-card]') as HTMLElement | null;
-                        if (card) e.dataTransfer.setDragImage(card, 20, 20);
-                      },
-                      onEnd: persistOrder,
-                    }}
-                  />
+            <>
+              {active.length === 0 ? (
+                <p className="py-8 text-sm text-neutral-400 dark:text-neutral-500 text-center">
+                  No active goals — nice work.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {active.map((g, i) => (
+                    <div key={g.id} onDragOver={(e) => onDragOver(e, i)} onDrop={(e) => e.preventDefault()}>
+                      <GoalCard
+                        goal={g}
+                        onChange={load}
+                        onOptimisticPatch={patchGoal}
+                        countdown={countdown}
+                        drag={{
+                          onStart: (e) => {
+                            dragIndex.current = i;
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', g.id);
+                            const card = (e.currentTarget as HTMLElement).closest('[data-goal-card]') as HTMLElement | null;
+                            if (card) e.dataTransfer.setDragImage(card, 20, 20);
+                          },
+                          onEnd: persistOrder,
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+
+              {completed.length > 0 && (
+                <div className="mt-5">
+                  <button
+                    onClick={toggleCompleted}
+                    aria-expanded={showCompleted}
+                    className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                  >
+                    <svg
+                      className={`w-3.5 h-3.5 transition-transform ${showCompleted ? 'rotate-90' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    Completed ({completed.length})
+                  </button>
+                  {showCompleted && (
+                    <div className="space-y-2 mt-2">
+                      {completed.map((g) => (
+                        <GoalCard
+                          key={g.id}
+                          goal={g}
+                          onChange={load}
+                          onOptimisticPatch={patchGoal}
+                          countdown={countdown}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           <TodoSection countdown={countdown} />
