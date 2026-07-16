@@ -187,7 +187,9 @@ export default function Goals() {
     // index for the ids sent and leaves completed goals' positions untouched.
     const ids = orderRef.current.map((g) => g.id);
     if (ids.length) {
-      await apiFetch('/v1/goals/reorder', { method: 'POST', body: JSON.stringify({ ids }) }).catch(console.error);
+      await apiFetch('/v1/goals/reorder', { method: 'POST', body: JSON.stringify({ ids }) }).catch(
+        console.error,
+      );
     }
   }
 
@@ -196,14 +198,14 @@ export default function Goals() {
   const completedSorted = completed
     .slice()
     .sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? ''));
-  const noGoalsAtAll = active !== null && active.length === 0 && completedTotal === 0;
-
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 mb-6">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight">Goals</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">Things you want to accomplish</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            Things you want to accomplish
+          </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-3">
           <button
@@ -250,102 +252,104 @@ export default function Goals() {
         </div>
       ) : (
         <>
-          {noGoalsAtAll ? (
-            <div className="p-12 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800 text-center">
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">No goals yet.</p>
+          {/* One message for any "no active goals" state — a brand-new user and
+              someone between goals see the same thing (no dynamic onboarding copy). */}
+          {active.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">No active goals.</p>
               <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-                Add something you want to accomplish — big or small.
+                Add a new goal to get started.
               </p>
-              <button
-                onClick={() => setAdding(true)}
-                className="mt-4 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500"
-              >
-                Create your first goal
-              </button>
             </div>
           ) : (
-            <>
-              {active.length === 0 ? (
-                <p className="py-8 text-sm text-neutral-400 dark:text-neutral-500 text-center">
-                  No active goals — nice work.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {active.map((g, i) => (
-                    <div key={g.id} onDragOver={(e) => onDragOver(e, i)} onDrop={(e) => e.preventDefault()}>
-                      <GoalCard
-                        goal={g}
-                        onChange={load}
-                        onOptimisticPatch={patchGoal}
-                        onOptimisticRemove={removeGoal}
-                        countdown={countdown}
-                        drag={{
-                          onStart: (e) => {
-                            dragIndex.current = i;
-                            e.dataTransfer.effectAllowed = 'move';
-                            e.dataTransfer.setData('text/plain', g.id);
-                            const card = (e.currentTarget as HTMLElement).closest('[data-goal-card]') as HTMLElement | null;
-                            if (card) e.dataTransfer.setDragImage(card, 20, 20);
-                          },
-                          onEnd: persistOrder,
-                        }}
-                      />
-                    </div>
-                  ))}
+            <div className="space-y-2">
+              {active.map((g, i) => (
+                <div
+                  key={g.id}
+                  onDragOver={(e) => onDragOver(e, i)}
+                  onDrop={(e) => e.preventDefault()}
+                >
+                  <GoalCard
+                    goal={g}
+                    onChange={load}
+                    onOptimisticPatch={patchGoal}
+                    onOptimisticRemove={removeGoal}
+                    countdown={countdown}
+                    drag={{
+                      onStart: (e) => {
+                        dragIndex.current = i;
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', g.id);
+                        const card = (e.currentTarget as HTMLElement).closest(
+                          '[data-goal-card]',
+                        ) as HTMLElement | null;
+                        if (card) e.dataTransfer.setDragImage(card, 20, 20);
+                      },
+                      onEnd: persistOrder,
+                    }}
+                  />
                 </div>
-              )}
+              ))}
+            </div>
+          )}
 
-              {completedTotal > 0 && (
-                <div className="mt-5">
-                  <button
-                    onClick={toggleCompleted}
-                    aria-expanded={showCompleted}
-                    className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                  >
-                    <svg
-                      className={`w-3.5 h-3.5 transition-transform ${showCompleted ? 'rotate-90' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    Completed ({completedTotal})
-                  </button>
-                  {showCompleted && (
-                    <div className="space-y-2 mt-2">
-                      {completedSorted.map((g) => (
-                        <GoalCard
-                          key={g.id}
-                          goal={g}
-                          onChange={load}
-                          onOptimisticPatch={patchGoal}
-                          onOptimisticRemove={removeGoal}
-                          countdown={countdown}
+          {completedTotal > 0 && (
+            <div className="mt-5">
+              <button
+                onClick={toggleCompleted}
+                aria-expanded={showCompleted}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+              >
+                <svg
+                  className={`w-3.5 h-3.5 transition-transform ${showCompleted ? 'rotate-90' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+                Completed ({completedTotal})
+              </button>
+              {showCompleted && (
+                <div className="space-y-2 mt-2">
+                  {completedSorted.map((g) => (
+                    <GoalCard
+                      key={g.id}
+                      goal={g}
+                      onChange={load}
+                      onOptimisticPatch={patchGoal}
+                      onOptimisticRemove={removeGoal}
+                      countdown={countdown}
+                    />
+                  ))}
+                  {loadingCompleted && completedSorted.length === 0 && (
+                    <div className="space-y-2">
+                      {[0, 1].map((i) => (
+                        <div
+                          key={i}
+                          className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer"
                         />
                       ))}
-                      {loadingCompleted && completedSorted.length === 0 && (
-                        <div className="space-y-2">
-                          {[0, 1].map((i) => (
-                            <div key={i} className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
-                          ))}
-                        </div>
-                      )}
-                      {completedHasMore && (
-                        <button
-                          onClick={() => loadCompleted(false)}
-                          disabled={loadingCompleted}
-                          className="w-full py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white disabled:opacity-50 transition-colors"
-                        >
-                          {loadingCompleted ? 'Loading…' : 'Load more'}
-                        </button>
-                      )}
                     </div>
+                  )}
+                  {completedHasMore && (
+                    <button
+                      onClick={() => loadCompleted(false)}
+                      disabled={loadingCompleted}
+                      className="w-full py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white disabled:opacity-50 transition-colors"
+                    >
+                      {loadingCompleted ? 'Loading…' : 'Load more'}
+                    </button>
                   )}
                 </div>
               )}
-            </>
+            </div>
           )}
 
           <TodoSection countdown={countdown} />
