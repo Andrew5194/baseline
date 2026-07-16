@@ -26,6 +26,7 @@ export function GoalCard({
   goal,
   onChange,
   onOptimisticPatch,
+  onOptimisticRemove,
   countdown = false,
   drag,
 }: {
@@ -35,6 +36,9 @@ export function GoalCard({
   // UI), before the mutation round-trip resolves. Called again with the old values
   // to roll back on failure.
   onOptimisticPatch?: (id: string, patch: Partial<Goal>) => void;
+  // Drop this goal from the parent list immediately on delete (the parent may not
+  // otherwise refetch the list it lives in, e.g. the lazy-loaded completed section).
+  onOptimisticRemove?: (id: string) => void;
   countdown?: boolean;
   drag?: { onStart: (e: React.DragEvent) => void; onEnd: (e: React.DragEvent) => void };
 }) {
@@ -91,6 +95,9 @@ export function GoalCard({
     notifyGoals();
   }
   async function remove() {
+    // Drop it from the list immediately (delete is behind a confirm, so no undo);
+    // onChange() reconciles active goals + count, notifyGoals refreshes siblings.
+    onOptimisticRemove?.(goal.id);
     await apiFetch(`/v1/goals/${goal.id}`, { method: 'DELETE' }).catch(console.error);
     onChange();
     notifyGoals();

@@ -171,6 +171,16 @@ export default function Goals() {
     setCompleted((cs) => cs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
   }, []);
 
+  // Optimistically drop a deleted goal from whichever list holds it (and adjust the
+  // completed count if it was completed), so it doesn't linger as a ghost — load()
+  // only refetches active goals + the count, never the loaded completed pages.
+  const removeGoal = useCallback((id: string) => {
+    const wasCompleted = completedRef.current.some((x) => x.id === id);
+    setActive((as) => as?.filter((x) => x.id !== id) ?? as);
+    setCompleted((cs) => cs.filter((x) => x.id !== id));
+    if (wasCompleted) setCompletedTotal((n) => Math.max(0, n - 1));
+  }, []);
+
   async function persistOrder() {
     dragIndex.current = null;
     // Only active goals carry a manual order; the reorder endpoint sets position by
@@ -267,6 +277,7 @@ export default function Goals() {
                         goal={g}
                         onChange={load}
                         onOptimisticPatch={patchGoal}
+                        onOptimisticRemove={removeGoal}
                         countdown={countdown}
                         drag={{
                           onStart: (e) => {
@@ -310,6 +321,7 @@ export default function Goals() {
                           goal={g}
                           onChange={load}
                           onOptimisticPatch={patchGoal}
+                          onOptimisticRemove={removeGoal}
                           countdown={countdown}
                         />
                       ))}
