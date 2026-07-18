@@ -16,6 +16,7 @@ import { ManageCategoriesModal } from '../components/manage-categories-modal';
 import { Modal } from '../components/modal';
 import { apiFetch } from '../../lib/api';
 import { useTimezone } from '../../lib/use-timezone';
+import { usePreference } from '../../lib/use-preference';
 import { buildColorMap, colorForCategory } from '../../lib/categories';
 
 interface BudgetResponse {
@@ -73,8 +74,9 @@ export default function Overview() {
   const [colorsReady, setColorsReady] = useState(false);
   const [recurringCats, setRecurringCats] = useState<string[]>([]);
   const [panel, setPanel] = useState<Panel | null>(null);
-  const [hideRecurring, setHideRecurring] = useState(false);
-  const [allocView, setAllocView] = useState<'bars' | 'calendar'>('bars');
+  // Synced server-side (users.preferences via /v1/me) so it follows the user across devices.
+  const [hideRecurring, setHideRecurring] = usePreference('hideRecurring');
+  const [allocView, setAllocView] = usePreference<'bars' | 'calendar'>('allocView', 'bars');
   const [unit, setUnit] = useTimeUnit();
   // 'new' = add modal; an Entry = edit modal; null = closed.
   const [editing, setEditing] = useState<Entry | 'new' | null>(null);
@@ -120,11 +122,6 @@ export default function Overview() {
     loadBudget();
     loadPeriod();
   }, [loadBudget, loadPeriod]);
-  // Restore persisted UI choices (after mount → no hydration clash).
-  useEffect(() => {
-    if (window.localStorage.getItem('baseline:hide-recurring') === 'true') setHideRecurring(true);
-    if (window.localStorage.getItem('baseline:alloc-view') === 'calendar') setAllocView('calendar');
-  }, []);
 
   const refreshAll = () => {
     loadBudget();
@@ -354,15 +351,7 @@ export default function Overview() {
             <button
               role="switch"
               aria-checked={hideRecurring}
-              onClick={() =>
-                setHideRecurring((v) => {
-                  const next = !v;
-                  try {
-                    window.localStorage.setItem('baseline:hide-recurring', next ? 'true' : 'false');
-                  } catch {}
-                  return next;
-                })
-              }
+              onClick={() => setHideRecurring(!hideRecurring)}
               title="Hide recurring routines to focus on free time"
               className="flex items-center gap-2"
             >
@@ -411,16 +400,8 @@ export default function Overview() {
               <button
                 key={v}
                 // Toggle to the other view on any click — so clicking the active icon
-                // again flips back to the other side. Persist the choice.
-                onClick={() =>
-                  setAllocView((cur) => {
-                    const next = cur === 'bars' ? 'calendar' : 'bars';
-                    try {
-                      window.localStorage.setItem('baseline:alloc-view', next);
-                    } catch {}
-                    return next;
-                  })
-                }
+                // again flips back to the other side. Persisted per-user across devices.
+                onClick={() => setAllocView(allocView === 'bars' ? 'calendar' : 'bars')}
                 aria-label={v === 'bars' ? 'Bar view' : 'Calendar view'}
                 aria-pressed={allocView === v}
                 className={`p-1.5 rounded-md transition-colors ${
