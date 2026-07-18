@@ -28,6 +28,9 @@ export const users = pgTable('users', {
   // treats `timezone` as unset and defaults to the browser's detected zone (and
   // tracks it), rather than letting the 'UTC' default win.
   timezoneSet: boolean('timezone_set').notNull().default(false),
+  // Arbitrary per-user UI preferences synced across devices (e.g. goals countdown
+  // mode, hide-recurring on the overview) — merged shallowly via PATCH /v1/me.
+  preferences: jsonb('preferences').notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '../../../lib/api';
+import { usePreference } from '../../../lib/use-preference';
 import { Modal } from '../../components/modal';
 import { AddGoalForm } from '../../components/add-goal-form';
 import { GoalCard, type Goal } from '../../components/goal-card';
@@ -21,12 +22,12 @@ export default function Goals() {
   const [completedLoaded, setCompletedLoaded] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
   const [adding, setAdding] = useState(false);
-  // Count-down mode (sticky) — reframes due dates and task counts as "time/tasks left".
-  // Initialise false so the server-rendered and first client render agree (no hydration
-  // mismatch), then restore the saved value right after mount.
-  const [countdown, setCountdown] = useState(false);
-  // Completed goals collapse into a disclosure at the bottom; remember open/closed.
-  const [showCompleted, setShowCompleted] = useState(false);
+  // Count-down mode — reframes due dates and task counts as "time/tasks left". Synced
+  // server-side (users.preferences via /v1/me) so it follows the user across devices.
+  const [countdown, setCountdown] = usePreference('goalsCountdown');
+  // Completed goals collapse into a disclosure at the bottom; remember open/closed
+  // per-user (synced across devices).
+  const [showCompleted, setShowCompleted] = usePreference('goalsShowCompleted');
   const dragIndex = useRef<number | null>(null);
   const orderRef = useRef<Goal[]>([]);
   const activeRef = useRef<Goal[] | null>(null);
@@ -44,32 +45,8 @@ export default function Goals() {
     completedLoadedRef.current = completedLoaded;
   }, [completedLoaded]);
 
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('baseline:goals-countdown') === '1') setCountdown(true);
-      if (localStorage.getItem('baseline:goals-show-completed') === '1') setShowCompleted(true);
-    } catch {}
-  }, []);
-
-  function toggleCountdown() {
-    setCountdown((v) => {
-      const next = !v;
-      try {
-        localStorage.setItem('baseline:goals-countdown', next ? '1' : '0');
-      } catch {}
-      return next;
-    });
-  }
-
-  function toggleCompleted() {
-    setShowCompleted((v) => {
-      const next = !v;
-      try {
-        localStorage.setItem('baseline:goals-show-completed', next ? '1' : '0');
-      } catch {}
-      return next;
-    });
-  }
+  const toggleCountdown = () => setCountdown(!countdown);
+  const toggleCompleted = () => setShowCompleted(!showCompleted);
 
   // Active goals + the completed count. Never touches the loaded `completed` pages,
   // so an expanded section doesn't collapse when this refetches (e.g. on a task-tag
