@@ -178,68 +178,81 @@ export function GoalDetail({
 
   return (
     <div className="px-4 pb-4 pt-1 space-y-4 border-t border-neutral-100 dark:border-neutral-800">
-      {/* Category — time on this goal's tasks rolls up here */}
-      <div className="pt-3">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Category</span>
-          <span className="text-[10px] text-neutral-400 dark:text-neutral-500">Tracked time rolls up here</span>
-        </div>
-        {customizing ? (
-          <input
-            autoFocus
-            value={customCat}
-            onChange={(e) => setCustomCat(e.target.value)}
-            onBlur={() => {
-              setCustomizing(false);
-              const c = customCat.trim();
-              if (c) saveCategory(c);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-              if (e.key === 'Escape') setCustomizing(false);
-            }}
-            placeholder="New category name"
-            className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
-          />
-        ) : (
-          <select
-            value={cat ?? ''}
-            onChange={(e) => onSelectCategory(e.target.value)}
-            className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
-          >
-            <option value="">Uncategorized</option>
-            {[...new Set([...PRESET_CATEGORIES, ...known, ...(cat ? [cat] : [])])].map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-            <option value={CUSTOM}>Custom…</option>
-          </select>
-        )}
-      </div>
-
-      {/* Target / expiration date */}
-      <div className="pt-3">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Target date</span>
-          {due && (
-            <button onClick={() => saveDue('')} className="text-[10px] text-neutral-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400">
-              Clear
-            </button>
+      {/* Category + target date, side by side */}
+      <div className="grid sm:grid-cols-2 gap-3 pt-3">
+        {/* Category — time on this goal's tasks rolls up here */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Category</span>
+          </div>
+          {customizing ? (
+            <input
+              autoFocus
+              value={customCat}
+              onChange={(e) => setCustomCat(e.target.value)}
+              onBlur={() => {
+                setCustomizing(false);
+                const c = customCat.trim();
+                if (c) saveCategory(c);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') setCustomizing(false);
+              }}
+              placeholder="New category name"
+              className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+            />
+          ) : (
+            <div className="relative">
+              <select
+                value={cat ?? ''}
+                onChange={(e) => onSelectCategory(e.target.value)}
+                className="w-full appearance-none text-sm pl-3 pr-9 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+              >
+                <option value="">Uncategorized</option>
+                {[...new Set([...PRESET_CATEGORIES, ...known, ...(cat ? [cat] : [])])].map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+                <option value={CUSTOM}>Custom…</option>
+              </select>
+              <svg
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           )}
         </div>
-        <input
-          type="date"
-          value={due}
-          onChange={(e) => saveDue(e.target.value)}
-          className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
-        />
+
+        {/* Target / expiration date */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Target date</span>
+            {due && (
+              <button onClick={() => saveDue('')} className="text-[10px] text-neutral-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400">
+                Clear
+              </button>
+            )}
+          </div>
+          <input
+            type="date"
+            value={due}
+            onChange={(e) => saveDue(e.target.value)}
+            className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+          />
+        </div>
       </div>
 
-      {/* Notes */}
+      {/* Reason */}
       <div className="pt-3">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Notes</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Reason</span>
           {saving ? (
             <span className="text-[10px] text-neutral-400 dark:text-neutral-500">Saving…</span>
           ) : notesError ? (
@@ -253,7 +266,7 @@ export function GoalDetail({
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Add notes about this goal — the why, the plan, anything…"
+          placeholder="Think about why this goal matters."
           rows={3}
           className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-emerald-500 focus:border-emerald-500 resize-none"
         />

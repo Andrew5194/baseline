@@ -21,11 +21,13 @@ export function TaskTimer({
   title,
   category,
   onLogged,
+  hideStart = false,
 }: {
   taskId: string;
   title: string;
   category: string;
   onLogged?: () => void;
+  hideStart?: boolean; // suppress the idle Start button (timers are started from the kebab)
 }) {
   const timer = useFocusTimer();
   const [saving, setSaving] = useState(false);
@@ -61,6 +63,7 @@ export function TaskTimer({
   const btn = 'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors';
 
   if (!isThis) {
+    if (hideStart) return null; // timers are started from the row's kebab menu
     return (
       <div className="flex flex-wrap items-center gap-2">
         <button

@@ -1,16 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { apiFetch } from '../../lib/api';
 import { TaskTimer } from './task-timer';
 import { type TimeUnit, fmtDuration } from '../../lib/time-units';
-
-interface TaskEntry {
-  id: string;
-  occurred_at: string;
-  hours: number;
-  timed: boolean;
-}
+import {
+  type TaskEntry,
+  getCachedTaskEntries,
+  fetchTaskEntries,
+  invalidateTaskEntries,
+} from '../../lib/task-entries';
 
 const fmtTime = (d: Date, tz: string) =>
   d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz });
@@ -49,27 +47,36 @@ export function TaskTimerPanel({
   onLogged?: () => void;
   taskDone?: boolean;
 }) {
-  const [entries, setEntries] = useState<TaskEntry[] | null>(null);
+  // Seed from cache so a re-open (or a kebab-prefetched open) paints instantly;
+  // null means "no cached value yet" → show a shimmer while the first fetch runs.
+  const [entries, setEntries] = useState<TaskEntry[] | null>(() => getCachedTaskEntries(taskId) ?? null);
 
   const load = useCallback(() => {
-    apiFetch<{ data: TaskEntry[] }>(`/v1/time-entries?task_id=${encodeURIComponent(taskId)}`)
-      .then((r) => setEntries(r.data ?? []))
-      .catch(() => setEntries([]));
+    fetchTaskEntries(taskId).then(setEntries);
   }, [taskId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    const cached = getCachedTaskEntries(taskId);
+    if (cached) setEntries(cached); // instant paint
+    load(); // always revalidate in the background
+  }, [taskId, load]);
 
-  // After a session is logged, refresh this list and let the page refetch too.
+  // After a session is logged, drop the stale cache entry and refetch.
   const logged = () => {
+    invalidateTaskEntries(taskId);
     load();
     onLogged?.();
   };
 
   return (
     <div className="space-y-2">
-      {entries && entries.length > 0 && (
+      {entries === null ? (
+        <div className="space-y-1">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded shimmer" />
+          ))}
+        </div>
+      ) : entries.length > 0 ? (
         <ul className="space-y-1">
           {entries.map((e) => (
             <li
@@ -90,9 +97,9 @@ export function TaskTimerPanel({
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
       {!taskDone ? (
-        <TaskTimer taskId={taskId} title={title} category={category} onLogged={logged} />
+        <TaskTimer taskId={taskId} title={title} category={category} onLogged={logged} hideStart />
       ) : entries && entries.length === 0 ? (
         <p className="text-xs text-neutral-400 dark:text-neutral-500">No sessions logged.</p>
       ) : null}

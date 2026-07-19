@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { goalColor } from '../../lib/goal-colors';
-import { GoalColorPicker } from './goal-color-picker';
+import { GoalActionsMenu } from './goal-actions-menu';
 import { GoalDetail } from './goal-detail';
 import { Modal } from './modal';
 import { dueMeta, DUE_TONE_CLASS } from '../../lib/due-date';
@@ -44,7 +44,6 @@ export function GoalCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(goal.title);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
@@ -201,44 +200,14 @@ export function GoalCard({
         </div>
 
         {!editing && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className={`flex items-center gap-2 flex-shrink-0 transition-opacity ${
-              pickerOpen ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
-            }`}
-          >
-            <GoalColorPicker current={color} onPick={setColor} onOpenChange={setPickerOpen} />
-            <button
-              onClick={startEdit}
-              aria-label="Edit goal"
-              className="text-neutral-300 dark:text-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-300"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setConfirming(true)}
-              aria-label="Delete goal"
-              className="text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
+          <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+            <GoalActionsMenu
+              color={color}
+              onEdit={startEdit}
+              onPickColor={setColor}
+              onDelete={() => setConfirming(true)}
+            />
           </div>
-        )}
-
-        {!editing && (
-          <svg
-            className={`w-4 h-4 text-neutral-300 dark:text-neutral-600 flex-shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
         )}
       </div>
 

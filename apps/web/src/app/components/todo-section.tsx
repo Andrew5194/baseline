@@ -6,7 +6,9 @@ import { CompletionHeatmap, type HeatmapCell } from './completion-heatmap';
 import { RecurringTodos } from './recurring-todos';
 import { TaskGoalTag } from './task-goal-tag';
 import { TaskTimerPanel } from './task-timer-panel';
-import { useFocusTimer, updateTimer } from '../../lib/focus-timer';
+import { ActionsMenu } from './actions-menu';
+import { prefetchTaskEntries } from '../../lib/task-entries';
+import { useFocusTimer, updateTimer, startTimer } from '../../lib/focus-timer';
 import { useTimeUnit } from '../../lib/use-time-unit';
 import { DayJournal } from './day-journal';
 import { useTimezone } from '../../lib/use-timezone';
@@ -319,9 +321,16 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     load();
   }
 
-  async function remove(id: string) {
-    setTodos((ts) => ts?.filter((x) => x.id !== id) ?? null);
-    await apiFetch(`/v1/todos/${id}`, { method: 'DELETE' }).catch(console.error);
+  // Delete a task. For a recurring occurrence this removes the underlying recurring
+  // rule (so it stops appearing on every day), mirroring the recurring-tasks card.
+  async function removeItem(item: { id: string; recurring: boolean }) {
+    if (item.recurring) {
+      setRecurring((rs) => rs.filter((r) => r.id !== item.id));
+      await apiFetch(`/v1/recurring-todos/${item.id}`, { method: 'DELETE' }).catch(console.error);
+    } else {
+      setTodos((ts) => ts?.filter((x) => x.id !== item.id) ?? null);
+      await apiFetch(`/v1/todos/${item.id}`, { method: 'DELETE' }).catch(console.error);
+    }
     notifyGoals();
     load();
   }
@@ -493,32 +502,50 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
                     category={t.category ?? null}
                     onChange={(sel) => tagItem(t, sel)}
                   />
-                  {t.recurring ? (
+                  {t.recurring && (
                     <span className="text-neutral-300 dark:text-neutral-600 text-xs flex-shrink-0" title="Recurring task">↻</span>
-                  ) : (
-                    <button
-                      onClick={() => remove(t.id)}
-                      aria-label="Delete task"
-                      className="text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-lg leading-none flex-shrink-0"
-                    >
-                      ×
-                    </button>
                   )}
-                  <button
-                    onClick={() => setTimerTask((id) => (id === t.id ? null : t.id))}
-                    aria-label="Timer"
-                    aria-expanded={timerTask === t.id}
-                    className="flex-shrink-0 text-neutral-300 dark:text-neutral-600 hover:text-neutral-500 dark:hover:text-neutral-400 transition-colors"
-                  >
-                    <svg
-                      className={`w-4 h-4 transition-transform ${timerTask === t.id ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
+                  <div className="flex-shrink-0">
+                    <ActionsMenu
+                      label="Task actions"
+                      onOpen={() => prefetchTaskEntries(t.id)}
+                      items={[
+                        {
+                          label: 'Start timer',
+                          icon: (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          ),
+                          onClick: () => {
+                            // Open this task's panel (only one is open at a time) and start the
+                            // timer, unless another task's timer is already running (don't clobber it).
+                            if (!activeTimer) startTimer(t.goalCategory ?? t.category ?? 'Uncategorized', t.title, t.id);
+                            setTimerTask(t.id);
+                          },
+                        },
+                        {
+                          label: timerTask === t.id ? 'Hide time logs' : 'Show time logs',
+                          icon: (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 12h16M4 18h10" />
+                            </svg>
+                          ),
+                          onClick: () => setTimerTask(timerTask === t.id ? null : t.id),
+                        },
+                        {
+                          label: t.recurring ? 'Delete recurring' : 'Delete task',
+                          danger: true,
+                          icon: (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          ),
+                          onClick: () => removeItem(t),
+                        },
+                      ]}
+                    />
+                  </div>
                 </div>
                 {timerTask === t.id && (
                   <div className="pl-11 pr-4 pb-3">
