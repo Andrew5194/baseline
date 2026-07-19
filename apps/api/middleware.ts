@@ -63,5 +63,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // The middleware only gates the /v1 API (auth presence + CORS) and the Auth.js
+  // endpoints — so only run it there, instead of on every request (assets, RSC
+  // payloads, error pages), which needlessly invokes the Edge runtime per request.
+  matcher: ['/v1/:path*', '/api/:path*'],
 };
