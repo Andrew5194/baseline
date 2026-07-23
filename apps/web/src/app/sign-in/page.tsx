@@ -82,7 +82,7 @@ export default function SignIn() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-6 bg-neutral-50 dark:bg-neutral-950">
+    <main className="flex min-h-dvh flex-col items-center justify-center px-6 bg-neutral-50 dark:bg-neutral-950">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-2">
           <div className="flex justify-center mb-4">
