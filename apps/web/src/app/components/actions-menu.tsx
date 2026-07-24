@@ -9,6 +9,7 @@ export interface ActionItem {
   onClick: () => void;
   danger?: boolean;
   disabled?: boolean;
+  title?: string; // hover tooltip (e.g. why a disabled item can't be used)
 }
 
 // A generic kebab (⋯) overflow menu. Renders a quiet trigger and a portal popover
@@ -87,19 +88,17 @@ export function ActionsMenu({
             style={{ position: 'fixed', top: pos.top, right: pos.right }}
             className="z-50 w-44 p-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-xl"
           >
-            {items.map((item, i) => (
-              <div key={i}>
-                {i === firstDanger && firstDanger > 0 && (
-                  <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
-                )}
+            {items.map((item, i) => {
+              const button = (
                 <button
                   role="menuitem"
                   disabled={item.disabled}
+                  title={item.disabled ? undefined : item.title}
                   onClick={() => {
                     setOpen(false);
                     item.onClick();
                   }}
-                  className={`flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-md text-sm text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  className={`flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-md text-sm text-left transition-colors disabled:opacity-40 disabled:pointer-events-none ${
                     item.danger
                       ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
                       : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800'
@@ -108,8 +107,24 @@ export function ActionsMenu({
                   <span className="flex-shrink-0">{item.icon}</span>
                   {item.label}
                 </button>
-              </div>
-            ))}
+              );
+              return (
+                <div key={i}>
+                  {i === firstDanger && firstDanger > 0 && (
+                    <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
+                  )}
+                  {/* The disabled button ignores pointer events, so wrap it to surface
+                      the tooltip (e.g. why the action is unavailable) on hover. */}
+                  {item.disabled && item.title ? (
+                    <span title={item.title} className="block cursor-not-allowed">
+                      {button}
+                    </span>
+                  ) : (
+                    button
+                  )}
+                </div>
+              );
+            })}
           </div>,
           document.body,
         )}
