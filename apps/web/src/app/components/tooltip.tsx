@@ -25,7 +25,7 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
   const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, {
     onMouseEnter: (e: MouseEvent<HTMLElement>) => {
       const r = e.currentTarget.getBoundingClientRect();
-      setRect({ top: r.top + r.height / 2, left: r.left, right: r.right });
+      setRect({ top: r.top, left: r.left, right: r.right });
       props.onMouseEnter?.(e);
     },
     onMouseLeave: (e: MouseEvent<HTMLElement>) => {
@@ -37,9 +37,11 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
   let bubble: ReactNode = null;
   if (rect && content) {
     const openLeft = rect.right + GAP + MAX_W > window.innerWidth;
+    // Top of the tooltip aligns with the top of the hovered item; opens to its right
+    // (or left when there's no room), so it never overlaps the row or nearby lines.
     const style = openLeft
-      ? { top: rect.top, left: rect.left - GAP, transform: 'translate(-100%, -50%)' as const }
-      : { top: rect.top, left: rect.right + GAP, transform: 'translate(0, -50%)' as const };
+      ? { top: rect.top, left: rect.left - GAP, transform: 'translate(-100%, 0)' as const }
+      : { top: rect.top, left: rect.right + GAP, transform: 'translate(0, 0)' as const };
     bubble = createPortal(
       <span
         style={{ position: 'fixed', ...style }}
