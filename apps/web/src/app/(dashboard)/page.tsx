@@ -75,7 +75,7 @@ export default function Overview() {
   const [recurringCats, setRecurringCats] = useState<string[]>([]);
   const [panel, setPanel] = useState<Panel | null>(null);
   // Synced server-side (users.preferences via /v1/me) so it follows the user across devices.
-  const [hideRecurring, setHideRecurring] = usePreference('hideRecurring');
+  const [hideRecurring, setHideRecurring, hideRecurringLoaded] = usePreference('hideRecurring');
   const [allocView, setAllocView] = usePreference<'bars' | 'calendar'>('allocView', 'bars');
   const [unit, setUnit] = useTimeUnit();
   // 'new' = add modal; an Entry = edit modal; null = closed.
@@ -254,8 +254,11 @@ export default function Overview() {
   const colorOf = (c: string) => colorMap[c] ?? colorForCategory(c, colors);
 
   // Hold the charts/entries until the color overrides and the full category set are
-  // loaded, so the first paint uses the final colors (no split-second recolor).
-  const ready = colorsReady && budget !== null && daily !== null && entries !== null;
+  // loaded, so the first paint uses the final colors (no split-second recolor). Also
+  // wait for the hide-recurring preference, so the donut/bars mount already at the
+  // correct freeFocus value instead of flashing false → true and replaying the hide
+  // tween on every navigation into the page.
+  const ready = colorsReady && budget !== null && daily !== null && entries !== null && hideRecurringLoaded;
 
   const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
   const tabClass = (p: Panel) =>
