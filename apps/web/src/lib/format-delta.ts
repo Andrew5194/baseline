@@ -3,13 +3,9 @@
 // `delta` is the fractional change from the prior period (0.12 = +12%, 5 = +500%),
 // or null when there's no comparable prior value. `value` is the current metric.
 //
-// Two readability rules, since raw percentages mislead at the extremes:
-//   • Large positive changes read as a multiplier ("6×") instead of a giant percent
-//     ("500%") — clearer when the prior period was tiny.
-//   • When there's no comparable prior value (delta null — e.g. the prior period was
-//     zero), there's no percentage to compute, so it renders a neutral "—".
-// Negative deltas are bounded at −100% (counts can't drop below zero), so they
-// always render as a plain percentage.
+// Always renders the signed percentage (▲ +467% / ▼ -40%), so the number is literal.
+// The one special case: when there's no comparable prior value (delta null — e.g. the
+// prior period was zero), there's no percentage to compute, so it renders a neutral "—".
 export function formatDelta(
   delta: number | null,
   value: number | null,
@@ -20,16 +16,10 @@ export function formatDelta(
   if (delta === 0) return { text: '0%', tone: 'neutral' };
   const tone = delta > 0 ? 'up' : 'down';
   const arrow = delta > 0 ? '▲' : '▼';
-  const abs = Math.abs(delta);
-  if (delta >= 1) {
-    const mult = abs + 1; // ratio of current to prior
-    const m = mult >= 10 ? Math.round(mult) : Math.round(mult * 10) / 10;
-    return { text: `${arrow} ${m}×`, tone };
-  }
-  // Keep the signed percentage — a down arrow with a bare "100%" reads ambiguously;
-  // "▼ -100%" / "▲ +25%" makes the direction unmistakable.
+  // Always the signed percentage — even large gains ("▲ +467%") — so it reads as a
+  // real number. A down arrow with a bare "100%" reads ambiguously, so keep the sign.
   const sign = delta > 0 ? '+' : '-';
-  return { text: `${arrow} ${sign}${Math.round(abs * 100)}%`, tone };
+  return { text: `${arrow} ${sign}${Math.round(Math.abs(delta) * 100)}%`, tone };
 }
 
 // A hover-tooltip explanation of a period-over-period delta, spelling out the
