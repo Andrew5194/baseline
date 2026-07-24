@@ -22,10 +22,13 @@ export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
   const tz = await getUserTimezone(userId);
   const params = request.nextUrl.searchParams;
+  const metricsParam = params.get('metrics');
   const metric = params.get('metric') || '';
   const periodParam = params.get('period') || 'week';
 
-  if (!METRICS.includes(metric)) {
+  // One metric (`metric=`) or a batch (`metrics=a,b,c`) sharing the one events query.
+  const requested = metricsParam ? metricsParam.split(',').filter(Boolean) : metric ? [metric] : [];
+  if (requested.length === 0 || requested.some((mk) => !METRICS.includes(mk))) {
     return NextResponse.json({ error: 'Invalid metric', code: 'INVALID_METRIC' }, { status: 400 });
   }
   if (!isPeriod(periodParam)) {
@@ -50,8 +53,8 @@ export async function GET(request: NextRequest) {
     );
   const all: Ev[] = rows.map((r) => ({ occurredAt: r.occurredAt, durationMs: r.durationMs ?? 0 }));
 
-  const valueFor = (evs: Ev[]): number => {
-    switch (metric) {
+  const valueFor = (mk: string, evs: Ev[]): number => {
+    switch (mk) {
       case 'meeting_hours':
         return round1(evs.reduce((a, v) => a + v.durationMs, 0) / HOUR_MS);
       case 'events':
@@ -65,10 +68,16 @@ export async function GET(request: NextRequest) {
     }
   };
 
-  const data = buckets.map((bk) => {
-    const evs = all.filter((v) => v.occurredAt >= bk.start && v.occurredAt < bk.end);
-    return { date: dayKeyInTz(bk.start, tz), value: valueFor(evs) };
-  });
+  const series: Record<string, Array<{ date: string; value: number }>> = {};
+  for (const mk of requested) {
+    series[mk] = buckets.map((bk) => {
+      const evs = all.filter((v) => v.occurredAt >= bk.start && v.occurredAt < bk.end);
+      return { date: dayKeyInTz(bk.start, tz), value: valueFor(mk, evs) };
+    });
+  }
 
-  return NextResponse.json({ metric, period: periodParam, data });
+  if (metricsParam) {
+    return NextResponse.json({ period: periodParam, series });
+  }
+  return NextResponse.json({ metric: requested[0], period: periodParam, data: series[requested[0]] });
 }

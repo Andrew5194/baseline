@@ -20,10 +20,14 @@ export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
   const tz = await getUserTimezone(userId);
   const params = request.nextUrl.searchParams;
+  const metricsParam = params.get('metrics');
   const metric = params.get('metric') || '';
   const periodParam = params.get('period') || 'week';
 
-  if (!METRICS.includes(metric)) {
+  // One metric (`metric=`) or a batch (`metrics=a,b,c`): the batch fetches each needed
+  // dataset once and returns every series, saving a request per tile.
+  const requested = metricsParam ? metricsParam.split(',').filter(Boolean) : metric ? [metric] : [];
+  if (requested.length === 0 || requested.some((mk) => !METRICS.includes(mk))) {
     return NextResponse.json({ error: 'Invalid metric', code: 'INVALID_METRIC' }, { status: 400 });
   }
   if (!isPeriod(periodParam)) {
@@ -35,30 +39,37 @@ export async function GET(request: NextRequest) {
   const b = periodBounds(periodParam, offsetNow(periodParam, now, tz, offset), tz);
   const buckets = periodBuckets(periodParam, b.start, b.end, tz);
 
-  // Pull only the dataset the requested metric needs, over the whole period.
-  let stamps: Stamp[] = [];
-  if (metric === 'goals_completed') {
-    const rows = await db
-      .select({ completedAt: goals.completedAt })
-      .from(goals)
-      .where(and(eq(goals.userId, userId), gte(goals.completedAt, b.start), lt(goals.completedAt, b.end)));
-    stamps = rows.filter((r) => r.completedAt).map((r) => ({ at: r.completedAt as Date, ms: 0 }));
-  } else if (metric === 'tasks_completed') {
-    const rows = await db
-      .select({ completedAt: todos.completedAt })
-      .from(todos)
-      .where(and(eq(todos.userId, userId), gte(todos.completedAt, b.start), lt(todos.completedAt, b.end)));
-    stamps = rows.filter((r) => r.completedAt).map((r) => ({ at: r.completedAt as Date, ms: 0 }));
-  } else {
-    const rows = await db
-      .select({ occurredAt: events.occurredAt, durationMs: events.durationMs })
-      .from(events)
-      .where(and(eq(events.userId, userId), eq(events.source, 'manual'), gte(events.occurredAt, b.start), lt(events.occurredAt, b.end)));
-    stamps = rows.map((r) => ({ at: r.occurredAt, ms: r.durationMs ?? 0 }));
-  }
+  // Fetch only the datasets the requested metrics need, each once, over the period.
+  const need = new Set(requested);
+  const [goalStamps, taskStamps, eventStamps] = await Promise.all([
+    need.has('goals_completed')
+      ? db
+          .select({ completedAt: goals.completedAt })
+          .from(goals)
+          .where(and(eq(goals.userId, userId), gte(goals.completedAt, b.start), lt(goals.completedAt, b.end)))
+          .then((rows) => rows.filter((r) => r.completedAt).map((r) => ({ at: r.completedAt as Date, ms: 0 })))
+      : Promise.resolve([] as Stamp[]),
+    need.has('tasks_completed')
+      ? db
+          .select({ completedAt: todos.completedAt })
+          .from(todos)
+          .where(and(eq(todos.userId, userId), gte(todos.completedAt, b.start), lt(todos.completedAt, b.end)))
+          .then((rows) => rows.filter((r) => r.completedAt).map((r) => ({ at: r.completedAt as Date, ms: 0 })))
+      : Promise.resolve([] as Stamp[]),
+    need.has('hours_tracked') || need.has('tracked_days')
+      ? db
+          .select({ occurredAt: events.occurredAt, durationMs: events.durationMs })
+          .from(events)
+          .where(and(eq(events.userId, userId), eq(events.source, 'manual'), gte(events.occurredAt, b.start), lt(events.occurredAt, b.end)))
+          .then((rows) => rows.map((r) => ({ at: r.occurredAt, ms: r.durationMs ?? 0 })))
+      : Promise.resolve([] as Stamp[]),
+  ]);
 
-  const valueFor = (rows: Stamp[]): number => {
-    switch (metric) {
+  const stampsFor = (mk: string): Stamp[] =>
+    mk === 'goals_completed' ? goalStamps : mk === 'tasks_completed' ? taskStamps : eventStamps;
+
+  const valueFor = (mk: string, rows: Stamp[]): number => {
+    switch (mk) {
       case 'goals_completed':
       case 'tasks_completed':
         return rows.length;
@@ -71,10 +82,17 @@ export async function GET(request: NextRequest) {
     }
   };
 
-  const data = buckets.map((bk) => {
-    const rows = stamps.filter((v) => v.at >= bk.start && v.at < bk.end);
-    return { date: dayKeyInTz(bk.start, tz), value: valueFor(rows) };
-  });
+  const series: Record<string, Array<{ date: string; value: number }>> = {};
+  for (const mk of requested) {
+    const stamps = stampsFor(mk);
+    series[mk] = buckets.map((bk) => {
+      const rows = stamps.filter((v) => v.at >= bk.start && v.at < bk.end);
+      return { date: dayKeyInTz(bk.start, tz), value: valueFor(mk, rows) };
+    });
+  }
 
-  return NextResponse.json({ metric, period: periodParam, data });
+  if (metricsParam) {
+    return NextResponse.json({ period: periodParam, series });
+  }
+  return NextResponse.json({ metric: requested[0], period: periodParam, data: series[requested[0]] });
 }
