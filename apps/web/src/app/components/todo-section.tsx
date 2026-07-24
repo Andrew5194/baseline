@@ -212,17 +212,28 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     loadGoals();
     loadCategories();
     loadCatColors();
+    // A goal changed (created, completed, tagged, reordered…): the goal options for
+    // task tags may have changed, and a goal/task tag can introduce a new category —
+    // but category COLORS don't change on a goal edit, so don't refetch them here.
     const onGoals = () => {
       loadGoals();
+      loadCategories();
+    };
+    // A category's list or color actually changed (created/deleted/renamed/recolored):
+    // refresh the category set and its color overrides. TodoSection didn't react to
+    // this before, so recolors now update its task-tag colors live.
+    const onCategories = () => {
       loadCategories();
       loadCatColors();
     };
     // A task completed elsewhere (e.g. the post-timer toast) should refresh the list.
     const onTodos = () => load();
     window.addEventListener('baseline:goals-changed', onGoals);
+    window.addEventListener('baseline:categories-changed', onCategories);
     window.addEventListener('baseline:todos-changed', onTodos);
     return () => {
       window.removeEventListener('baseline:goals-changed', onGoals);
+      window.removeEventListener('baseline:categories-changed', onCategories);
       window.removeEventListener('baseline:todos-changed', onTodos);
     };
   }, [load, loadGoals, loadCategories, loadCatColors]);
