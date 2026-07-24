@@ -30,11 +30,12 @@ export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta
   const deltaText = `${f.text} vs prior ${window}`;
 
   // Spell out exactly what's being compared: this period's elapsed slice against the
-  // prior period's matching slice, with the active-day counts on both sides.
-  const deltaTip =
-    activeDays !== null && priorActiveDays !== null && priorActiveDays !== undefined
-      ? `${activeDays} active ${activeDays === 1 ? 'day' : 'days'} out of ${totalDays} so far this ${window}, compared to ${priorActiveDays} active ${priorActiveDays === 1 ? 'day' : 'days'} out of ${totalDays} for the same period last ${window}.`
-      : explainDelta(activeDays, delta, window, 'active days');
+  // prior period's matching slice — with both day counts and the explicit division.
+  const canBreakdown = activeDays !== null && priorActiveDays !== null && priorActiveDays !== undefined && priorActiveDays !== 0;
+  const pct = canBreakdown ? Math.round(((activeDays! - priorActiveDays!) / priorActiveDays!) * 100) : 0;
+  const deltaTip = canBreakdown
+    ? `${activeDays} of ${totalDays} active days so far this ${window} vs ${priorActiveDays} of ${totalDays} by the same point last ${window}  →  (${activeDays} − ${priorActiveDays}) ÷ ${priorActiveDays} = ${pct > 0 ? '+' : ''}${pct}%`
+    : explainDelta(activeDays, priorActiveDays ?? null, window, 'active days');
 
   const scoreColor = score === null ? '#a3a3a3' : score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
 

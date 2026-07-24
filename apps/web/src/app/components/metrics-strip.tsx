@@ -10,6 +10,8 @@ export interface StripStat {
   sub?: string;
   // Fractional change vs the prior period (e.g. 0.12 = +12%). undefined → no delta row.
   delta?: number | null;
+  prev?: number | null; // prior-period value (for the tooltip's exact math)
+  unit?: string; // unit label for the tooltip (e.g. "days")
 }
 
 const toneColor: Record<'up' | 'down' | 'neutral', string> = {
@@ -23,11 +25,12 @@ interface MetricsStripProps {
   activeKey?: string;
   onSelect?: (key: string) => void;
   accent?: string;
+  window?: string; // period label for the delta tooltips (e.g. "week")
 }
 
 // Compact horizontal KPI strip. When `onSelect` is provided, each cell is a button
 // that selects the metric (highlighted with an accent underline).
-export function MetricsStrip({ stats, activeKey, onSelect, accent = '#10b981' }: MetricsStripProps) {
+export function MetricsStrip({ stats, activeKey, onSelect, accent = '#10b981', window = 'period' }: MetricsStripProps) {
   return (
     <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-neutral-100 dark:divide-neutral-800 overflow-hidden">
       {stats.map((s) => {
@@ -51,7 +54,7 @@ export function MetricsStrip({ stats, activeKey, onSelect, accent = '#10b981' }:
               const cur = Number.isFinite(num) ? num : null;
               const f = formatDelta(s.delta ?? null, cur);
               return (
-                <Tooltip content={explainDelta(cur, s.delta ?? null, 'period', typeof s.sub === 'string' ? s.sub : undefined)}>
+                <Tooltip content={explainDelta(cur, s.prev ?? null, window, s.unit)}>
                   <p className={`w-fit mt-0.5 text-[11px] tabular-nums ${toneColor[f.tone]}`}>{f.text}</p>
                 </Tooltip>
               );

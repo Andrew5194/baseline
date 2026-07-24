@@ -39,33 +39,21 @@ export function formatDelta(
 // — except at −100%, where the prior isn't recoverable because current fell to zero.
 export function explainDelta(
   current: number | null,
-  delta: number | null,
+  prev: number | null | undefined,
   window: string,
   unit?: string,
 ): string {
   const w = window || 'period';
   const u = unit ? ` ${unit}` : '';
-  // The comparison is always against the SAME elapsed slice of the prior period —
-  // e.g. 5 days into this week vs the first 5 days of last week — not the full prior
-  // period. The wording ("so far this week" vs "by the same point last week") makes
-  // that explicit so a partial period isn't read as a drop against a complete one.
-  const samePoint = `by the same point last ${w}`;
-  if (delta === null) {
-    return current !== null && current > 0
-      ? `New — no prior ${w} to compare this against yet.`
-      : `No comparable prior ${w} to compare against yet.`;
-  }
-  if (delta === 0) return `No change vs ${samePoint}.`;
-  const pct = Math.round(Math.abs(delta) * 100);
-  const signed = `${delta > 0 ? '+' : '-'}${pct}%`;
   const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
-  const cur = current !== null ? fmt(current) : '0';
-  if (delta <= -1) {
-    return `${cur}${u} so far this ${w}, down from a nonzero total ${samePoint} — a ${signed} change. Measured against the same elapsed span, not the full ${w}.`;
+  if (current === null) return `No data yet this ${w}.`;
+  if (prev === null || prev === undefined) return `Nothing in the matching span last ${w} to compare against.`;
+  if (prev === 0) {
+    return `${fmt(current)}${u} so far this ${w} vs 0 by the same point last ${w} — new, so there's no prior value to take a % of.`;
   }
-  const prior = current !== null ? current / (1 + delta) : null;
-  if (prior !== null && Number.isFinite(prior)) {
-    return `${cur}${u} so far this ${w} vs ~${fmt(prior)}${u} ${samePoint} — change = (${cur} − ${fmt(prior)}) ÷ ${fmt(prior)} = ${signed}. Measured against the same elapsed span, not the full ${w}.`;
-  }
-  return `${signed} vs ${samePoint} — (now − prior) ÷ prior, measured against the same elapsed span of last ${w}.`;
+  const pct = Math.round(((current - prev) / prev) * 100);
+  const signed = `${pct > 0 ? '+' : ''}${pct}%`;
+  // Dead-clear and succinct: the two real numbers being compared (this period's
+  // elapsed slice vs the prior period's matching slice) and the exact division.
+  return `${fmt(current)}${u} so far this ${w} vs ${fmt(prev)} by the same point last ${w}  →  (${fmt(current)} − ${fmt(prev)}) ÷ ${fmt(prev)} = ${signed}`;
 }

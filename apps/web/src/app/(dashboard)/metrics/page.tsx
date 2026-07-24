@@ -190,6 +190,8 @@ export default function Metrics() {
       value: d.suffix ? `${v}${d.suffix}` : v,
       sub: d.sub === 'elapsed' ? `/ ${elapsedDays}` : undefined,
       delta: m?.[d.metric]?.delta ?? null,
+      prev: m?.[d.metric]?.prev ?? null,
+      unit: d.unit,
     };
   });
 
@@ -276,7 +278,7 @@ export default function Metrics() {
       )}
 
       <div className="mb-6">
-        <MetricsStrip stats={stats} activeKey={active} onSelect={setActive} />
+        <MetricsStrip stats={stats} activeKey={active} onSelect={setActive} window={dataPeriod} />
       </div>
 
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">

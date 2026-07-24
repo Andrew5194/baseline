@@ -7,6 +7,7 @@ interface MetricCardProps {
   label: string;
   value: number | null;
   delta: number | null;
+  prev?: number | null;
   unit: string;
   window?: string;
   active?: boolean;
@@ -21,7 +22,7 @@ function formatValue(value: number | null, unit: string): string {
   return `${value}`;
 }
 
-export function MetricCard({ label, value, delta, unit, window, active, onClick }: MetricCardProps) {
+export function MetricCard({ label, value, delta, prev, unit, window, active, onClick }: MetricCardProps) {
   const formattedValue = formatValue(value, unit);
   const f = formatDelta(delta, value);
   const toneColor = { up: 'text-emerald-600', down: 'text-red-500', neutral: 'text-neutral-400' }[f.tone];
@@ -41,7 +42,7 @@ export function MetricCard({ label, value, delta, unit, window, active, onClick 
         <p className="text-xs text-neutral-400">{unit}</p>
       </div>
       {(delta !== null || window) && (
-        <Tooltip content={explainDelta(value, delta, window || '30d', unit)}>
+        <Tooltip content={explainDelta(value, prev, window || '30d', unit)}>
           <p className={`w-fit text-xs mt-1 ${toneColor}`}>
             {f.text} vs prior {window || '30d'}
           </p>
