@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { colorForCategory } from '../../lib/categories';
 import { type TimeUnit, fmtDuration } from '../../lib/time-units';
@@ -95,20 +95,53 @@ export function CalendarAllocation({
   }, []);
   const isYear = granularity === 'month';
 
-  const dates = data.map((r) => String(r.date)).sort();
+  const dates = useMemo(() => data.map((r) => String(r.date)).sort(), [data]);
   const isWeek = !isYear && dates.length <= 7;
 
-  // Individual events for the month/year views, grouped by local day and month, each
-  // group sorted newest-first (the whole list is pre-sorted descending).
-  const sorted = (entries ?? []).slice().sort((a, b) => +new Date(b.occurred_at) - +new Date(a.occurred_at));
-  const eventsByDate = new Map<string, CalEntry[]>();
-  const eventsByMonth = new Map<string, CalEntry[]>();
-  for (const e of sorted) {
-    const d = localEnd(e.occurred_at, tz).date;
-    (eventsByDate.get(d) ?? eventsByDate.set(d, []).get(d)!).push(e);
-    const ym = d.slice(0, 7);
-    (eventsByMonth.get(ym) ?? eventsByMonth.set(ym, []).get(ym)!).push(e);
-  }
+  // Events grouped by local day and month (newest-first) for the month/year views.
+  // Memoized so the per-second pending tick doesn't re-run localEnd() for every entry.
+  const { eventsByDate, eventsByMonth } = useMemo(() => {
+    const sorted = (entries ?? []).slice().sort((a, b) => +new Date(b.occurred_at) - +new Date(a.occurred_at));
+    const byDate = new Map<string, CalEntry[]>();
+    const byMonth = new Map<string, CalEntry[]>();
+    for (const e of sorted) {
+      const d = localEnd(e.occurred_at, tz).date;
+      (byDate.get(d) ?? byDate.set(d, []).get(d)!).push(e);
+      const ym = d.slice(0, 7);
+      (byMonth.get(ym) ?? byMonth.set(ym, []).get(ym)!).push(e);
+    }
+    return { eventsByDate: byDate, eventsByMonth: byMonth };
+  }, [entries, tz]);
+
+  // Week grid: each entry as a start→end block on the local day it ends. Top-level memo
+  // (a hook can't live in the isWeek branch) so the pending tick doesn't re-loop; empty
+  // map for non-week shapes.
+  const blocksByDate = useMemo(() => {
+    const map = new Map<string, Array<{ top: number; height: number; tiny: boolean; cat: string; hours: number; note?: string | null; range: string }>>();
+    if (isYear || dates.length === 0 || dates.length > 7) return map;
+    const LABEL_MIN = HOUR_PX * 0.5; // below this a block is too short to fit a label
+    for (const d of dates) map.set(d, []);
+    for (const e of entries ?? []) {
+      if (!(e.hours > 0)) continue;
+      const { date, hour } = localEnd(e.occurred_at, tz);
+      const bucket = map.get(date);
+      if (!bucket) continue; // outside this week
+      const start = Math.max(0, hour - e.hours);
+      const top = start * HOUR_PX;
+      // Draw to true scale (duration × px/hr); just keep a 1px sliver so it's visible.
+      const height = Math.max(1, (hour - start) * HOUR_PX);
+      const tiny = height < LABEL_MIN; // too short to fit a label
+      const fmt = (h: number) => {
+        const hh = Math.floor(h) % 24;
+        const mm = Math.round((h - Math.floor(h)) * 60);
+        const ampm = hh < 12 ? 'AM' : 'PM';
+        const h12 = hh % 12 === 0 ? 12 : hh % 12;
+        return `${h12}:${String(mm).padStart(2, '0')} ${ampm}`;
+      };
+      bucket.push({ top, height, tiny, cat: e.category, hours: e.hours, note: e.note, range: `${fmt(start)} – ${fmt(hour)}` });
+    }
+    return map;
+  }, [entries, tz, dates, isYear]);
 
   const CAP = 3; // events shown per cell before "+N more"
   // The event's start–end time (optionally prefixed with its date) for the tooltip.
@@ -166,30 +199,7 @@ export function CalendarAllocation({
 
   // ── Week: Google-Calendar-style hour grid (12 AM → 12 AM) ──────────────────
   if (isWeek && dates.length > 0) {
-    // Bucket each entry onto the local day it ends, as a block from start → end.
-    const LABEL_MIN = HOUR_PX * 0.5; // below this a block is too short to fit a label
-    const blocksByDate = new Map<string, Array<{ top: number; height: number; tiny: boolean; cat: string; hours: number; note?: string | null; range: string }>>();
-    for (const d of dates) blocksByDate.set(d, []);
-    for (const e of entries ?? []) {
-      if (!(e.hours > 0)) continue;
-      const { date, hour } = localEnd(e.occurred_at, tz);
-      const bucket = blocksByDate.get(date);
-      if (!bucket) continue; // outside this week
-      const start = Math.max(0, hour - e.hours);
-      const top = start * HOUR_PX;
-      // Draw to true scale (duration × px/hr); just keep a 1px sliver so it's visible.
-      const height = Math.max(1, (hour - start) * HOUR_PX);
-      const tiny = height < LABEL_MIN; // too short to fit a label
-      const fmt = (h: number) => {
-        const hh = Math.floor(h) % 24;
-        const mm = Math.round((h - Math.floor(h)) * 60);
-        const ampm = hh < 12 ? 'AM' : 'PM';
-        const h12 = hh % 12 === 0 ? 12 : hh % 12;
-        return `${h12}:${String(mm).padStart(2, '0')} ${ampm}`;
-      };
-      bucket.push({ top, height, tiny, cat: e.category, hours: e.hours, note: e.note, range: `${fmt(start)} – ${fmt(hour)}` });
-    }
-
+    // Bucketed entry blocks come from the memoized `blocksByDate` above.
     // "Current time" line, shown only when today is within the displayed week.
     const nowPos = now ? localEnd(now.toISOString(), tz) : null;
     const showNow = !!nowPos && dates.includes(nowPos.date);

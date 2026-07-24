@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { PeriodSelector, PeriodNav, periodRangeLabel, type Period } from '../components/period-selector';
 import { BudgetDonut, type BudgetCategory } from '../components/budget-donut';
@@ -179,24 +179,29 @@ export default function Overview() {
   // 24h axis (bars shoot off the top) until the refetch lands.
   const granularity = daily?.granularity ?? 'day';
   const isYear = granularity === 'month';
-  const capacityFor = (iso: string) => {
-    if (!isYear) return DAY_HOURS;
-    const [y, m] = iso.split('-').map(Number);
-    return DAY_HOURS * new Date(Date.UTC(y, m, 0)).getUTCDate(); // m is 1-based → day 0 = last day of month
-  };
-  const categories = daily?.categories ?? [];
-  const barRows =
-    daily?.data.map((d) => {
-      const row: Record<string, number | string> = { date: d.date };
-      let sum = 0;
-      for (const c of categories) {
-        const h = d.by_category[c] ?? 0;
-        row[c] = h;
-        sum += h;
-      }
-      row.Free = Math.round(Math.max(capacityFor(d.date) - sum, 0) * 10) / 10;
-      return row;
-    }) ?? [];
+  const categories = useMemo(() => daily?.categories ?? [], [daily]);
+  // Stacked rows (per bucket: each category's hours + Free). Memoized so the 1s timer
+  // tick that grows the live "pending" block doesn't rebuild this O(buckets×cats) set.
+  const barRows = useMemo(() => {
+    const capacityFor = (iso: string) => {
+      if (!isYear) return DAY_HOURS;
+      const [y, m] = iso.split('-').map(Number);
+      return DAY_HOURS * new Date(Date.UTC(y, m, 0)).getUTCDate(); // m is 1-based → day 0 = last day of month
+    };
+    return (
+      daily?.data.map((d) => {
+        const row: Record<string, number | string> = { date: d.date };
+        let sum = 0;
+        for (const c of categories) {
+          const h = d.by_category[c] ?? 0;
+          row[c] = h;
+          sum += h;
+        }
+        row.Free = Math.round(Math.max(capacityFor(d.date) - sum, 0) * 10) / 10;
+        return row;
+      }) ?? []
+    );
+  }, [daily, categories, isYear]);
   // Allocation-section label from the real bucket count: 7 for a week, the month's
   // actual length (e.g. July → "Next 31 days"), 12 for a year. Falls back to the
   // static label until data loads.
@@ -225,32 +230,38 @@ export default function Overview() {
       ? { date: todayLocal, category: activeTimer.category, hours: pendingHours, running: activeTimer.startedAt !== null }
       : null;
 
-  // Stack recurring routines (sleep, meals) together at the bottom of each bar so
-  // the variable, one-off categories sit on top — making day-to-day changes obvious.
-  const RECURRING_STACK_PRIORITY = ['Breakfast', 'Lunch', 'Dinner', 'Sleep'];
-  const recurringSet = new Set(recurringCats);
-  const recurringInChart = categories
-    .filter((c) => recurringSet.has(c))
-    .sort((a, b) => {
-      const ia = RECURRING_STACK_PRIORITY.indexOf(a);
-      const ib = RECURRING_STACK_PRIORITY.indexOf(b);
-      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
-    });
-  const variableInChart = categories.filter((c) => !recurringSet.has(c));
-  const stackCategories = [...recurringInChart, ...variableInChart];
+  // Recurring routines stacked at the bottom, variable categories on top (so day-to-day
+  // changes stand out). Memoized so the timer tick doesn't re-sort.
+  const stackCategories = useMemo(() => {
+    const RECURRING_STACK_PRIORITY = ['Breakfast', 'Lunch', 'Dinner', 'Sleep'];
+    const recurringSet = new Set(recurringCats);
+    const recurringInChart = categories
+      .filter((c) => recurringSet.has(c))
+      .sort((a, b) => {
+        const ia = RECURRING_STACK_PRIORITY.indexOf(a);
+        const ib = RECURRING_STACK_PRIORITY.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+      });
+    const variableInChart = categories.filter((c) => !recurringSet.has(c));
+    return [...recurringInChart, ...variableInChart];
+  }, [categories, recurringCats]);
 
   // Every category the user has touched or created, with a distinct color (overrides
   // win). Keys of `colors` are the registry — they include categories created in the
   // manage-categories modal that aren't used yet.
-  const allCategories = [
-    ...new Set([
-      ...categories,
-      ...(entries?.categories ?? []),
-      ...(budget?.categories.map((c) => c.category) ?? []),
-      ...Object.keys(colors),
-    ]),
-  ].sort();
-  const colorMap = buildColorMap(allCategories, colors);
+  const allCategories = useMemo(
+    () =>
+      [
+        ...new Set([
+          ...categories,
+          ...(entries?.categories ?? []),
+          ...(budget?.categories.map((c) => c.category) ?? []),
+          ...Object.keys(colors),
+        ]),
+      ].sort(),
+    [categories, entries, budget, colors],
+  );
+  const colorMap = useMemo(() => buildColorMap(allCategories, colors), [allCategories, colors]);
   const colorOf = (c: string) => colorMap[c] ?? colorForCategory(c, colors);
 
   // Hold the charts/entries until the color overrides and the full category set are

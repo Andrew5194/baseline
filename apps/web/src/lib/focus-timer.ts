@@ -73,11 +73,16 @@ export function useFocusTimer(): FocusTimerState | null {
   useEffect(() => {
     const sync = () => setState(readTimer());
     sync();
+    // Cross-tab: react only to our key (or a full clear → key null). Other tabs' writes
+    // must not wake this hook. The in-tab EVT has no `key`, so it keeps `sync`.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === KEY || e.key === null) sync();
+    };
     window.addEventListener(EVT, sync);
-    window.addEventListener('storage', sync);
+    window.addEventListener('storage', onStorage);
     return () => {
       window.removeEventListener(EVT, sync);
-      window.removeEventListener('storage', sync);
+      window.removeEventListener('storage', onStorage);
     };
   }, []);
 
