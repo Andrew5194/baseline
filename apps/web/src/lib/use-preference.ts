@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from './api';
 
 // Live-sync channel so every mounted usePreference() consumer — and other tabs —
@@ -21,14 +21,22 @@ export function usePreference<T extends boolean | string | number = boolean>(
 ): [T, (v: T) => void, boolean] {
   const [value, setValue] = useState<T>(fallback);
   const [loaded, setLoaded] = useState(false);
+  // Number of PATCHes still in flight. While > 0 the optimistic value is the source
+  // of truth, so a /v1/me refetch must not overwrite it — otherwise a rapid burst of
+  // toggles can have an earlier write's refetch read the server before a later write
+  // commits, then revert the latest choice.
+  const pending = useRef(0);
 
   useEffect(() => {
     const load = () =>
       apiFetch<{ preferences?: Record<string, unknown> | null }>('/v1/me')
         .then((m) => {
-          const v = m?.preferences?.[key];
-          // Only accept a stored value whose type matches the fallback's.
-          setValue(typeof v === typeof fallback ? (v as T) : fallback);
+          // Don't clobber the optimistic value while a write is still settling.
+          if (pending.current === 0) {
+            const v = m?.preferences?.[key];
+            // Only accept a stored value whose type matches the fallback's.
+            setValue(typeof v === typeof fallback ? (v as T) : fallback);
+          }
           setLoaded(true);
         })
         .catch(() => setLoaded(true));
@@ -44,15 +52,23 @@ export function usePreference<T extends boolean | string | number = boolean>(
   const set = useCallback(
     (v: T) => {
       setValue(v); // optimistic
+      pending.current += 1;
       apiFetch('/v1/me', { method: 'PATCH', body: JSON.stringify({ preferences: { [key]: v } }) })
         .then(() => {
-          // Nudge this tab's other consumers + other tabs to re-sync from the server.
-          try {
-            window.localStorage.setItem(BUMP_KEY, String(Date.now()));
-          } catch {}
-          window.dispatchEvent(new Event(EVT));
+          pending.current -= 1;
+          // Only re-broadcast once the LAST in-flight write has settled — so the
+          // refetch it triggers reads a fully-committed, consistent server state
+          // and can't revert a rapid sequence of toggles.
+          if (pending.current === 0) {
+            try {
+              window.localStorage.setItem(BUMP_KEY, String(Date.now()));
+            } catch {}
+            window.dispatchEvent(new Event(EVT));
+          }
         })
-        .catch(() => {});
+        .catch(() => {
+          pending.current -= 1;
+        });
     },
     [key],
   );
