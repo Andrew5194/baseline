@@ -16,6 +16,7 @@ import { useTimeUnit } from '../../../lib/use-time-unit';
 interface MetricValue {
   value: number | null;
   delta: number | null;
+  prev?: number | null; // the same metric over the matching elapsed slice of the prior period
   unit: string;
   expected?: number; // all-time per-bucket baseline (Baseline source only)
   expectedTotal?: number; // numerator behind the baseline (e.g. total tasks ever)
@@ -266,6 +267,7 @@ export default function Metrics() {
         <div className="mb-6">
           <ConsistencyScore
             activeDays={m?.[consistencyDef.metric]?.value ?? null}
+            priorActiveDays={m?.[consistencyDef.metric]?.prev ?? null}
             totalDays={elapsedDays}
             delta={m?.[consistencyDef.metric]?.delta ?? null}
             window={dataPeriod}

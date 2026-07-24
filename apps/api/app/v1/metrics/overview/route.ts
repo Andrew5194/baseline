@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
   const m = (fn: (e: typeof ei, s: Date, e2: Date, tz: string) => number | null) => {
     const curr = fn(ei, windowStart, currEnd, tz);
     const prev = fn(ei, prevStart, prevEnd, tz);
-    return { value: curr, delta: computeDelta(curr, prev) };
+    return { value: curr, delta: computeDelta(curr, prev), prev };
   };
 
   return NextResponse.json({

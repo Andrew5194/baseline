@@ -5,6 +5,7 @@ import { Tooltip } from './tooltip';
 
 interface ConsistencyScoreProps {
   activeDays: number | null;
+  priorActiveDays?: number | null; // active days by the same point in the prior period
   totalDays: number;
   delta: number | null;
   window: string;
@@ -16,7 +17,7 @@ const toneColor: Record<'up' | 'down' | 'neutral', string> = {
   neutral: 'text-neutral-400',
 };
 
-export function ConsistencyScore({ activeDays, totalDays, delta, window }: ConsistencyScoreProps) {
+export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta, window }: ConsistencyScoreProps) {
   const score = activeDays !== null && totalDays > 0 ? Math.round((activeDays / totalDays) * 100) : null;
 
   const radius = 54;
@@ -27,6 +28,13 @@ export function ConsistencyScore({ activeDays, totalDays, delta, window }: Consi
   const f = formatDelta(delta, activeDays);
   const deltaColor = toneColor[f.tone];
   const deltaText = `${f.text} vs prior ${window}`;
+
+  // Spell out exactly what's being compared: this period's elapsed slice against the
+  // prior period's matching slice, with the active-day counts on both sides.
+  const deltaTip =
+    activeDays !== null && priorActiveDays !== null && priorActiveDays !== undefined
+      ? `${activeDays} active ${activeDays === 1 ? 'day' : 'days'} out of ${totalDays} so far this ${window}, compared to ${priorActiveDays} active ${priorActiveDays === 1 ? 'day' : 'days'} out of ${totalDays} for the same period last ${window}.`
+      : explainDelta(activeDays, delta, window, 'active days');
 
   const scoreColor = score === null ? '#a3a3a3' : score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
 
@@ -62,7 +70,7 @@ export function ConsistencyScore({ activeDays, totalDays, delta, window }: Consi
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
           {activeDays !== null ? activeDays : '—'} active days out of {totalDays} so far this {window}
         </p>
-        <Tooltip content={explainDelta(activeDays, delta, window, 'active days')}>
+        <Tooltip content={deltaTip}>
           <p className={`w-fit text-xs mt-2 ${deltaColor}`}>{deltaText}</p>
         </Tooltip>
       </div>
