@@ -294,7 +294,9 @@ export default function Goals() {
                 Completed ({completedTotal})
               </button>
               {showCompleted && (
-                <div className="space-y-2 mt-2">
+                // Bounded + internally scrollable so 50+ completed goals never push the
+                // page down — collapsed it's still a single line; expanded it caps here.
+                <div className="mt-2 max-h-96 space-y-2 overflow-y-auto overscroll-contain pr-1">
                   {completedSorted.map((g) => (
                     <GoalCard
                       key={g.id}
