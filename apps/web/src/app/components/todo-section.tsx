@@ -494,7 +494,7 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
         </div>
 
         {/* Add a task — for the selected day */}
-        <form onSubmit={add} className="flex items-center gap-2 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+        <form onSubmit={add} className="flex items-center gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
           <span className="w-4 h-4 rounded-[5px] border border-dashed border-neutral-300 dark:border-neutral-600 flex-shrink-0" />
           <input
             value={title}
