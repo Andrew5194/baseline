@@ -1,9 +1,12 @@
 name: Publish images
 
 # Publishes the open-core web + api images to Docker Hub so anyone can pull them.
-# Pre-1.0 flow: every push to main builds both images multi-arch (amd64 + arm64) and
-# pushes `latest` + `sha-<commit>`. Pushing a v* tag additionally stamps the semver
-# tags. workflow_dispatch is available for a manual run.
+# Pre-1.0 flow: every push to main builds both images (linux/amd64 — the deploy and
+# CI architecture) and pushes `latest` + `sha-<commit>`. Pushing a v* tag additionally
+# stamps the semver tags. workflow_dispatch is available for a manual run.
+#
+# amd64 only on purpose: emulating arm64 via QEMU crashes Next's native SWC compiler
+# (SIGILL) during `next build`. ARM users can still run the amd64 image emulated.
 
 on:
   push:
@@ -28,10 +31,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # QEMU lets an amd64 runner emulate arm64 so we can build both architectures.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -58,7 +57,7 @@ jobs:
         with:
           context: .
           file: ./apps/${{ matrix.app }}/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
