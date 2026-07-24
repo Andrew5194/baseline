@@ -6,18 +6,17 @@
 // Two readability rules, since raw percentages mislead at the extremes:
 //   • Large positive changes read as a multiplier ("6×") instead of a giant percent
 //     ("500%") — clearer when the prior period was tiny.
-//   • A metric that's nonzero now but had no prior activity reads as "new" rather
-//     than a suppressed "—" (you can't take a percentage of zero).
+//   • When there's no comparable prior value (delta null — e.g. the prior period was
+//     zero), there's no percentage to compute, so it renders a neutral "—".
 // Negative deltas are bounded at −100% (counts can't drop below zero), so they
 // always render as a plain percentage.
 export function formatDelta(
   delta: number | null,
   value: number | null,
 ): { text: string; tone: 'up' | 'down' | 'neutral' } {
-  if (delta === null) {
-    if (value !== null && value > 0) return { text: 'new', tone: 'up' };
-    return { text: '—', tone: 'neutral' };
-  }
+  // No comparable prior value → no % to show, so render a neutral dash (consistent
+  // with how other "nothing to compute" states read across the app).
+  if (delta === null) return { text: '—', tone: 'neutral' };
   if (delta === 0) return { text: '0%', tone: 'neutral' };
   const tone = delta > 0 ? 'up' : 'down';
   const arrow = delta > 0 ? '▲' : '▼';
@@ -49,7 +48,7 @@ export function explainDelta(
   if (current === null) return `No data yet this ${w}.`;
   if (prev === null || prev === undefined) return `Nothing in the matching span last ${w} to compare against.`;
   if (prev === 0) {
-    return `${fmt(current)}${u} so far this ${w} vs 0 by the same point last ${w} — new, so there's no prior value to take a % of.`;
+    return `${fmt(current)}${u} so far this ${w} vs 0 by the same point last ${w} — no prior value to calculate a % from.`;
   }
   const pct = Math.round(((current - prev) / prev) * 100);
   const signed = `${pct > 0 ? '+' : ''}${pct}%`;
