@@ -11,6 +11,7 @@ import { prefetchTaskEntries } from '../../lib/task-entries';
 import { useFocusTimer, updateTimer, startTimer } from '../../lib/focus-timer';
 import { useTimeUnit } from '../../lib/use-time-unit';
 import { DayJournal } from './day-journal';
+import { Modal } from './modal';
 import { useTimezone } from '../../lib/use-timezone';
 import { goalColor } from '../../lib/goal-colors';
 import { PRESET_CATEGORIES, buildColorMap, colorForCategory } from '../../lib/categories';
@@ -27,6 +28,7 @@ interface Todo {
   goal_color: string | null;
   goal_category: string | null;
   category: string | null;
+  sessions: number; // count of logged time sessions linked to this task
 }
 interface GoalOpt {
   id: string;
@@ -61,6 +63,8 @@ interface DayItem {
   goalColor?: string | null;
   goalCategory?: string | null;
   category?: string | null;
+  date?: string; // the scheduled day (one-off tasks only)
+  sessions?: number; // linked time sessions (one-off tasks only)
 }
 
 const weekdayOf = (date: string): number => {
@@ -92,6 +96,52 @@ const Check = () => (
   </svg>
 );
 
+// A small dialog to reschedule a one-off task to another day.
+function MoveTaskModal({
+  item,
+  onClose,
+  onMove,
+}: {
+  item: DayItem;
+  onClose: () => void;
+  onMove: (item: DayItem, date: string) => void;
+}) {
+  const [date, setDate] = useState(item.date ?? '');
+  return (
+    <Modal onClose={onClose}>
+      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xl p-6">
+        <h2 className="text-base font-semibold tracking-tight text-neutral-900 dark:text-white">Move task</h2>
+        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400 truncate">“{item.title}”</p>
+        <label className="block mt-4 mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          New date
+        </label>
+        <input
+          type="date"
+          autoFocus
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+        />
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onMove(item, date)}
+            disabled={!date || date === item.date}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Move
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function TodoSection({ countdown = false }: { countdown?: boolean } = {}) {
   const tz = useTimezone();
   const [unit] = useTimeUnit();
@@ -106,6 +156,7 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const [timerTask, setTimerTask] = useState<string | null>(null);
+  const [movingTask, setMovingTask] = useState<DayItem | null>(null);
   const [knownCats, setKnownCats] = useState<string[]>([]);
   const [catColors, setCatColors] = useState<Record<string, string>>({});
   // A task id from a `?task=` deep link (e.g. the "go to task" link on a time entry).
@@ -335,6 +386,18 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     load();
   }
 
+  // Reschedule a one-off task to another day. Optimistic: update its date so it
+  // leaves the current day-bucket immediately; load() reconciles + refreshes the
+  // heatmap. Only offered for tasks with no linked time sessions.
+  async function moveTask(item: DayItem, newDate: string) {
+    setMovingTask(null);
+    if (!newDate || newDate === item.date) return;
+    setTodos((ts) => ts?.map((t) => (t.id === item.id ? { ...t, date: newDate } : t)) ?? null);
+    await apiFetch(`/v1/todos/${item.id}`, { method: 'PATCH', body: JSON.stringify({ date: newDate }) }).catch(console.error);
+    notifyGoals();
+    load();
+  }
+
   // Categories offered in the label picker: presets + categories on goals + any the
   // user has created/used (from the canonical /v1/categories list).
   const categories = [
@@ -378,6 +441,8 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
         goalColor: t.goal_id ? goalColor(t.goal_color, t.goal_id) : null,
         goalCategory: t.goal_category,
         category: t.category,
+        date: t.date,
+        sessions: t.sessions,
       })),
   ].sort((a, b) => Number(a.done) - Number(b.done));
 
@@ -533,6 +598,27 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
                           ),
                           onClick: () => setTimerTask(timerTask === t.id ? null : t.id),
                         },
+                        // One-off tasks can be rescheduled — but only when no time has
+                        // been logged against them, so time-allocation history is never
+                        // shifted. Recurring tasks are weekday-based, so no "move".
+                        ...(t.recurring
+                          ? []
+                          : [
+                              {
+                                label: 'Move to date',
+                                disabled: (t.sessions ?? 0) > 0,
+                                title:
+                                  (t.sessions ?? 0) > 0
+                                    ? 'This task can’t be moved because it has linked time sessions'
+                                    : undefined,
+                                icon: (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                ),
+                                onClick: () => setMovingTask(t),
+                              },
+                            ]),
                         {
                           label: t.recurring ? 'Delete recurring' : 'Delete task',
                           danger: true,
@@ -575,6 +661,8 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     </section>
 
     <DayJournal day={day} dayLabel={fullDayLabel(day)} />
+
+    {movingTask && <MoveTaskModal item={movingTask} onClose={() => setMovingTask(null)} onMove={moveTask} />}
     </>
   );
 }

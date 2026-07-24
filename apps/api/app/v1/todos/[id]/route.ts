@@ -11,14 +11,14 @@ export async function PATCH(
   const userId = await getCurrentUserId();
   const { id } = await params;
 
-  let body: { done?: boolean; title?: string; goal_id?: string | null; category?: string | null };
+  let body: { done?: boolean; title?: string; goal_id?: string | null; category?: string | null; date?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON', code: 'INVALID_BODY' }, { status: 400 });
   }
 
-  const updates: { done?: boolean; completedAt?: Date | null; title?: string; goalId?: string | null; categoryId?: string | null } = {};
+  const updates: { done?: boolean; completedAt?: Date | null; title?: string; goalId?: string | null; categoryId?: string | null; date?: string } = {};
   if (typeof body.done === 'boolean') {
     updates.done = body.done;
     updates.completedAt = body.done ? new Date() : null;
@@ -43,6 +43,15 @@ export async function PATCH(
     const cid = await resolveCategoryId(userId, name);
     updates.categoryId = cid;
     if (cid) updates.goalId = null;
+  }
+  // date (YYYY-MM-DD) reschedules the task to a different local day. The client only
+  // offers this for tasks with no logged time sessions, so moving never orphans or
+  // shifts time-allocation history (which is keyed on the entry's own timestamp).
+  if (typeof body.date === 'string') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
+      return NextResponse.json({ error: 'date must be YYYY-MM-DD', code: 'INVALID_DATE' }, { status: 400 });
+    }
+    updates.date = body.date;
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'nothing to update', code: 'INVALID_BODY' }, { status: 400 });
