@@ -44,12 +44,16 @@ export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
   const tz = await getUserTimezone(userId);
   const params = request.nextUrl.searchParams;
+  const metricsParam = params.get('metrics');
   const metric = params.get('metric');
   const periodParam = params.get('period');
   // bucket=day → daily (heatmap); absent → the period's natural buckets (bar chart).
   const bucket = params.get('bucket');
 
-  if (!metric || !METRIC_FNS[metric]) {
+  // One metric (`metric=`) or a batch (`metrics=a,b,c`): the batch runs the single
+  // events query once and returns every series, saving one request per tile.
+  const requested = metricsParam ? metricsParam.split(',').filter(Boolean) : metric ? [metric] : [];
+  if (requested.length === 0 || requested.some((mk) => !METRIC_FNS[mk])) {
     return NextResponse.json({ error: 'Invalid metric', code: 'INVALID_METRIC' }, { status: 400 });
   }
 
@@ -121,11 +125,17 @@ export async function GET(request: NextRequest) {
     payload: r.payload as Record<string, unknown> | null,
   }));
 
-  const metricFn = METRIC_FNS[metric];
-  const data = buckets.map((bk) => ({
-    date: dayKeyInTz(bk.start, tz),
-    value: metricFn(eventInputs, bk.start, bk.end, tz) ?? 0,
-  }));
+  const series: Record<string, Array<{ date: string; value: number }>> = {};
+  for (const mk of requested) {
+    const fn = METRIC_FNS[mk];
+    series[mk] = buckets.map((bk) => ({
+      date: dayKeyInTz(bk.start, tz),
+      value: fn(eventInputs, bk.start, bk.end, tz) ?? 0,
+    }));
+  }
 
-  return NextResponse.json({ metric, period: label, window: label, granularity, data });
+  if (metricsParam) {
+    return NextResponse.json({ period: label, window: label, granularity, series });
+  }
+  return NextResponse.json({ metric: requested[0], period: label, window: label, granularity, data: series[requested[0]] });
 }

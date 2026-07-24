@@ -27,8 +27,8 @@ interface OverviewResponse {
   since?: string; // account-creation day the Baseline average is measured from
   metrics: Record<string, MetricValue>;
 }
-interface TimeseriesResponse {
-  data: Array<{ date: string; value: number }>;
+interface TimeseriesBatchResponse {
+  series: Record<string, Array<{ date: string; value: number }>>;
 }
 
 // Every metric, tagged with its source. The source filter is derived from these, so
@@ -69,8 +69,8 @@ const SOURCES = [...new Set(['baseline', ...METRICS.map((m) => m.source)])];
 const SOURCE_BASE: Record<string, string> = { google_calendar: '/v1/metrics/calendar', baseline: '/v1/metrics/baseline' };
 const overviewUrl = (source: string, period: string, offset: number) =>
   `${SOURCE_BASE[source] ?? '/v1/metrics'}/overview?period=${period}&offset=${offset}`;
-const timeseriesUrl = (source: string, metric: string, period: string, offset: number) =>
-  `${SOURCE_BASE[source] ?? '/v1/metrics'}/timeseries?metric=${metric}&period=${period}&offset=${offset}`;
+const timeseriesBatchUrl = (source: string, metrics: string[], period: string, offset: number) =>
+  `${SOURCE_BASE[source] ?? '/v1/metrics'}/timeseries?metrics=${metrics.join(',')}&period=${period}&offset=${offset}`;
 
 const PERIOD_LABEL: Record<Period, string> = { week: 'this week', month: 'this month', year: 'this year' };
 
@@ -129,27 +129,32 @@ export default function Metrics() {
   const [loading, setLoading] = useState(true);
   const [inspect, setInspect] = useState<{ since: string; until: string; title: string; tab: string; source: string; metric?: string; label?: string } | null>(null);
 
-  // Prefetch every source's overview + each metric's series on period change, so
-  // switching tiles/sources is instant. Resilient: a source that isn't connected
+  // Prefetch every source's overview + all its metric series on period change, so
+  // switching tiles/sources is instant. Series are fetched ONE request per source
+  // (metrics=a,b,c) rather than one per tile. Resilient: a source that isn't connected
   // (or errors) just contributes empty data instead of failing the whole load.
   useEffect(() => {
     setLoading(true);
     const empty: OverviewResponse = { period, metrics: {} };
+    type Pair = [string, Array<{ date: string; value: number }>];
+    // Group tiles by source so each source's series load in a single batched request.
+    const bySource = new Map<string, typeof METRICS>();
+    for (const d of METRICS) bySource.set(d.source, [...(bySource.get(d.source) ?? []), d]);
     Promise.all([
       apiFetch<OverviewResponse>(overviewUrl('github', period, offset)).catch(() => empty),
       apiFetch<OverviewResponse>(overviewUrl('google_calendar', period, offset)).catch(() => empty),
       apiFetch<OverviewResponse>(overviewUrl('baseline', period, offset)).catch(() => empty),
       Promise.all(
-        METRICS.map((d) =>
-          apiFetch<TimeseriesResponse>(timeseriesUrl(d.source, d.metric, period, offset))
-            .then((r) => [d.key, r.data] as [string, Array<{ date: string; value: number }>])
-            .catch(() => [d.key, []] as [string, Array<{ date: string; value: number }>]),
+        [...bySource.entries()].map(([src, list]) =>
+          apiFetch<TimeseriesBatchResponse>(timeseriesBatchUrl(src, list.map((d) => d.metric), period, offset))
+            .then((r) => list.map((d) => [d.key, r.series?.[d.metric] ?? []] as Pair))
+            .catch(() => list.map((d) => [d.key, []] as Pair)),
         ),
       ),
     ])
-      .then(([gh, cal, base, entries]) => {
+      .then(([gh, cal, base, seriesGroups]) => {
         setOverview({ period: gh.period ?? period, since: base.since, metrics: { ...gh.metrics, ...cal.metrics, ...base.metrics } });
-        setSeriesMap(Object.fromEntries(entries));
+        setSeriesMap(Object.fromEntries(seriesGroups.flat()));
       })
       .catch(console.error)
       .finally(() => setLoading(false));
