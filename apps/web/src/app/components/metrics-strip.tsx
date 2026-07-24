@@ -1,6 +1,7 @@
 'use client';
 
 import { formatDelta, explainDelta } from '../../lib/format-delta';
+import { Tooltip } from './tooltip';
 
 export interface StripStat {
   key: string;
@@ -50,12 +51,9 @@ export function MetricsStrip({ stats, activeKey, onSelect, accent = '#10b981' }:
               const cur = Number.isFinite(num) ? num : null;
               const f = formatDelta(s.delta ?? null, cur);
               return (
-                <p
-                  className={`mt-0.5 text-[11px] tabular-nums ${toneColor[f.tone]} cursor-help`}
-                  title={explainDelta(cur, s.delta ?? null, 'period', typeof s.sub === 'string' ? s.sub : undefined)}
-                >
-                  {f.text}
-                </p>
+                <Tooltip content={explainDelta(cur, s.delta ?? null, 'period', typeof s.sub === 'string' ? s.sub : undefined)}>
+                  <p className={`mt-0.5 text-[11px] tabular-nums ${toneColor[f.tone]}`}>{f.text}</p>
+                </Tooltip>
               );
             })()}
             {active && <span className="absolute left-0 right-0 bottom-0 h-[2px]" style={{ backgroundColor: accent }} />}
