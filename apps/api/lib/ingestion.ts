@@ -40,12 +40,10 @@ export async function syncIntegration(integrationId: string): Promise<number> {
     throw new Error('No GitHub username on integration');
   }
 
-  // Incremental window. We re-scan an overlap before lastSyncedAt rather than
-  // trusting the cursor exactly: GitHub's contributionsCollection graph (used to
-  // enumerate repos in client.ts) lags behind freshly-pushed commits, so a narrow
-  // "since last run" window silently drops just-pushed events — and because the
-  // cursor advances to now() unconditionally, they were never retried. The overlap
-  // makes each run self-healing; onConflictDoNothing dedupes the re-scanned rows.
+  // Incremental window with an overlap re-scan before lastSyncedAt: GitHub's
+  // contributionsCollection graph lags freshly-pushed commits, so a narrow "since
+  // last run" window drops them — and the cursor advances to now() regardless, so
+  // they'd never be retried. Overlap self-heals; onConflictDoNothing dedupes.
   const FULL_BACKFILL_MS = 90 * 24 * 60 * 60 * 1000;
   const OVERLAP_MS = 3 * 24 * 60 * 60 * 1000;
   const since = integration.lastSyncedAt
@@ -202,10 +200,9 @@ async function syncGoogleCalendar(integration: Integration): Promise<number> {
 export interface SyncBatchOptions {
   /** Max integrations synced at once. Keeps DB/GitHub load bounded. */
   concurrency?: number;
-  /** Wall-clock ceiling for the whole pass. Must stay under the Cloud Run
-   *  request timeout (300s) so the batch returns cleanly instead of being killed
-   *  mid-flight. Integrations not reached before the deadline are deferred to the
-   *  next tick (and logged, never silently dropped). */
+  /** Wall-clock ceiling for the pass. Must stay under Cloud Run's 300s request
+   *  timeout so the batch returns cleanly instead of being killed mid-flight.
+   *  Integrations past the deadline are deferred to the next tick (and logged). */
   timeBudgetMs?: number;
 }
 
@@ -218,13 +215,11 @@ export interface SyncBatchResult {
   durationMs: number;
 }
 
-// Sync every connected integration through a bounded worker pool with a wall-clock
-// budget. Ordered oldest-synced-first (NULLS FIRST = never-synced go first) so that
-// when the budget is exhausted it's the *freshest* integrations that get deferred —
-// deferral rotates fairly instead of permanently starving the tail of the list.
-// Never throws: per-integration failures are logged inside syncIntegration and only
-// counted here. This is invoked by POST /v1/internal/cron on the worker service,
-// not from an in-process timer.
+// Sync every connected integration through a bounded worker pool under a wall-clock
+// budget. Oldest-synced-first (NULLS FIRST = never-synced first) so exhausting the
+// budget defers the *freshest* integrations — rotating fairly instead of starving the
+// tail. Never throws: per-integration failures are logged in syncIntegration, counted
+// here. Invoked by POST /v1/internal/cron on the worker, not an in-process timer.
 export async function runSyncBatch(opts: SyncBatchOptions = {}): Promise<SyncBatchResult> {
   const concurrency = Math.max(1, opts.concurrency ?? 3);
   const timeBudgetMs = opts.timeBudgetMs ?? 4 * 60 * 1000;

@@ -51,9 +51,8 @@ export function CompletionHeatmap({
   onPrevMonth?: () => void;
   onNextMonth?: () => void;
   canNextMonth?: boolean;
-  // The active (selected) day's stat, shown in the header regardless of which month is
-  // on screen — so browsing to another month doesn't change the headline until you
-  // pick a day there. A hovered cell temporarily overrides it.
+  // Active day's stat, shown in the header regardless of which month is on screen — so
+  // browsing months doesn't change the headline until you pick a day. Hover overrides it.
   focusStat?: HeatmapCell | null;
 }) {
   const tz = useTimezone();

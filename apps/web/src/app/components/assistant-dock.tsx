@@ -7,9 +7,8 @@ import { AssistantPanel, BaselineAIMark } from './assistant-panel';
 const WIDTH = 380; // px
 const STORAGE_KEY = 'baseline.assistant.open';
 
-// Global, dockable AI assistant. Slides in/out from the right edge on every page.
-// Mounted in the dashboard layout, so its open state and conversation persist as
-// the user navigates between pages.
+// Global, dockable AI assistant sliding in from the right edge. Mounted in the
+// dashboard layout, so open state and conversation persist across navigation.
 export function AssistantDock() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -24,8 +23,8 @@ export function AssistantDock() {
     if (mounted) window.localStorage.setItem(STORAGE_KEY, open ? '1' : '0');
   }, [open, mounted]);
 
-  // Close when clicking anywhere outside the drawer. Only armed while open; the
-  // launcher is pointer-events-none when open, so it can't re-trigger.
+  // Close on outside click. Only armed while open; the launcher is
+  // pointer-events-none when open, so it can't re-trigger.
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
@@ -43,7 +42,7 @@ export function AssistantDock() {
 
   return (
     <>
-      {/* Launcher — top-right button matching the app's UI; hides while the dock is open */}
+      {/* Launcher — top-right button; hides while the dock is open */}
       <button
         onClick={() => setOpen(true)}
         aria-label="Open Baseline AI"

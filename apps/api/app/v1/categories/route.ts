@@ -15,10 +15,9 @@ import { getCurrentUserId } from '../../../lib/user';
 
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-// GET /v1/categories — the user's categories (rows in the categories table), each
-// with its color (from category_colors, keyed by name) and a usage `count`: how
-// many goals/tasks/recurring-allocations/time-entries reference it. `in_use` =
-// count > 0. Time entries carry the category name in their event payload.
+// GET /v1/categories — user's categories, each with its color (from category_colors,
+// keyed by name) and a usage `count` of referencing goals/tasks/allocations/time-entries.
+// `in_use` = count > 0. Time entries carry the category name in their event payload.
 export async function GET() {
   const userId = await getCurrentUserId();
 
@@ -139,8 +138,8 @@ export async function DELETE(request: NextRequest) {
     db.select({ n: count() }).from(events).where(payloadMatch),
   ]);
 
-  // Strip the category from time-entry payloads, drop its color, then delete the
-  // row (FK cascades set null onto goals/tasks/allocations).
+  // Strip category from time-entry payloads, drop its color, then delete the row
+  // (FK cascade sets null on goals/tasks/allocations).
   await db.update(events).set({ payload: sql`${events.payload} - 'category'` }).where(payloadMatch);
   await db.delete(categoryColors).where(and(eq(categoryColors.userId, userId), eq(categoryColors.category, cat.name)));
   await db.delete(categories).where(and(eq(categories.userId, userId), eq(categories.id, id)));
@@ -198,8 +197,8 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  // Rename the row — goals/tasks/allocations follow automatically via the FK.
-  // The name-keyed color row and time-entry payloads are updated to match.
+  // Rename the row — goals/tasks/allocations follow via the FK. The name-keyed color
+  // row and time-entry payloads are updated to match.
   await db.update(categories).set({ name }).where(and(eq(categories.userId, userId), eq(categories.id, id)));
   await db.update(categoryColors).set({ category: name }).where(and(eq(categoryColors.userId, userId), eq(categoryColors.category, cat.name)));
   await db

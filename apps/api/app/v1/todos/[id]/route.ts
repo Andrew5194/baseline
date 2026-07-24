@@ -44,9 +44,9 @@ export async function PATCH(
     updates.categoryId = cid;
     if (cid) updates.goalId = null;
   }
-  // date (YYYY-MM-DD) reschedules the task to a different local day. The client only
-  // offers this for tasks with no logged time sessions, so moving never orphans or
-  // shifts time-allocation history (which is keyed on the entry's own timestamp).
+  // date (YYYY-MM-DD) reschedules the task to a different local day. Client only offers
+  // this for tasks with no logged time, so moving never orphans/shifts time-allocation
+  // history (which is keyed on the entry's own timestamp).
   if (typeof body.date === 'string') {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
       return NextResponse.json({ error: 'date must be YYYY-MM-DD', code: 'INVALID_DATE' }, { status: 400 });

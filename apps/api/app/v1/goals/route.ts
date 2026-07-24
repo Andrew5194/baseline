@@ -15,9 +15,8 @@ const goalCols = {
   createdAt: goals.createdAt,
 };
 
-// Tally tagged tasks (total + done) for a set of goal ids. Only queries the todos
-// tied to the goals actually being returned, so a page of completed goals doesn't
-// scan the user's whole todo table.
+// Tally tagged tasks (total + done) for a set of goal ids. Only scans todos tied to
+// the goals being returned, so a page of completed goals doesn't scan the whole table.
 async function taskCounts(userId: string, ids: string[]): Promise<Map<string, { total: number; done: number }>> {
   const counts = new Map<string, { total: number; done: number }>();
   if (ids.length === 0) return counts;
@@ -39,9 +38,8 @@ async function taskCounts(userId: string, ids: string[]): Promise<Map<string, { 
 //   (default)                        → active (open) goals in manual order + { completed_count }
 //   ?status=completed&limit=&offset= → a page of completed goals, newest completion
 //                                      first, + { has_more }
-// Completed goals are paginated and lazy-loaded (the client fetches them only when
-// the "Completed" section is expanded), so the Goals page stays fast no matter how
-// many goals have been finished.
+// Completed goals are paginated + lazy-loaded (fetched only when the "Completed"
+// section expands) so the Goals page stays fast regardless of history size.
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
   const { searchParams } = new URL(request.url);
@@ -67,8 +65,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data, has_more: hasMore });
   }
 
-  // Default: active goals only, in manual order, plus a count of completed ones so
-  // the "Completed (N)" label is accurate without loading the whole list.
+  // Active goals in manual order, plus a completed count so "Completed (N)" is
+  // accurate without loading the whole list.
   const rows = await db
     .select(goalCols)
     .from(goals)

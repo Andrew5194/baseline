@@ -101,15 +101,14 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
   }, [target]);
   const progress = progressRef.current;
 
-  // Hiding recurring reframes the donut around free time: the pool shrinks from the
-  // full budget to `freeBudget` (budget minus routines), recurring slices shrink to
-  // 0, and "Untracked" is what's left of that pool after the non-recurring tracked
-  // work. Driven by `progress` (0..1) for a smooth tween.
+  // Hiding recurring reframes the donut around free time: pool shrinks to `freeBudget`
+  // (budget minus routines), recurring slices shrink to 0, "Untracked" is the rest.
+  // Driven by `progress` (0..1) for a smooth tween.
   const recurringTotal = Math.round(effCategories.filter((c) => recurringSet.has(c.category)).reduce((s, c) => s + c.hours, 0) * 10) / 10;
   const freeBudget = budget - recurringTotal * progress;
-  // Keep these unrounded so a running timer ticks them up smoothly at the displayed
-  // unit's precision — fmtDuration rounds to two decimals of min/hr/day. Rounding to
-  // hundredths-of-an-hour here would make minutes jump in coarse 0.6-min steps.
+  // Keep unrounded so a running timer ticks smoothly at the display unit's precision
+  // (fmtDuration rounds later). Rounding to hundredths-of-an-hour here makes minutes
+  // jump in coarse 0.6-min steps.
   const displayTracked = effTracked - recurringTotal * progress;
   const displayFree = freeBudget - displayTracked;
   const slicePct = (hours: number) => (freeBudget > 0 ? Math.round((hours / freeBudget) * 1000) / 10 : 0);
@@ -141,11 +140,10 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
   const freePct = slicePct(displayFree);
   const activeSlice = slices.find((s) => s.name === active) ?? null;
 
-  // Floor every slice at a fixed angular size — the size of a ~1.2h slice in the month
-  // view (≈0.58° of the ring) — so a small category reads as the same fine line in
-  // week, month, AND year. Without it, tiny year categories (a few hours of the
-  // ~8,760h budget) are sub-pixel and vanish. `drawValue` only affects rendering — the
-  // center figure, tooltips, and legend still use the real hours; Free absorbs the gap.
+  // Floor every slice at a fixed angular size (~0.58° of the ring) so a small category
+  // reads the same in week, month, AND year — without it, tiny year categories go
+  // sub-pixel and vanish. `drawValue` is render-only; center figure, tooltips, and
+  // legend use real hours, and Free absorbs the gap.
   const realTotal = slices.reduce((sum, s) => sum + s.value, 0);
   const minSlice = realTotal > 0 ? realTotal * 0.0016 : 0;
   const boost = slices.reduce((sum, s) => (s.free ? sum : sum + Math.max(0, minSlice - s.value)), 0);

@@ -4,9 +4,8 @@ import { eq, and, lt, gte, desc } from 'drizzle-orm';
 import { zonedCivilToUtc } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
 
-// A since/until param. A date-only 'YYYY-MM-DD' is resolved to that calendar day's
-// start in the user's timezone (so day windows match the dashboard's local-day
-// bucketing); a full ISO timestamp is used as-is. Returns null on a bad value.
+// A since/until param. Date-only 'YYYY-MM-DD' resolves to that day's start in the user's
+// tz (so windows match the dashboard's local-day bucketing); full ISO used as-is; null if bad.
 function parseBoundary(v: string, tz: string): Date | null {
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
     const [y, mo, d] = v.split('-').map(Number);

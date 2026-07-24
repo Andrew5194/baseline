@@ -18,15 +18,15 @@ interface TaskGoalTagProps {
   goalTitle: string | null;
   goalColor: string | null; // effective color of the tagged goal
   category: string | null; // directly-tagged category (when not tagged to a goal)
-  // Resolves a category to its registry color (overrides → preset → palette). Falls
-  // back to the plain palette if not provided.
+  // Resolves a category to its registry color (overrides → preset → palette);
+  // falls back to the plain palette if omitted.
   categoryColorOf?: (cat: string) => string;
   onChange: (sel: { goalId: string | null; category: string | null }) => void;
 }
 
-// A task's label. It can be tagged either to a goal (shown in the goal's color) or
-// directly to a category — the menu lists both as separate sections. Untagged reads
-// "Uncategorized". The menu renders in a portal so it isn't clipped by overflow.
+// A task's label: tagged to a goal (in the goal's color) or directly to a category —
+// the menu lists both as sections; untagged reads "Uncategorized". Rendered in a
+// portal so overflow doesn't clip it.
 export function TaskGoalTag({ goals, categories, value, goalTitle, goalColor, category, categoryColorOf = colorForCategory, onChange }: TaskGoalTagProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number } | null>(null);
@@ -40,8 +40,8 @@ export function TaskGoalTag({ goals, categories, value, goalTitle, goalColor, ca
       if (menuRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
-    // Close when the page scrolls (the menu is position:fixed to the button), but
-    // NOT when scrolling inside the menu's own list.
+    // Close on page scroll (menu is position:fixed to the button), but not when
+    // scrolling inside the menu's own list.
     const onScroll = (e: Event) => {
       if (menuRef.current?.contains(e.target as Node)) return;
       setOpen(false);
@@ -68,8 +68,8 @@ export function TaskGoalTag({ goals, categories, value, goalTitle, goalColor, ca
       const right = window.innerWidth - r.right;
       const spaceBelow = window.innerHeight - r.bottom - margin;
       const spaceAbove = r.top - margin;
-      // Open below by default; flip above when there's more room there. Either way
-      // the menu is capped to the available space so its list scrolls inside.
+      // Open below by default; flip above when there's more room. Either way the menu
+      // is capped to available space so its list scrolls inside.
       if (spaceBelow >= 220 || spaceBelow >= spaceAbove) {
         setPos({ top: r.bottom + 4, right, maxHeight: Math.max(160, spaceBelow) });
       } else {

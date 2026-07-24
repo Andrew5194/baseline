@@ -34,8 +34,8 @@ interface AddTimeEntryFormProps {
   knownCategories: string[];
   onClose: () => void;
   onSuccess: () => void;
-  // The user's resolved timezone, passed in so the date prefill never races the
-  // async timezone hook (which would briefly resolve to UTC and shift the day).
+  // Resolved timezone passed in so the date prefill doesn't race the async tz hook
+  // (which briefly resolves to UTC and shifts the day).
   tz: string;
   // When set, the form edits this entry (PUT) instead of creating one (POST).
   entry?: EditableEntry | null;
@@ -46,8 +46,8 @@ interface AddTimeEntryFormProps {
 const CUSTOM = '__custom__';
 const inputClass =
   'w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500';
-// Tighter font/padding so a full datetime value sits flush beside the native
-// calendar icon in a half-width field.
+// Tighter font/padding so a full datetime value fits beside the native calendar
+// icon in a half-width field.
 const dtInputClass =
   'w-full px-2 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500';
 
@@ -63,8 +63,8 @@ export function AddTimeEntryForm({ knownCategories, onClose, onSuccess, tz, entr
   const today = toLocalInput(now, tz).slice(0, 10);
 
   const [mode, setMode] = useState<'log' | 'timer'>('log');
-  // 'hours' = type the number of hours (default); 'range' = pick start/end and derive
-  // it. Editing a timer/range entry opens in range mode to match how it was logged.
+  // 'hours' = type hours (default); 'range' = pick start/end and derive them. Editing
+  // a timer/range entry opens in range mode to match how it was logged.
   const [inputMode, setInputMode] = useState<'range' | 'hours'>(entry?.timed ? 'range' : 'hours');
   const [from, setFrom] = useState(toLocalInput(initStart, tz));
   const [to, setTo] = useState(toLocalInput(initEnd, tz));
@@ -78,8 +78,8 @@ export function AddTimeEntryForm({ knownCategories, onClose, onSuccess, tz, entr
 
   const resolvedCategory = () => (category === CUSTOM ? customCategory.trim() : category);
 
-  // In range mode, hours are derived from the two wall-clocks (the difference is
-  // tz-agnostic, so parsing them as local is fine for the readout).
+  // Range mode derives hours from the two wall-clocks (the difference is tz-agnostic,
+  // so parsing as local is fine for the readout).
   const fromMs = Date.parse(from);
   const toMs = Date.parse(to);
   const validRange = !isNaN(fromMs) && !isNaN(toMs) && toMs > fromMs;

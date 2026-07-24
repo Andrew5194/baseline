@@ -27,10 +27,9 @@ type LinkedItem = {
 const inputClass =
   'w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500';
 
-// A modal to create categories and manage their colors. Categories are real rows
-// (seeded with defaults on signup); every one — default or custom — can be deleted.
-// Deleting uncategorizes anything linked to it (goals/tasks/allocations/time entries)
-// rather than removing those items.
+// Create categories and manage their colors. Categories are real rows (defaults
+// seeded on signup); any — default or custom — can be deleted. Deleting uncategorizes
+// linked items (goals/tasks/allocations/time entries) rather than removing them.
 export function ManageCategoriesModal({ onChange }: { onChange: () => void }) {
   const [cats, setCats] = useState<Cat[]>([]);
   const [newName, setNewName] = useState('');
@@ -58,8 +57,8 @@ export function ManageCategoriesModal({ onChange }: { onChange: () => void }) {
   useEffect(() => {
     load();
   }, [load]);
-  // Refresh when categories/colors change elsewhere on the same page (e.g. a
-  // recolor from the budget donut) so this panel's swatches don't go stale.
+  // Refresh when categories/colors change elsewhere on the page (e.g. a donut
+  // recolor) so this panel's swatches don't go stale.
   useEffect(() => {
     const onChanged = () => load();
     window.addEventListener('baseline:categories-changed', onChanged);
@@ -90,8 +89,8 @@ export function ManageCategoriesModal({ onChange }: { onChange: () => void }) {
       setError('That category already exists');
       return;
     }
-    // Optimistic: show the new name and close the editor immediately (mirrors the
-    // optimistic recolor above); reconcile via load(). Roll back on failure.
+    // Optimistic: show the new name and close the editor immediately; load()
+    // reconciles, roll back on failure.
     const prev = cats;
     setEditingId(null);
     setCats((list) => list.map((x) => (x.id === c.id ? { ...x, name } : x)));

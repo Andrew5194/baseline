@@ -197,8 +197,8 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
         .catch(() => {}),
     [],
   );
-  // The user's category color overrides — so category tags use the same colors as
-  // the donut/registry, not a stale palette guess.
+  // The user's category color overrides, so tags match the donut/registry rather
+  // than a stale palette guess.
   const loadCatColors = useCallback(
     () =>
       apiFetch<{ colors: Record<string, string> }>('/v1/category-colors')
@@ -212,16 +212,14 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     loadGoals();
     loadCategories();
     loadCatColors();
-    // A goal changed (created, completed, tagged, reordered…): the goal options for
-    // task tags may have changed, and a goal/task tag can introduce a new category —
-    // but category COLORS don't change on a goal edit, so don't refetch them here.
+    // A goal changed: refresh goal options and the category set (a tag can introduce a
+    // new category) — but category COLORS don't change on a goal edit, so skip those.
     const onGoals = () => {
       loadGoals();
       loadCategories();
     };
-    // A category's list or color actually changed (created/deleted/renamed/recolored):
-    // refresh the category set and its color overrides. TodoSection didn't react to
-    // this before, so recolors now update its task-tag colors live.
+    // A category changed (created/deleted/renamed/recolored): refresh the category set
+    // and its color overrides so task-tag colors update live.
     const onCategories = () => {
       loadCategories();
       loadCatColors();
@@ -238,8 +236,8 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     };
   }, [load, loadGoals, loadCategories, loadCatColors]);
 
-  // If a task's timer is running (e.g. started from the Overview), reveal that
-  // task's dropdown automatically when returning to this page.
+  // If a task's timer is running (e.g. started from the Overview), auto-reveal that
+  // task's dropdown when returning to this page.
   useEffect(() => {
     if (activeTimer?.taskId) setTimerTask(activeTimer.taskId);
   }, [activeTimer?.taskId]);
@@ -283,8 +281,7 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     const t = editDraft.trim();
     if (!t || t === item.title) return;
     const path = item.recurring ? `/v1/recurring-todos/${item.id}` : `/v1/todos/${item.id}`;
-    // Optimistic: show the new title immediately instead of reverting until the
-    // PATCH + reload land. Roll back on failure.
+    // Optimistic: show the new title immediately; roll back on failure.
     const prevTodos = todos;
     const prevRecurring = recurring;
     if (item.recurring) {
@@ -307,11 +304,10 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     const willBeDone = !item.done;
     const nowIso = new Date().toISOString();
 
-    // Optimistic update: flip the checkbox in local state immediately so the UI
-    // responds instantly, rather than waiting on the mutation + a full reload (two
-    // sequential API round-trips). The mutation runs in the background; on failure
-    // we roll back. `load()` at the end reconciles derived data (heatmap, goal
-    // counts) from the server but no longer gates the visual change.
+    // Optimistic: flip the checkbox in local state immediately so the UI responds
+    // without waiting on the mutation + reload. Mutation runs in the background, roll
+    // back on failure; the trailing load() reconciles derived data (heatmap, goal
+    // counts) without gating the visual change.
     if (item.recurring) {
       // "Done" for a recurring task = a completion row exists for (id, day).
       setCompletions((cs) => {
@@ -350,9 +346,8 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   async function tagItem(item: DayItem, sel: { goalId: string | null; category: string | null }) {
     const path = item.recurring ? `/v1/recurring-todos/${item.id}` : `/v1/todos/${item.id}`;
     const goal = sel.goalId ? goalsList.find((g) => g.id === sel.goalId) ?? null : null;
-    // Optimistic: apply the tag to local state so the chip updates instantly (goal
-    // and category are mutually exclusive — the API clears the other). Roll back on
-    // failure; load() reconciles server truth in the background.
+    // Optimistic: apply the tag to local state so the chip updates instantly (goal and
+    // category are mutually exclusive — the API clears the other). Roll back on failure.
     const prevTodos = todos;
     const prevRecurring = recurring;
     const patch = {
@@ -383,8 +378,8 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     load();
   }
 
-  // Delete a task. For a recurring occurrence this removes the underlying recurring
-  // rule (so it stops appearing on every day), mirroring the recurring-tasks card.
+  // Delete a task. For a recurring occurrence this removes the underlying rule (so it
+  // stops appearing on every day), mirroring the recurring-tasks card.
   async function removeItem(item: { id: string; recurring: boolean }) {
     if (item.recurring) {
       setRecurring((rs) => rs.filter((r) => r.id !== item.id));
@@ -397,9 +392,9 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
     load();
   }
 
-  // Reschedule a one-off task to another day. Optimistic: update its date so it
-  // leaves the current day-bucket immediately; load() reconciles + refreshes the
-  // heatmap. Only offered for tasks with no linked time sessions.
+  // Reschedule a one-off task. Optimistic: update its date so it leaves the current
+  // day-bucket immediately; load() reconciles + refreshes the heatmap. Only for tasks
+  // with no linked time sessions.
   async function moveTask(item: DayItem, newDate: string) {
     setMovingTask(null);
     if (!newDate || newDate === item.date) return;
@@ -457,8 +452,8 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
       })),
   ].sort((a, b) => Number(a.done) - Number(b.done));
 
-  // Show the heatmap as soon as the month has loaded — even with no tasks yet, so a
-  // fresh account still sees the empty grid (the API always returns a full month).
+  // Show the heatmap once the month has loaded, even with no tasks, so a fresh account
+  // still sees the empty grid (the API always returns a full month).
   const loaded = todos !== null;
 
   return (
@@ -594,8 +589,8 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
                             </svg>
                           ),
                           onClick: () => {
-                            // Open this task's panel (only one is open at a time) and start the
-                            // timer, unless another task's timer is already running (don't clobber it).
+                            // Open this task's panel and start the timer, unless another
+                            // task's timer is already running (don't clobber it).
                             if (!activeTimer) startTimer(t.goalCategory ?? t.category ?? 'Uncategorized', t.title, t.id);
                             setTimerTask(t.id);
                           },
@@ -609,9 +604,9 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
                           ),
                           onClick: () => setTimerTask(timerTask === t.id ? null : t.id),
                         },
-                        // One-off tasks can be rescheduled — but only when no time has
-                        // been logged against them, so time-allocation history is never
-                        // shifted. Recurring tasks are weekday-based, so no "move".
+                        // One-off tasks can be rescheduled, but only with no logged time,
+                        // so allocation history is never shifted. Recurring tasks are
+                        // weekday-based, so no "move".
                         ...(t.recurring
                           ? []
                           : [

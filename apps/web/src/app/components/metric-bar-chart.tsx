@@ -51,8 +51,8 @@ export function MetricBarChart({
   const innerH = HEIGHT - MARGIN.top - MARGIN.bottom;
   const compact = data.length <= 7;
   const x = scaleBand<string>({ domain: data.map((d) => d.date), range: [0, innerW], padding: data.length > 45 ? 0.1 : 0.28 });
-  // A fixed ceiling (yMax) keeps a percentage-style line at its true height; otherwise
-  // scale to the data, including the baseline so its line is always within range.
+  // Fixed ceiling (yMax) keeps a percentage-style line at its true height; else scale
+  // to the data, including the baseline so its line is always within range.
   const domainMax = yMax ?? Math.max(1, ...data.map((d) => d.value), average ?? 0) * 1.1;
   const y = scaleLinear<number>({ domain: [0, domainMax], range: [innerH, 0] });
   const bw = x.bandwidth();
@@ -87,8 +87,8 @@ export function MetricBarChart({
               </text>
             ))}
 
-            {/* Click target for the baseline line — under the bars so they keep hover priority;
-                clickable over empty days and the gaps between bars. */}
+            {/* Baseline-line click target, under the bars so bars keep hover priority;
+                clickable over empty days and gaps between bars. */}
             {average != null && average > 0 && averageInfo && (
               <rect x={0} y={y(average) - 7} width={innerW} height={14} fill="transparent" style={{ cursor: 'pointer' }} onClick={() => setAvgOpen((o) => !o)} />
             )}
@@ -101,7 +101,7 @@ export function MetricBarChart({
               return (
                 <g key={d.date} style={{ opacity: dimmed ? 0.35 : 1, transition: 'opacity 0.15s ease' }}>
                   {h > 0 && <path d={roundedTop(bx, top, bw, h, Math.min(3, bw / 2))} fill="url(#metric-bar-grad)" />}
-                  {/* Hit area only exists where there's an actual bar — empty days aren't interactive. */}
+                  {/* Hit area only where a bar exists — empty days aren't interactive. */}
                   {d.value > 0 && (
                     <rect
                       x={bx}

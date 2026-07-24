@@ -8,9 +8,9 @@ export const ROUTINE_PRESETS: Array<{ category: string; hours: number }> = [
   { category: 'Meals', hours: 2 },
 ];
 
-// Hand-picked, spread across the hue wheel so adjacent categories stay distinct.
-// The first six match the seeded defaults (see DEFAULT_CATEGORIES in @baseline/db);
-// the last two are kept so any legacy "Code Review"/"Break" categories keep their hue.
+// Hand-picked hues spread across the wheel so adjacent categories stay distinct. First
+// six match the seeded DEFAULT_CATEGORIES (@baseline/db); the rest keep legacy
+// categories (e.g. "Code Review"/"Break") on their existing hue.
 const PRESET_COLORS: Record<string, string> = {
   Coding: '#10b981', // emerald (green)
   Work: '#6366f1', // indigo
@@ -72,9 +72,8 @@ function hexToHsl(hex: string): [number, number, number] {
   return [h, s * 100, l * 100];
 }
 
-// Shift a hex color's lightness by `deltaL` (in HSL lightness points), keeping hue
-// and saturation — for tasteful, true-to-color gradient stops. Non-hex inputs pass
-// through unchanged.
+// Shift a hex color's HSL lightness by `deltaL`, keeping hue/saturation — for
+// true-to-color gradient stops. Non-hex inputs pass through unchanged.
 export function adjustLightness(hex: string, deltaL: number): string {
   if (!hex.startsWith('#')) return hex;
   const [h, s, l] = hexToHsl(hex);
@@ -99,11 +98,10 @@ export function colorForCategory(name: string, overrides?: Record<string, string
 }
 
 /**
- * Build a stable color map for a known set of categories. Presets and user
- * overrides keep their fixed colors; the remaining ("custom") categories get
- * hues evenly spaced around the wheel so they stay visually distinct — the
- * spacing tightens as the number of categories grows. Users can still override
- * any of them if two end up too close.
+ * Build a stable color map for a known set of categories. Presets/overrides keep their
+ * fixed colors; the remaining ("custom") categories get hues evenly spaced around the
+ * wheel to stay distinct (spacing tightens as the count grows). Users can override any
+ * if two land too close.
  */
 export function buildColorMap(
   categories: string[],

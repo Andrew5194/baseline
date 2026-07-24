@@ -21,9 +21,9 @@ function fmtSession(hours: number): string {
   return `${m}m`;
 }
 
-// Global confirmation toast shown after a timer's "Stop & log". Always confirms the
-// time was logged; if the session was tied to a task, it also offers to mark the task
-// complete. A task-less session just confirms and fades on its own.
+// Global toast shown after a timer's "Stop & log". Confirms the time was logged; if
+// the session was tied to a task, also offers to mark it complete. Task-less sessions
+// just confirm and fade.
 export function SessionToast() {
   const [toast, setToast] = useState<LoggedDetail | null>(null);
   const [completing, setCompleting] = useState(false);
@@ -42,8 +42,8 @@ export function SessionToast() {
     return () => window.removeEventListener('baseline:session-logged', onLogged);
   }, []);
 
-  // A task prompt counts down (so you can see how long to decide), then auto-closes; a
-  // plain confirmation or a just-completed one just fades quickly.
+  // A task prompt counts down then auto-closes; a plain or just-completed confirmation
+  // just fades quickly.
   useEffect(() => {
     if (!toast) return;
     const lingers = !!toast.taskId && !completed;

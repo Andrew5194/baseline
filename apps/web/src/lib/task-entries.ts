@@ -7,10 +7,10 @@ export interface TaskEntry {
   timed: boolean;
 }
 
-// A tiny stale-while-revalidate cache for a task's logged time sessions, keyed by
-// task id. Opening a task's time-logs panel reads any cached value instantly and
-// revalidates in the background, so re-opening (or opening after a prefetch on the
-// kebab) is immediate instead of paying a fresh round-trip every time.
+// Stale-while-revalidate cache for a task's logged time sessions, keyed by task id. The
+// time-logs panel reads any cached value instantly and revalidates in the background, so
+// re-opening (or opening after a kebab prefetch) is immediate instead of a fresh
+// round-trip every time.
 const cache = new Map<string, TaskEntry[]>();
 const inflight = new Map<string, Promise<TaskEntry[]>>();
 

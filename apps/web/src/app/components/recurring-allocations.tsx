@@ -94,8 +94,7 @@ export function RecurringAllocations({ knownCategories, colorOf, onChange }: Rec
   }
 
   async function remove(id: string) {
-    // Optimistic: drop the row immediately; load()/onChange() reconcile. Roll back
-    // on failure.
+    // Optimistic: drop the row now; load()/onChange() reconcile, roll back on failure.
     const prev = items;
     setItems((its) => its.filter((i) => i.id !== id));
     try {

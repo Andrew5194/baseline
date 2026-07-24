@@ -39,9 +39,9 @@ export function AddGoalForm({ onClose, onSuccess }: AddGoalFormProps) {
     setLoading(true);
     try {
       await apiFetch('/v1/goals', { method: 'POST', body: JSON.stringify({ title: t, category, due_at: dueAt || null }) });
-      // Broadcast so sibling views refresh — notably the Tasks section's goal
-      // picker, which keeps its own goal list and would otherwise miss a brand-new
-      // goal until a manual page reload. (Matches assistant-dock / goal-detail.)
+      // Broadcast so sibling views refresh — notably the Tasks goal picker, which
+      // keeps its own list and would miss a new goal until reload. (Matches
+      // assistant-dock / goal-detail.)
       window.dispatchEvent(new CustomEvent('baseline:goals-changed'));
       onSuccess();
       onClose();

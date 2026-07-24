@@ -28,8 +28,8 @@ interface MetricsStripProps {
   window?: string; // period label for the delta tooltips (e.g. "week")
 }
 
-// Compact horizontal KPI strip. When `onSelect` is provided, each cell is a button
-// that selects the metric (highlighted with an accent underline).
+// Compact horizontal KPI strip. With `onSelect`, each cell is a button that selects
+// the metric (highlighted with an accent underline).
 export function MetricsStrip({ stats, activeKey, onSelect, accent = '#10b981', window = 'period' }: MetricsStripProps) {
   return (
     <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-neutral-100 dark:divide-neutral-800 overflow-hidden">

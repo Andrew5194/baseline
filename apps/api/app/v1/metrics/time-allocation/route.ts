@@ -9,9 +9,9 @@ import { periodBounds, isPeriod, offsetNow, parseOffset } from '../../../../lib/
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // GET /v1/metrics/time-allocation?period=week|month|year — budget out of the period's
-// allocatable hours (24 × days), with per-category hours, share of budget, and delta
-// vs the previous period. Recurring routines are counted only up to today, so the
-// donut fills as the period progresses.
+// allocatable hours (24 × days), with per-category hours, share of budget, and delta vs
+// the previous period. Recurring routines count only up to today, so the donut fills as
+// the period progresses.
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
   const periodParam = request.nextUrl.searchParams.get('period') || 'week';
@@ -49,9 +49,9 @@ export async function GET(request: NextRequest) {
     source: r.source,
   }));
 
-  // Fold in standing recurring allocations (sleep, meals, …) across the whole
-  // period, including future days, since they're a planned routine — unless the
-  // caller asks to exclude them (?recurring=exclude) to focus on free time.
+  // Fold in standing recurring allocations (sleep, meals, …) across the whole period
+  // including future days (they're a planned routine) — unless ?recurring=exclude asks
+  // to focus on free time.
   if (request.nextUrl.searchParams.get('recurring') !== 'exclude') {
     const recurring = await db
       .select({

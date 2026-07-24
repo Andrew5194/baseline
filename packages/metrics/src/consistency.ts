@@ -2,12 +2,9 @@ import type { EventInput } from './types';
 import { dayKeyInTz, startOfDayInTz, addLocalDays } from './tz';
 
 /**
- * Measures consistency of daily output over the window.
- * Returns a score from 0-100 where 100 = committed every day equally,
- * 0 = all commits on one day.
- *
- * Uses coefficient of variation (lower CV = more consistent).
- * Score = max(0, 100 - CV * 100), capped at 100.
+ * Consistency of daily output over the window: 0-100, where 100 = committed every
+ * day equally, 0 = all commits on one day. Uses coefficient of variation (lower CV
+ * = more consistent). Score = max(0, 100 - CV * 100), capped at 100.
  */
 export function consistencyScoreV1(
   events: EventInput[],

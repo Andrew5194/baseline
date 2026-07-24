@@ -24,8 +24,8 @@ function ordinal(n: number): string {
   return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
 }
 
-// Today's local calendar date in `timeZone`, as a UTC-midnight Date carrying the
-// right Y/M/D (so day arithmetic with getUTC*/setUTC* stays on the local date).
+// Today's local calendar date in `timeZone` as a UTC-midnight Date carrying the right
+// Y/M/D, so getUTC*/setUTC* arithmetic stays on the local date.
 function localToday(timeZone: string): Date {
   const key = new Intl.DateTimeFormat('en-CA', {
     timeZone,
@@ -37,9 +37,8 @@ function localToday(timeZone: string): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
-// Human label for a period in the user's timezone, `offset` periods back from now
-// (0 = current): a date range for the week, the month name, or the year — e.g.
-// "June 1st – June 7th", "May" / "December 2025", "2026".
+// Human label for a period `offset` back from now (0 = current): a week's date range,
+// month name, or year — e.g. "June 1st – June 7th", "May" / "December 2025", "2026".
 export function periodRangeLabel(period: Period, timeZone = 'UTC', offset = 0): string {
   const today = localToday(timeZone);
   if (period === 'year') return String(today.getUTCFullYear() - offset);
@@ -59,9 +58,8 @@ export function periodRangeLabel(period: Period, timeZone = 'UTC', offset = 0): 
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
-// Prev/next stepper pinned to the two ends of its own full-width row. The period
-// label lives separately under the page title (via periodRangeLabel). Going back
-// increases the offset; "next" is disabled at the current period (offset 0).
+// Prev/next stepper pinned to the ends of its full-width row (the label lives
+// separately via periodRangeLabel). Back increases offset; "next" disabled at offset 0.
 export function PeriodNav({ offset, onChange }: { offset: number; onChange: (offset: number) => void }) {
   const arrow = 'p-1 rounded-md text-neutral-400 dark:text-neutral-500 enabled:hover:text-neutral-700 dark:enabled:hover:text-neutral-200 enabled:hover:bg-neutral-100 dark:enabled:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-default transition-colors';
   return (

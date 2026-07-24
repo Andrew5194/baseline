@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
   const eCurr = within(entries, b.start, currEnd);
   const ePrev = within(entries, b.prevStart, prevEnd);
 
-  // All-time "expected" baseline: the average per bucket (a day for the week/month
-  // views, a month for the year view) over the user's whole history — plus the raw
-  // total ÷ buckets behind it, so the chart can show how the number was derived.
+  // All-time "expected" baseline: average per bucket (day for week/month, month for
+  // year) over full history, plus the raw total ÷ buckets so the chart can show how
+  // the number was derived.
   const granularity: 'day' | 'month' = periodParam === 'year' ? 'month' : 'day';
   const todayKey = dayKeyInTz(now, tz);
 
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest) {
     db.select({ occurredAt: events.occurredAt, durationMs: events.durationMs }).from(events).where(and(eq(events.userId, userId), eq(events.source, 'manual'))),
   ]);
 
-  // Number of day- or month-buckets from account creation ("since you started Baseline")
-  // to today, inclusive — the denominator for the all-time average.
+  // Day/month buckets from account creation to today, inclusive — the denominator for
+  // the all-time average.
   const startKey = userRow[0] ? dayKeyInTz(userRow[0].createdAt, tz) : todayKey;
   const spanCount = (unit: 'day' | 'month'): number => {
     const [fy, fm, fd] = startKey.split('-').map(Number);

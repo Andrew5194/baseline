@@ -12,10 +12,9 @@ export interface ActionItem {
   title?: string; // hover tooltip (e.g. why a disabled item can't be used)
 }
 
-// A generic kebab (⋯) overflow menu. Renders a quiet trigger and a portal popover
-// (fixed position, so it's never clipped) listing the given items; a divider is
-// inserted before the first `danger` item, which is tinted red. Closes on outside
-// click / scroll / resize.
+// Generic kebab (⋯) overflow menu. Trigger + fixed-position portal popover (so it's
+// never clipped); a red-tinted divider precedes the first `danger` item. Closes on
+// outside click / scroll / resize.
 export function ActionsMenu({
   items,
   label = 'Actions',
@@ -113,8 +112,7 @@ export function ActionsMenu({
                   {i === firstDanger && firstDanger > 0 && (
                     <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
                   )}
-                  {/* The disabled button ignores pointer events, so wrap it to surface
-                      the tooltip (e.g. why the action is unavailable) on hover. */}
+                  {/* Disabled button ignores pointer events, so wrap it to surface the tooltip on hover. */}
                   {item.disabled && item.title ? (
                     <span title={item.title} className="block cursor-not-allowed">
                       {button}

@@ -9,14 +9,11 @@ type ApiInit = RequestInit & { noCache?: boolean };
 
 const isBrowser = typeof window !== 'undefined';
 
-// A tiny browser-only GET cache with two jobs:
-//   • In-flight coalescing: concurrent identical GETs share ONE request (e.g. the
-//     Goals page and TodoSection both loading /v1/goals on mount → one fetch).
-//   • Short-TTL reuse: a repeat GET within TTL_MS returns the cached body instead of
-//     refetching (e.g. navigating away and back quickly).
-// Safety: any mutation, and any of the app's `*-changed` events, clears the cache — so
-// a read after a change is always fresh. Never used server-side (a module-level cache
-// there would leak across requests).
+// Browser-only GET cache with two jobs: (1) coalesce concurrent identical GETs into ONE
+// request (e.g. Goals page + TodoSection both loading /v1/goals on mount); (2) reuse the
+// cached body on a repeat GET within TTL_MS. Any mutation or `*-changed` event clears it,
+// so a read after a change is always fresh. Never used server-side — a module-level
+// cache there would leak across requests.
 const TTL_MS = 2500;
 const cache = new Map<string, { at: number; data: unknown }>();
 const inflight = new Map<string, Promise<unknown>>();
@@ -25,8 +22,8 @@ function isGet(init?: ApiInit): boolean {
   return (init?.method ?? 'GET').toUpperCase() === 'GET';
 }
 
-// Clear the GET cache (all of it — cheap, and guarantees no stale read after a write).
-// In-flight requests are untouched, so their coalescing still holds.
+// Clear the whole GET cache (cheap; guarantees no stale read after a write). In-flight
+// requests are untouched, so their coalescing still holds.
 export function invalidateApiCache(): void {
   cache.clear();
 }
