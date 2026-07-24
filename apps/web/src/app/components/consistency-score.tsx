@@ -1,6 +1,6 @@
 'use client';
 
-import { formatDelta } from '../../lib/format-delta';
+import { formatDelta, explainDelta } from '../../lib/format-delta';
 
 interface ConsistencyScoreProps {
   activeDays: number | null;
@@ -61,7 +61,9 @@ export function ConsistencyScore({ activeDays, totalDays, delta, window }: Consi
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
           {activeDays !== null ? activeDays : '—'} active days out of {totalDays} so far this {window}
         </p>
-        <p className={`text-xs mt-2 ${deltaColor}`}>{deltaText}</p>
+        <p className={`text-xs mt-2 ${deltaColor} cursor-help`} title={explainDelta(activeDays, delta, window, 'active days')}>
+          {deltaText}
+        </p>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { formatDelta } from '../../lib/format-delta';
+import { formatDelta, explainDelta } from '../../lib/format-delta';
 
 interface MetricCardProps {
   label: string;
@@ -40,7 +40,10 @@ export function MetricCard({ label, value, delta, unit, window, active, onClick 
         <p className="text-xs text-neutral-400">{unit}</p>
       </div>
       {(delta !== null || window) && (
-        <p className={`text-xs mt-1 ${toneColor}`}>
+        <p
+          className={`text-xs mt-1 ${toneColor} cursor-help`}
+          title={explainDelta(value, delta, window || '30d', unit)}
+        >
           {f.text} vs prior {window || '30d'}
         </p>
       )}
