@@ -81,8 +81,8 @@ export function RecurringTodos({
 
   async function tag(id: string, sel: TagSel) {
     const goal = sel.goalId ? goals.find((g) => g.id === sel.goalId) ?? null : null;
-    // Optimistic: update the chip immediately (goal/category are mutually
-    // exclusive). Roll back on failure; load()/onChange() reconcile.
+    // Optimistic: update the chip now (goal/category are mutually exclusive); roll
+    // back on failure, load()/onChange() reconcile.
     const prev = items;
     setItems((its) =>
       its.map((i) =>

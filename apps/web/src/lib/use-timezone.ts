@@ -18,10 +18,10 @@ export function notifyTimezoneChanged(): void {
   broadcastMe();
 }
 
-// The current user's configured timezone, from the shared /v1/me store (so it no longer
-// fires its own fetch). Starts at a fixed 'UTC' on the server and first client render
-// (no hydration mismatch), then after mount resolves to the saved preference, falling
-// back to the browser's zone until the user has explicitly chosen one (`timezoneSet`).
+// The user's configured timezone, from the shared /v1/me store (no separate fetch).
+// Starts at a fixed 'UTC' on server and first client render (no hydration mismatch),
+// then after mount resolves to the saved preference, falling back to the browser's zone
+// until the user has explicitly chosen one (`timezoneSet`).
 export function useTimezone(): string {
   const { me } = useMe();
   const [browserTz, setBrowserTz] = useState<string | null>(null);

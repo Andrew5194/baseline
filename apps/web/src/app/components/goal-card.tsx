@@ -32,9 +32,8 @@ export function GoalCard({
 }: {
   goal: Goal;
   onChange: () => void;
-  // Merge a partial update into this goal in the parent list immediately (optimistic
-  // UI), before the mutation round-trip resolves. Called again with the old values
-  // to roll back on failure.
+  // Optimistically merge a partial update into this goal before the mutation resolves.
+  // Called again with the old values to roll back on failure.
   onOptimisticPatch?: (id: string, patch: Partial<Goal>) => void;
   // Drop this goal from the parent list immediately on delete (the parent may not
   // otherwise refetch the list it lives in, e.g. the lazy-loaded completed section).
@@ -76,10 +75,9 @@ export function GoalCard({
 
   async function toggle() {
     const willBeDone = !goal.done;
-    // Optimistic: fill the checkbox instantly instead of waiting on the mutation +
-    // a full /v1/goals reload (two sequential round-trips). onChange() at the end
-    // reconciles server truth (completed_at, ordering, task counts) in the
-    // background; on failure we roll the checkbox back.
+    // Optimistic: fill the checkbox instantly instead of awaiting the mutation + full
+    // reload. onChange() later reconciles server truth (completed_at, ordering, task
+    // counts); on failure we roll the checkbox back.
     onOptimisticPatch?.(goal.id, {
       done: willBeDone,
       completed_at: willBeDone ? goal.completed_at ?? new Date().toISOString() : null,

@@ -1,8 +1,7 @@
-// Same-origin BFF proxy: forwards /api/auth/* and /v1/* to the API server-side so
-// the browser only ever talks to the web origin (cookies/CSRF stay same-origin, no
-// CORS). Lives in a Node.js route handler — NOT next.config rewrites or middleware —
-// because only the Node runtime reads process.env.API_INTERNAL_URL at RUNTIME (both
-// build-time rewrites and Edge middleware freeze it at build time).
+// Same-origin BFF proxy for /api/auth/* and /v1/*: the browser only talks to the web
+// origin, so cookies/CSRF stay same-origin (no CORS). Must be a Node route handler, not
+// next.config rewrites or Edge middleware — only the Node runtime reads
+// API_INTERNAL_URL at runtime; the others freeze it at build time.
 
 function apiBase(): string {
   return (
@@ -16,8 +15,8 @@ function normProto(v: string | null): string | undefined {
   return s === 'http' || s === 'https' ? s : undefined;
 }
 
-// The scheme/host the browser actually used, from the proxy headers (the internal
-// fetch to the API would otherwise drop them). Mirrors the old middleware logic.
+// The scheme the browser actually used, from proxy headers — the internal fetch to the
+// API would otherwise drop it.
 function detectScheme(h: Headers): string {
   const xfProto = normProto(h.get('x-forwarded-proto'));
   if (xfProto) return xfProto;

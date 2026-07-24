@@ -6,12 +6,10 @@ import { createPortal } from 'react-dom';
 const GAP = 8;
 const MAX_W = 240; // matches max-w-[15rem]
 
-// A lightweight styled hover tooltip. Attaches to its single child element (no extra
-// wrapper, so it works anywhere — even inside overflow-hidden containers) and renders
-// the bubble in a portal at document.body. It opens to the RIGHT of the element,
-// vertically centered, so it never covers the element's own text or the lines above/
-// below it — flipping to the left only when there isn't room on the right. Unlike the
-// native `title` attribute it's instant, styled, and never clipped.
+// Lightweight styled hover tooltip. Attaches to its single child (no wrapper, so it
+// works even inside overflow-hidden) and renders the bubble in a portal at
+// document.body. Opens to the RIGHT so it never covers the element's own text,
+// flipping left only when there's no room. Instant and never clipped, unlike `title`.
 export function Tooltip({ content, children }: { content: ReactNode; children: ReactElement }) {
   const [rect, setRect] = useState<{ top: number; left: number; right: number } | null>(null);
   if (!isValidElement(children)) return children;
@@ -37,8 +35,8 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
   let bubble: ReactNode = null;
   if (rect && content) {
     const openLeft = rect.right + GAP + MAX_W > window.innerWidth;
-    // Top of the tooltip aligns with the top of the hovered item; opens to its right
-    // (or left when there's no room), so it never overlaps the row or nearby lines.
+    // Top aligns with the hovered item; opens right (or left when no room) so it
+    // never overlaps the row or nearby lines.
     const style = openLeft
       ? { top: rect.top, left: rect.left - GAP, transform: 'translate(-100%, 0)' as const }
       : { top: rect.top, left: rect.right + GAP, transform: 'translate(0, 0)' as const };

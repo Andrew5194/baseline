@@ -33,9 +33,8 @@ export async function GET() {
   return NextResponse.json(user);
 }
 
-// PATCH /v1/me — update editable fields: timezone and/or UI preferences. Each is
-// optional; preferences are shallow-merged into the stored JSON so a partial update
-// (one key) doesn't clobber the others.
+// PATCH /v1/me — update timezone and/or UI preferences (each optional). Preferences are
+// shallow-merged into the stored JSON so a one-key update doesn't clobber the others.
 export async function PATCH(request: NextRequest) {
   const userId = await getCurrentUserId();
 

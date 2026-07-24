@@ -5,9 +5,8 @@ import { eq } from 'drizzle-orm';
 import { verify } from '@node-rs/bcrypt';
 import type { NextAuthConfig } from 'next-auth';
 
-// A precomputed cost-12 bcrypt hash (same cost as signup). We compare against it
-// when an account doesn't exist so login response time is identical whether or not
-// the email is registered — closing the account-enumeration timing side channel.
+// Cost-12 bcrypt hash (matching signup) compared against when no account exists, so
+// login timing is identical either way — closes the account-enumeration side channel.
 const TIMING_SAFE_HASH = '$2b$12$iyjEJG0VjmPnVZmKrDLnRuQDLaW/jIHjsCktzqr3FPx6XFOA.pEYW';
 
 export const authConfig: NextAuthConfig = {
@@ -46,10 +45,9 @@ export const authConfig: NextAuthConfig = {
   ],
   // Accept the forwarded host behind the proxy.
   trustHost: true,
-  // Fixed cookie name (not the default `__Secure-` prefix, which Auth.js picks
-  // unpredictably behind the proxy) so the web middleware matches it on both
-  // localhost and the proxy. Secure is set in production (Cloud Run is HTTPS-only)
-  // so the session cookie never rides plain HTTP; relaxed on localhost for dev.
+  // Fixed cookie name (not Auth.js's default `__Secure-` prefix, which it picks
+  // unpredictably behind the proxy) so the web middleware matches it on localhost
+  // and the proxy. Secure only in production (Cloud Run is HTTPS-only); relaxed for dev.
   cookies: {
     sessionToken: {
       name: 'authjs.session-token',

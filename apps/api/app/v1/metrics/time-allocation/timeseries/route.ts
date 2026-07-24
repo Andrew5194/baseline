@@ -7,10 +7,9 @@ import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
 import { periodBounds, periodBuckets, isPeriod, offsetNow, parseOffset } from '../../../../../lib/period';
 
 // GET /v1/metrics/time-allocation/timeseries?period=week|month|year
-// Buckets spanning the whole period: daily for week/month (each ~24h), monthly
-// totals for year. Recurring routines are projected across the full period, so
-// future days/months show the standing routine; one-off work only appears up to
-// today.
+// Buckets spanning the period: daily for week/month, monthly totals for year.
+// Recurring routines project across the full period (future days/months show the
+// standing routine); one-off work only appears up to today.
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
   const periodParam = request.nextUrl.searchParams.get('period') || 'week';
@@ -66,7 +65,7 @@ export async function GET(request: NextRequest) {
 
   const seen = new Set<string>();
   // Daily buckets sum to a day's hours; monthly (year) buckets sum to the month's
-  // total hours by category.
+  // total by category.
   const data = periodBuckets(periodParam, start, end, tz).map((b) => {
     const byCategory = hoursByCategoryV1(ei, b.start, b.end);
     Object.keys(byCategory).forEach((c) => seen.add(c));

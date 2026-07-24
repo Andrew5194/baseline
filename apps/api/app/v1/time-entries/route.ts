@@ -116,8 +116,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // The category name lives in the event payload, but still register it in the
-  // categories table so it shows up in the category list (which reads from there).
+  // Category name lives in the payload, but still register it in the categories table
+  // so it appears in the category list (which reads from there).
   if (typeof body.category === 'string' && body.category.trim()) {
     await resolveCategoryId(userId, body.category);
   }

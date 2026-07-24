@@ -3,9 +3,8 @@
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Bar label: compact "M/D" on short windows (week); otherwise TradingView-style —
-// the day number for every bar, with the month abbreviation on the 1st. Monthly
-// buckets (year view) are dated `YYYY-MM-01`, so they naturally render as months.
+// Bar label: compact "M/D" for week; else TradingView-style — day number per bar, month
+// abbrev on the 1st. Year buckets are dated `YYYY-MM-01`, so they render as months.
 export function barLabel(iso: string, compact: boolean): string {
   const [, m, d] = iso.split('-');
   if (compact) return `${Number(m)}/${Number(d)}`;

@@ -6,8 +6,8 @@ import { dayKeyInTz } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
 import { monthDayKeys } from '../../../lib/month-heatmap';
 
-// A task/recurring-task's own category and its tagged goal's category both resolve
-// to names via the categories table — two aliased joins keep them distinct.
+// A task's own category and its tagged goal's category both resolve via the categories
+// table — two aliased joins keep them distinct.
 const todoCat = alias(categories, 'todo_cat');
 const goalCat = alias(categories, 'goal_cat');
 
@@ -111,8 +111,8 @@ export async function GET(request: NextRequest) {
     .from(recurringTodoCompletions)
     .where(eq(recurringTodoCompletions.userId, userId));
 
-  // Count logged time sessions per task (manual events carrying a task_id) so the
-  // client can disable "move to date" for any task that already has linked time.
+  // Count logged time sessions per task (manual events with a task_id) so the client
+  // can disable "move to date" for tasks that already have linked time.
   const sessionRows = await db
     .select({ taskId: sql<string>`${events.payload} ->> 'task_id'`, count: sql<number>`count(*)::int` })
     .from(events)

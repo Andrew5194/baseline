@@ -1,10 +1,9 @@
 // Calendar-aligned periods for the Overview: this week / month / year. Unlike the
-// trailing windows (7d/30d/90d), these start at the period boundary so a bar chart
-// spanning the full period shows where today falls within it.
+// trailing windows (7d/30d/90d), these start at the period boundary so a full-period
+// bar chart shows where today falls within it.
 //
-// All boundaries are computed in the user's local timezone (`tz`, an IANA name)
-// and returned as the UTC instants the DB filters on — so a "day" is the user's
-// local calendar day, not a UTC day.
+// Boundaries are computed in the user's local timezone (`tz`, IANA) and returned as
+// the UTC instants the DB filters on — so a "day" is the local calendar day, not UTC.
 
 import { partsInTz, zonedCivilToUtc, addLocalDays, startOfDayInTz } from '@baseline/metrics';
 

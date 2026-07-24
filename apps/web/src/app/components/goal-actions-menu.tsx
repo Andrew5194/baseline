@@ -4,9 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { GOAL_PALETTE } from '../../lib/goal-colors';
 
-// The per-goal overflow (kebab) menu: Edit, a row of color swatches, then a
-// divider and a red Delete. Renders in a portal (fixed position) so it's never
-// clipped by a card, and closes on outside click / scroll / resize.
+// Per-goal kebab menu: Edit, color swatches, divider, red Delete. Fixed-position portal
+// so it's never clipped by a card; closes on outside click / scroll / resize.
 export function GoalActionsMenu({
   color,
   onEdit,

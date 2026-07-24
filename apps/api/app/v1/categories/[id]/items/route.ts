@@ -23,9 +23,8 @@ function fmtDuration(ms: number): string {
   return `${Math.round((ms / 3_600_000) * 10) / 10}h`;
 }
 
-// GET /v1/categories/[id]/items — the specific items linked to a category, each
-// with a secondary `meta` line (dates, recurrence, hours) so a delete confirmation
-// or the linked-items inspector can show exactly what's affected.
+// GET /v1/categories/[id]/items — items linked to a category, each with a `meta` line
+// (dates, recurrence, hours) so a delete confirmation / inspector can show what's affected.
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -57,8 +56,8 @@ export async function GET(
       .orderBy(desc(events.occurredAt)),
   ]);
 
-  // `durationMs` is the raw value so the client can sort the Duration column
-  // numerically (the `hours` string is only for display).
+  // Raw `durationMs` so the client can sort the Duration column numerically (the
+  // `hours` string is display-only).
   const items = [
     ...goalRows.map((r) => ({ type: 'goal', label: r.title, date: r.dueAt ?? '', schedule: '', hours: '', status: r.done ? 'Done' : 'Open', durationMs: 0 })),
     ...todoRows.map((r) => ({ type: 'task', label: r.title, date: r.date ?? '', schedule: '', hours: '', status: r.done ? 'Done' : 'Open', durationMs: 0 })),

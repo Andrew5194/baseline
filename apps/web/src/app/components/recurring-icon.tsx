@@ -1,5 +1,5 @@
-// Small "repeat" glyph marking a category that comes from a recurring routine
-// (sleep, meals, …) rather than a one-off logged entry.
+// "Repeat" glyph marking a category from a recurring routine (sleep, meals, …)
+// rather than a one-off logged entry.
 export function RecurringIcon({ className = 'w-3 h-3' }: { className?: string }) {
   return (
     <svg

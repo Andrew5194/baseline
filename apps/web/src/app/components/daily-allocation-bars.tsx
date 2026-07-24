@@ -96,10 +96,8 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
   const innerW = Math.max(0, width - marginLeft - MARGIN.right);
   const innerH = HEIGHT - MARGIN.top - MARGIN.bottom;
   const compact = data.length <= 7;
-  // Respect the incoming stack order — recurring routines at the bottom, variable
-  // (non-recurring) categories above — with Free as the top segment. So when
-  // recurring is hidden, it shrinks away at the base and the non-recurring work
-  // settles to the bottom, coming into focus.
+  // Stack order: recurring routines at the bottom, non-recurring above, Free on top. So
+  // hiding recurring shrinks it away at the base and the variable work settles down.
   const keys = [...categories, FREE_KEY];
 
   const dates = data.map((d) => String(d.date));
@@ -159,9 +157,8 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
               const bx = x(iso) ?? 0;
               const dimmed = hovered !== null && hovered !== iso;
 
-              // Focusing on free time removes recurring time from the day entirely:
-              // recurring segments shrink by `progress`, Free stays as-is, so the bar
-              // total falls from 24h toward (24h − recurring).
+              // Focusing on free time removes recurring: those segments shrink by
+              // `progress`, Free stays, so the total falls from 24h toward (24h − recurring).
               let acc = 0;
               const segs = keys
                 .map((key) => {

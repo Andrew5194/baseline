@@ -12,10 +12,9 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
 
-  // Prefetch the CSRF token (and set its cookie) on page load so submitting the
-  // form doesn't have to wait on a /csrf round-trip first. getCsrfToken() below
-  // falls back to an on-demand fetch if this hasn't landed yet, so the flow is
-  // never broken — just occasionally one round-trip slower.
+  // Prefetch the CSRF token (and set its cookie) on load so submit doesn't wait on a
+  // /csrf round-trip. getCsrfToken() below falls back to an on-demand fetch if this
+  // hasn't landed yet, so the flow never breaks — just one round-trip slower.
   useEffect(() => {
     let cancelled = false;
     fetch(`${API_URL}/api/auth/csrf`, { credentials: 'include' })
@@ -47,11 +46,10 @@ export default function SignIn() {
     try {
       const token = await getCsrfToken();
 
-      // The `X-Auth-Return-Redirect` header makes Auth.js return the outcome as
-      // JSON (`{ url }`) instead of a 302 — the same mechanism the built-in
-      // signIn({ redirect: false }) uses. A failed login comes back with `?error=`
-      // in the URL and sets no session cookie; a success returns a URL with no
-      // error param. Reading the result here lets us skip the extra /session
+      // `X-Auth-Return-Redirect` makes Auth.js return the outcome as JSON (`{ url }`)
+      // instead of a 302 — the same mechanism signIn({ redirect: false }) uses. A failed
+      // login comes back with `?error=` in the URL and no session cookie; a success
+      // returns a URL with no error param. Reading it here skips the extra /session
       // round-trip the manual-redirect flow used to need.
       const res = await fetch(`${API_URL}/api/auth/callback/credentials`, {
         method: 'POST',

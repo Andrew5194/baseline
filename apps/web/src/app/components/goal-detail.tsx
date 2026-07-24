@@ -77,9 +77,8 @@ export function GoalDetail({
       .then((r) => setKnown((r.categories ?? []).map((c) => c.name)))
       .catch(() => {});
   }, []);
-  // Notes are seeded once from the fetch (they're not in the goal list payload).
-  // Category + due come from props, so a later reload (or an in-flight fetch that
-  // resolves after an edit) can't reset them or steal the textarea's focus.
+  // Notes seed once from the fetch (not in the goal list payload). Category + due come
+  // from props, so a later reload can't reset them or steal the textarea's focus.
   const seeded = useRef(false);
 
   const load = useCallback(
@@ -131,9 +130,9 @@ export function GoalDetail({
   const notesRef = useRef({ notes: '', savedNotes: '' });
   notesRef.current = { notes, savedNotes };
 
-  // Only commit `savedNotes` once the request succeeds, so a failure keeps the editor
-  // "dirty" and surfaces an error instead of silently dropping text. Reads the latest
-  // text from a ref so the debounce timer / unmount flush never use stale content.
+  // Commit `savedNotes` only on success, so a failure keeps the editor "dirty" and
+  // shows an error instead of dropping text. Reads latest text from a ref so the
+  // debounce timer / unmount flush never use stale content.
   async function saveNotes() {
     const { notes: n, savedNotes: s } = notesRef.current;
     if (n === s || savingRef.current) return;
@@ -154,7 +153,7 @@ export function GoalDetail({
 
   const notesDirty = notes !== savedNotes;
 
-  // Debounced autosave — persist ~800ms after the last keystroke.
+  // Debounced autosave after the last keystroke.
   useEffect(() => {
     if (!notesDirty) return;
     const t = setTimeout(saveNotes, AUTOSAVE_MS);

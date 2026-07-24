@@ -15,8 +15,8 @@ const fmtTime = (d: Date, tz: string) =>
 const fmtDate = (d: Date, tz: string) =>
   d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz });
 
-// A session's start → end. `occurred_at` is the end instant, so the start is end
-// minus the duration. Collapses to one date when both fall on the same local day.
+// A session's start → end. `occurred_at` is the end instant, so start = end − duration.
+// Collapses to one date when both fall on the same local day.
 function sessionRange(iso: string, hours: number, tz: string): string {
   const end = new Date(iso);
   const start = new Date(end.getTime() - hours * 3_600_000);
@@ -26,8 +26,8 @@ function sessionRange(iso: string, hours: number, tz: string): string {
   return `${fmtDate(start, tz)} ${fmtTime(start, tz)} – ${fmtDate(end, tz)} ${fmtTime(end, tz)}`;
 }
 
-// The expanded panel under a task: the sessions already logged against it (newest
-// first), with the Start button / running timer always at the bottom of the list.
+// The expanded panel under a task: sessions logged against it (newest first), with
+// the Start button / running timer pinned at the bottom.
 export function TaskTimerPanel({
   taskId,
   title,
@@ -47,8 +47,8 @@ export function TaskTimerPanel({
   onLogged?: () => void;
   taskDone?: boolean;
 }) {
-  // Seed from cache so a re-open (or a kebab-prefetched open) paints instantly;
-  // null means "no cached value yet" → show a shimmer while the first fetch runs.
+  // Seed from cache so a re-open paints instantly; null = no cache yet → shimmer
+  // while the first fetch runs.
   const [entries, setEntries] = useState<TaskEntry[] | null>(() => getCachedTaskEntries(taskId) ?? null);
 
   const load = useCallback(() => {

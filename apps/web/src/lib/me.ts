@@ -3,11 +3,10 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { apiFetch } from './api';
 
-// The current user's profile from /v1/me — timezone + synced UI preferences. Shared
-// in one module-level store so every consumer (all usePreference() + useTimezone()
-// hooks) reads from a SINGLE, request-coalesced fetch instead of each firing its own
-// /v1/me. The cache persists across client-side navigations, so moving between pages
-// doesn't refetch.
+// The current user's profile from /v1/me — timezone + synced UI preferences. Held in
+// one module-level store so every consumer (all usePreference/useTimezone hooks) shares
+// a SINGLE, request-coalesced fetch instead of each firing its own /v1/me. Persists
+// across client-side navigations, so moving between pages doesn't refetch.
 export interface Me {
   id?: string;
   email?: string;

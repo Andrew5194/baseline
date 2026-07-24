@@ -56,10 +56,10 @@ export async function GET(request: NextRequest) {
     prevStart = new Date(windowStart.getTime() - days * DAY_MS);
     label = window;
   }
-  // The current window is period-to-date (clamped to now). Compare against the SAME
-  // elapsed slice of the prior period — not the whole prior period — so a partial
-  // week/month isn't measured against a complete one (which made early-period deltas
-  // look like big drops and inflated growth vs sparse prior periods).
+  // Current window is period-to-date (clamped to now). Compare against the SAME elapsed
+  // slice of the prior period, not the whole one — else a partial week/month measured
+  // against a complete one makes early-period deltas look like big drops and inflates
+  // growth vs sparse prior periods.
   const currEnd = now < windowEnd ? now : windowEnd;
   const elapsedMs = currEnd.getTime() - windowStart.getTime();
   const prevEnd = new Date(prevStart.getTime() + elapsedMs);

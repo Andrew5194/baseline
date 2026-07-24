@@ -25,9 +25,9 @@ export interface DueMeta {
   tone: DueTone;
 }
 
-// A short relative label + severity for a goal's due date. Pass `done` so completed
-// goals never read as overdue. With `countdown`, the label reads as time remaining
-// ("7 more days") rather than a fixed date. Returns null when there's no due date.
+// Short relative label + severity for a goal's due date. `done` keeps completed goals
+// from reading as overdue; `countdown` shows time remaining ("7 more days") vs a fixed
+// date. Returns null when there's no due date.
 export function dueMeta(dueAt: string | null | undefined, done = false, countdown = false): DueMeta | null {
   if (!dueAt) return null;
   const date = fmtDue(dueAt);

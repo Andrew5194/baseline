@@ -7,9 +7,8 @@ import { apiFetch } from '../../lib/api';
 // slip (or an accidental clear) can be undone before it's committed.
 const AUTOSAVE_MS = 2500;
 
-// A per-day journal subsection (mirrors the Tasks subsection). Loads the entry for
-// `day` and saves edits (on blur, via the Save button, or when the day switches).
-// The textarea auto-grows with its content.
+// Per-day journal subsection. Loads the entry for `day` and saves edits (on blur, via
+// the Save button, or when the day switches). The textarea auto-grows with its content.
 export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string }) {
   const [content, setContent] = useState('');
   const [saved, setSaved] = useState('');
@@ -86,8 +85,8 @@ export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string })
 
   const dirty = content !== saved;
 
-  // Debounced autosave — persist ~800ms after the last keystroke. Re-runs on each edit,
-  // so the timer always trails the latest text; the day-switch cleanup flushes the rest.
+  // Debounced autosave after the last keystroke. Re-runs on each edit so the timer
+  // trails the latest text; the day-switch cleanup flushes the rest.
   useEffect(() => {
     if (loading || !dirty) return;
     const t = setTimeout(save, AUTOSAVE_MS);

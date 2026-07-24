@@ -4,9 +4,8 @@
 const BEATS = 'M0 12 L6 12 L8 9.5 L10 12 L13 12 L15 3 L17 21 L19 12 L24 12 L30 12 L32 9.5 L34 12 L37 12 L39 3 L41 21 L43 12 L48 12';
 const FLAT = 'M0 12 H48';
 
-// A heartbeat trace: the waveform stays put and a bright "trace light" sweeps along
-// it (EKG-monitor style). When paused, the waveform flattens but the light keeps
-// sweeping. The faint full path sits under the bright moving dash.
+// EKG-monitor trace: a bright "trace light" (dash) sweeps along the fixed waveform,
+// with a faint full path beneath it. Paused flattens the wave but the light still sweeps.
 export function Heartbeat({ running }: { running: boolean }) {
   const d = running ? BEATS : FLAT;
   return (

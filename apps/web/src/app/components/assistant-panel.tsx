@@ -2,9 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Baseline AI mark: the pixel-art wizard logo. The outline uses currentColor (so it's
-// theme-adaptive — dark in light mode, white in dark mode); the fill + flame keep their
-// fixed colours.
+// Baseline AI mark: pixel-art wizard logo. Outline uses currentColor (theme-adaptive);
+// the fill + flame keep fixed colours.
 export function BaselineAIMark({ className = 'w-7 h-7' }: { className?: string }) {
   return (
     <svg
@@ -28,11 +27,9 @@ export function BaselineAIMark({ className = 'w-7 h-7' }: { className?: string }
   );
 }
 
-// NOTE: This is a UI preview of the planned Baseline assistant. Replies are scripted
-// (no model wired up yet) — but the "Create" buttons on a suggestion really do create
-// the goal via the existing API, so the suggest→act flow is genuine. When wired for
-// real, the conversation would be powered by Claude with tool access to the user's
-// metrics + goals.
+// NOTE: UI preview of the planned assistant. Replies are scripted (no model yet), but
+// the suggestion "Create" buttons really do create the goal via the API, so suggest→act
+// is genuine. Real version would be Claude with tool access to the user's metrics + goals.
 
 interface Suggestion {
   label: string; // the goal text (also the payload title)

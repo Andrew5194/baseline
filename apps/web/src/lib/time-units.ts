@@ -10,9 +10,8 @@ export const UNIT_META: Record<TimeUnit, { factor: number; suffix: string; word:
 
 export const isTimeUnit = (v: string): v is TimeUnit => v === 'min' || v === 'hr' || v === 'day';
 
-// Formatted number only: as many decimals as the value actually has, up to the
-// hundredths — so a whole number stays whole, a tenth stays a tenth, and a value
-// with hundredths shows two places. Thousands-grouped — e.g. "75", "75.8", "75.83".
+// Formatted number only: up to two decimals, trailing zeros dropped (whole stays whole,
+// a tenth stays a tenth). Thousands-grouped — e.g. "75", "75.8", "75.83".
 export function fmtDurationNum(hours: number, unit: TimeUnit): string {
   const v = hours * UNIT_META[unit].factor;
   return v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });

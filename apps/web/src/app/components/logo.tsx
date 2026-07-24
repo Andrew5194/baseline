@@ -1,6 +1,5 @@
-// Baseline mark: an outlined squircle with a progress line + dots. Monochrome and
-// theme-adaptive — dark in light mode, white in dark mode (via currentColor).
-// Single source of truth — used in the sidebar, auth pages, etc.
+// Baseline mark: outlined squircle with a progress line + dots. Theme-adaptive via
+// currentColor (dark in light mode, white in dark). Single source used app-wide.
 export function Logo({ className = 'w-6 h-6' }: { className?: string }) {
   return (
     <svg

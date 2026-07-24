@@ -9,8 +9,8 @@ interface SourceDropdownProps {
   sources: string[]; // source ids that have metrics
 }
 
-// Dropdown to pick which integration's metrics to view. "All sources" plus each
-// source that currently has metrics — new integrations appear here automatically.
+// Dropdown to pick which integration's metrics to view: "All sources" plus each
+// source that currently has metrics (new integrations appear automatically).
 export function SourceDropdown({ value, onChange, sources }: SourceDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);

@@ -2,11 +2,10 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 
-// Cache the pool + client on globalThis (not a module-scoped variable). In dev,
-// Next.js hot-reload re-evaluates this module on every change; a module-scoped
-// singleton would reset and open a fresh 10-connection pool each time while
-// abandoning the old one, leaking connections until Postgres hits max_connections
-// (→ 500s / timeouts). globalThis survives reloads, so we reuse one pool.
+// Cache the pool + client on globalThis, not a module-scoped variable: Next.js dev
+// hot-reload re-evaluates this module, and a module singleton would open a fresh
+// 10-connection pool each time while abandoning the old one — leaking until Postgres
+// hits max_connections (500s/timeouts). globalThis survives reloads, so we reuse one.
 const globalForDb = globalThis as unknown as {
   __pgSql?: ReturnType<typeof postgres>;
   __db?: PostgresJsDatabase<typeof schema>;

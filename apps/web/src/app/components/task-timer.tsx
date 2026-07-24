@@ -14,8 +14,8 @@ function fmt(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
-// A per-task focus timer. Shares the single global timer (so it also shows on the
-// Overview), tagged with this task's id. Stopping it logs a time entry.
+// A per-task focus timer sharing the single global timer (so it also shows on the
+// Overview), tagged with this task's id. Stopping logs a time entry.
 export function TaskTimer({
   taskId,
   title,
