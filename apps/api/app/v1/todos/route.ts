@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, todos, goals, recurringTodos, recurringTodoCompletions, categories, resolveCategoryId } from '@baseline/db';
-import { eq, asc, desc } from 'drizzle-orm';
+import { db, todos, goals, recurringTodos, recurringTodoCompletions, categories, events, resolveCategoryId } from '@baseline/db';
+import { eq, asc, desc, and, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { dayKeyInTz } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
@@ -111,7 +111,17 @@ export async function GET(request: NextRequest) {
     .from(recurringTodoCompletions)
     .where(eq(recurringTodoCompletions.userId, userId));
 
-  const data = rows.map(toDto);
+  // Count logged time sessions per task (manual events carrying a task_id) so the
+  // client can disable "move to date" for any task that already has linked time.
+  const sessionRows = await db
+    .select({ taskId: sql<string>`${events.payload} ->> 'task_id'`, count: sql<number>`count(*)::int` })
+    .from(events)
+    .where(and(eq(events.userId, userId), eq(events.source, 'manual'), sql`${events.payload} ->> 'task_id' IS NOT NULL`))
+    .groupBy(sql`${events.payload} ->> 'task_id'`);
+  const sessionsByTask = new Map<string, number>();
+  for (const s of sessionRows) sessionsByTask.set(s.taskId, Number(s.count));
+
+  const data = rows.map((r) => ({ ...toDto(r), sessions: sessionsByTask.get(r.id) ?? 0 }));
 
   // Per-day heatmap: a day's total = one-off tasks scheduled that day + recurring
   // tasks scheduled that day; completed = the done ones.
@@ -196,5 +206,5 @@ export async function POST(request: NextRequest) {
     goalColor = g?.color ?? null;
     goalCategory = g?.category ?? null;
   }
-  return NextResponse.json(toDto({ ...row, goalTitle, goalColor, goalCategory, category: categoryName }), { status: 201 });
+  return NextResponse.json({ ...toDto({ ...row, goalTitle, goalColor, goalCategory, category: categoryName }), sessions: 0 }, { status: 201 });
 }
