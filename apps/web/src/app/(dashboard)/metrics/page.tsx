@@ -16,6 +16,7 @@ import { useTimeUnit } from '../../../lib/use-time-unit';
 interface MetricValue {
   value: number | null;
   delta: number | null;
+  prev?: number | null; // the same metric over the matching elapsed slice of the prior period
   unit: string;
   expected?: number; // all-time per-bucket baseline (Baseline source only)
   expectedTotal?: number; // numerator behind the baseline (e.g. total tasks ever)
@@ -189,6 +190,8 @@ export default function Metrics() {
       value: d.suffix ? `${v}${d.suffix}` : v,
       sub: d.sub === 'elapsed' ? `/ ${elapsedDays}` : undefined,
       delta: m?.[d.metric]?.delta ?? null,
+      prev: m?.[d.metric]?.prev ?? null,
+      unit: d.unit,
     };
   });
 
@@ -266,6 +269,7 @@ export default function Metrics() {
         <div className="mb-6">
           <ConsistencyScore
             activeDays={m?.[consistencyDef.metric]?.value ?? null}
+            priorActiveDays={m?.[consistencyDef.metric]?.prev ?? null}
             totalDays={elapsedDays}
             delta={m?.[consistencyDef.metric]?.delta ?? null}
             window={dataPeriod}
@@ -274,7 +278,7 @@ export default function Metrics() {
       )}
 
       <div className="mb-6">
-        <MetricsStrip stats={stats} activeKey={active} onSelect={setActive} />
+        <MetricsStrip stats={stats} activeKey={active} onSelect={setActive} window={dataPeriod} />
       </div>
 
       <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">

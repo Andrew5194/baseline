@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
   const mk = (cv: number, pv: number, unit: string, expected: number, total: number, buckets: number) => ({
     value: cv,
     delta: computeDelta(cv, pv),
+    prev: pv,
     unit,
     expected,
     expectedTotal: total,

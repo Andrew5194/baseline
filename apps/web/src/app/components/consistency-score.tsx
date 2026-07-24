@@ -1,9 +1,11 @@
 'use client';
 
-import { formatDelta } from '../../lib/format-delta';
+import { formatDelta, explainDelta } from '../../lib/format-delta';
+import { Tooltip } from './tooltip';
 
 interface ConsistencyScoreProps {
   activeDays: number | null;
+  priorActiveDays?: number | null; // active days by the same point in the prior period
   totalDays: number;
   delta: number | null;
   window: string;
@@ -15,7 +17,7 @@ const toneColor: Record<'up' | 'down' | 'neutral', string> = {
   neutral: 'text-neutral-400',
 };
 
-export function ConsistencyScore({ activeDays, totalDays, delta, window }: ConsistencyScoreProps) {
+export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta, window }: ConsistencyScoreProps) {
   const score = activeDays !== null && totalDays > 0 ? Math.round((activeDays / totalDays) * 100) : null;
 
   const radius = 54;
@@ -26,6 +28,14 @@ export function ConsistencyScore({ activeDays, totalDays, delta, window }: Consi
   const f = formatDelta(delta, activeDays);
   const deltaColor = toneColor[f.tone];
   const deltaText = `${f.text} vs prior ${window}`;
+
+  // Spell out exactly what's being compared: this period's elapsed slice against the
+  // prior period's matching slice — with both day counts and the explicit division.
+  const canBreakdown = activeDays !== null && priorActiveDays !== null && priorActiveDays !== undefined && priorActiveDays !== 0;
+  const pct = canBreakdown ? Math.round(((activeDays! - priorActiveDays!) / priorActiveDays!) * 100) : 0;
+  const deltaTip = canBreakdown
+    ? `${activeDays} of ${totalDays} active days so far this ${window} vs ${priorActiveDays} of ${totalDays} by the same point last ${window}  →  (${activeDays} − ${priorActiveDays}) ÷ ${priorActiveDays} = ${pct > 0 ? '+' : ''}${pct}%`
+    : explainDelta(activeDays, priorActiveDays ?? null, window, 'active days');
 
   const scoreColor = score === null ? '#a3a3a3' : score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
 
@@ -61,7 +71,9 @@ export function ConsistencyScore({ activeDays, totalDays, delta, window }: Consi
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
           {activeDays !== null ? activeDays : '—'} active days out of {totalDays} so far this {window}
         </p>
-        <p className={`text-xs mt-2 ${deltaColor}`}>{deltaText}</p>
+        <Tooltip content={deltaTip}>
+          <p className={`w-fit text-xs mt-2 ${deltaColor}`}>{deltaText}</p>
+        </Tooltip>
       </div>
     </div>
   );

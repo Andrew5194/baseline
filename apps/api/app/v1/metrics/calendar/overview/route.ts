@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   const curr = within(all, b.start, currEnd);
   const prev = within(all, b.prevStart, prevEnd);
-  const mk = (cv: number, pv: number, unit: string) => ({ value: cv, delta: computeDelta(cv, pv), unit });
+  const mk = (cv: number, pv: number, unit: string) => ({ value: cv, delta: computeDelta(cv, pv), unit, prev: pv });
 
   return NextResponse.json({
     period: periodParam,
