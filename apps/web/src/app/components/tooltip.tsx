@@ -3,12 +3,17 @@
 import { useState, cloneElement, isValidElement, type ReactElement, type ReactNode, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 
+const GAP = 8;
+const MAX_W = 240; // matches max-w-[15rem]
+
 // A lightweight styled hover tooltip. Attaches to its single child element (no extra
 // wrapper, so it works anywhere — even inside overflow-hidden containers) and renders
-// the bubble in a portal at document.body, positioned above the child. Unlike the
+// the bubble in a portal at document.body. It opens to the RIGHT of the element,
+// vertically centered, so it never covers the element's own text or the lines above/
+// below it — flipping to the left only when there isn't room on the right. Unlike the
 // native `title` attribute it's instant, styled, and never clipped.
 export function Tooltip({ content, children }: { content: ReactNode; children: ReactElement }) {
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [rect, setRect] = useState<{ top: number; left: number; right: number } | null>(null);
   if (!isValidElement(children)) return children;
 
   const props = children.props as {
@@ -20,32 +25,36 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
   const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, {
     onMouseEnter: (e: MouseEvent<HTMLElement>) => {
       const r = e.currentTarget.getBoundingClientRect();
-      // Anchor to the element's left edge (where the — left-aligned — delta text
-      // starts), not its center: a full-width block row would otherwise place the
-      // tooltip in the middle of the row, far to the right of the actual text.
-      setPos({ top: r.top, left: r.left });
+      setRect({ top: r.top + r.height / 2, left: r.left, right: r.right });
       props.onMouseEnter?.(e);
     },
     onMouseLeave: (e: MouseEvent<HTMLElement>) => {
-      setPos(null);
+      setRect(null);
       props.onMouseLeave?.(e);
     },
   });
 
+  let bubble: ReactNode = null;
+  if (rect && content) {
+    const openLeft = rect.right + GAP + MAX_W > window.innerWidth;
+    const style = openLeft
+      ? { top: rect.top, left: rect.left - GAP, transform: 'translate(-100%, -50%)' as const }
+      : { top: rect.top, left: rect.right + GAP, transform: 'translate(0, -50%)' as const };
+    bubble = createPortal(
+      <span
+        style={{ position: 'fixed', ...style }}
+        className="pointer-events-none z-[60] w-max max-w-[15rem] rounded-lg bg-neutral-900 px-2.5 py-1.5 text-[11px] font-normal leading-snug text-white shadow-lg dark:bg-neutral-700 dark:text-neutral-100"
+      >
+        {content}
+      </span>,
+      document.body,
+    );
+  }
+
   return (
     <>
       {trigger}
-      {pos && content
-        ? createPortal(
-            <span
-              style={{ position: 'fixed', top: pos.top - 4, left: pos.left, transform: 'translate(0, -100%)' }}
-              className="pointer-events-none z-[60] w-max max-w-[15rem] rounded-lg bg-neutral-900 px-2.5 py-1.5 text-[11px] font-normal leading-snug text-white shadow-lg dark:bg-neutral-700 dark:text-neutral-100"
-            >
-              {content}
-            </span>,
-            document.body,
-          )
-        : null}
+      {bubble}
     </>
   );
 }

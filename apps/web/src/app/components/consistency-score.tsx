@@ -63,7 +63,7 @@ export function ConsistencyScore({ activeDays, totalDays, delta, window }: Consi
           {activeDays !== null ? activeDays : '—'} active days out of {totalDays} so far this {window}
         </p>
         <Tooltip content={explainDelta(activeDays, delta, window, 'active days')}>
-          <p className={`text-xs mt-2 ${deltaColor}`}>{deltaText}</p>
+          <p className={`w-fit text-xs mt-2 ${deltaColor}`}>{deltaText}</p>
         </Tooltip>
       </div>
     </div>

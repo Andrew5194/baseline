@@ -52,7 +52,7 @@ export function MetricsStrip({ stats, activeKey, onSelect, accent = '#10b981' }:
               const f = formatDelta(s.delta ?? null, cur);
               return (
                 <Tooltip content={explainDelta(cur, s.delta ?? null, 'period', typeof s.sub === 'string' ? s.sub : undefined)}>
-                  <p className={`mt-0.5 text-[11px] tabular-nums ${toneColor[f.tone]}`}>{f.text}</p>
+                  <p className={`w-fit mt-0.5 text-[11px] tabular-nums ${toneColor[f.tone]}`}>{f.text}</p>
                 </Tooltip>
               );
             })()}

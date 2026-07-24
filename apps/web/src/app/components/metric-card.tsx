@@ -42,7 +42,7 @@ export function MetricCard({ label, value, delta, unit, window, active, onClick 
       </div>
       {(delta !== null || window) && (
         <Tooltip content={explainDelta(value, delta, window || '30d', unit)}>
-          <p className={`text-xs mt-1 ${toneColor}`}>
+          <p className={`w-fit text-xs mt-1 ${toneColor}`}>
             {f.text} vs prior {window || '30d'}
           </p>
         </Tooltip>
