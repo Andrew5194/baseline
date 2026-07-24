@@ -140,15 +140,3 @@ html {
 ::selection {
   background: rgb(16 185 129 / 0.15);
 }
-
-/* iOS Safari zooms the page in when you focus a text field whose font-size is < 16px
-   (and it ignores maximum-scale / user-scalable, so the viewport trick doesn't help).
-   Force 16px on small screens so tapping a field never zooms; desktop keeps the
-   smaller input text. Left unlayered so it wins over Tailwind's `text-sm` on inputs. */
-@media (max-width: 640px) {
-  input,
-  textarea,
-  select {
-    font-size: 16px;
-  }
-}
