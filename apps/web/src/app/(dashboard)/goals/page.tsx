@@ -309,7 +309,7 @@ export default function Goals() {
                   ))}
                   {loadingCompleted && completedSorted.length === 0 && (
                     <div className="space-y-2">
-                      {[0, 1].map((i) => (
+                      {[0].map((i) => (
                         <div
                           key={i}
                           className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer"
