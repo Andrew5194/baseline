@@ -51,7 +51,8 @@ function bindCrossTab(): void {
 export function fetchMe(force = false): Promise<Me> {
   if (inflight) return inflight;
   if (!force && cache) return Promise.resolve(cache);
-  const p = apiFetch<Me>('/v1/me')
+  // The store is /v1/me's single cache/coalescer, so skip the generic apiFetch cache.
+  const p = apiFetch<Me>('/v1/me', { noCache: true })
     .then((m) => {
       cache = m ?? {};
       loaded = true;
