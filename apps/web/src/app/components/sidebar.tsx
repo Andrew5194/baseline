@@ -16,14 +16,24 @@ const nav = [
 ];
 
 async function signOut() {
-  const csrfRes = await fetch(`${API_URL}/api/auth/csrf`, { credentials: 'include' });
-  const { csrfToken } = await csrfRes.json();
-  await fetch(`${API_URL}/api/auth/signout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ csrfToken, redirect: 'false' }),
-    credentials: 'include',
-  });
+  try {
+    const csrfRes = await fetch(`${API_URL}/api/auth/csrf`, { credentials: 'include' });
+    const { csrfToken } = await csrfRes.json();
+    // Auth.js answers the sign-out POST with a 302 to the API's own origin. With the
+    // default `redirect: 'follow'`, fetch would chase that redirect cross-origin and
+    // throw on CORS — so the code below never ran and the user was never redirected.
+    // `redirect: 'manual'` still lets the browser apply the session-clearing Set-Cookie
+    // from the 302, but doesn't follow it; we navigate to /sign-in ourselves.
+    await fetch(`${API_URL}/api/auth/signout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ csrfToken }),
+      credentials: 'include',
+      redirect: 'manual',
+    });
+  } catch {
+    // Redirect regardless — the user should always land on the sign-in page.
+  }
   window.location.href = '/sign-in';
 }
 
