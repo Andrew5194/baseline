@@ -45,22 +45,27 @@ export function explainDelta(
 ): string {
   const w = window || 'period';
   const u = unit ? ` ${unit}` : '';
+  // The comparison is always against the SAME elapsed slice of the prior period —
+  // e.g. 5 days into this week vs the first 5 days of last week — not the full prior
+  // period. The wording ("so far this week" vs "by the same point last week") makes
+  // that explicit so a partial period isn't read as a drop against a complete one.
+  const samePoint = `by the same point last ${w}`;
   if (delta === null) {
     return current !== null && current > 0
-      ? `New this ${w} — there's no prior ${w} to compare against.`
-      : `No comparable prior ${w} to compare against.`;
+      ? `New — no prior ${w} to compare this against yet.`
+      : `No comparable prior ${w} to compare against yet.`;
   }
-  if (delta === 0) return `No change vs the prior ${w}.`;
+  if (delta === 0) return `No change vs ${samePoint}.`;
   const pct = Math.round(Math.abs(delta) * 100);
   const signed = `${delta > 0 ? '+' : '-'}${pct}%`;
   const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
   const cur = current !== null ? fmt(current) : '0';
   if (delta <= -1) {
-    return `${signed} vs the prior ${w}: ${cur}${u} now, down from a nonzero prior ${w}. Change = (now − prior) ÷ prior.`;
+    return `${cur}${u} so far this ${w}, down from a nonzero total ${samePoint} — a ${signed} change. Measured against the same elapsed span, not the full ${w}.`;
   }
   const prior = current !== null ? current / (1 + delta) : null;
   if (prior !== null && Number.isFinite(prior)) {
-    return `${signed} vs the prior ${w}: ${cur}${u} now vs ~${fmt(prior)}${u} prior. Change = (${cur} − ${fmt(prior)}) ÷ ${fmt(prior)}.`;
+    return `${cur}${u} so far this ${w} vs ~${fmt(prior)}${u} ${samePoint} — change = (${cur} − ${fmt(prior)}) ÷ ${fmt(prior)} = ${signed}. Measured against the same elapsed span, not the full ${w}.`;
   }
-  return `${signed} vs the prior ${w}. Change = (now − prior) ÷ prior.`;
+  return `${signed} vs ${samePoint} — (now − prior) ÷ prior, measured against the same elapsed span of last ${w}.`;
 }

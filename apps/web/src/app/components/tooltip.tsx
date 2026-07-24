@@ -18,7 +18,6 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
   };
 
   const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, {
-    className: `${props.className ?? ''} cursor-help`.trim(),
     onMouseEnter: (e: MouseEvent<HTMLElement>) => {
       const r = e.currentTarget.getBoundingClientRect();
       setPos({ top: r.top, left: r.left + r.width / 2 });
@@ -36,8 +35,8 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
       {pos && content
         ? createPortal(
             <span
-              style={{ position: 'fixed', top: pos.top - 8, left: pos.left, transform: 'translate(-50%, -100%)' }}
-              className="pointer-events-none z-[60] w-max max-w-[16rem] rounded-lg bg-neutral-900 px-2.5 py-1.5 text-[11px] font-normal leading-snug text-white shadow-lg dark:bg-neutral-700 dark:text-neutral-100"
+              style={{ position: 'fixed', top: pos.top - 4, left: pos.left, transform: 'translate(-50%, -100%)' }}
+              className="pointer-events-none z-[60] w-max max-w-[15rem] rounded-lg bg-neutral-900 px-2.5 py-1.5 text-[11px] font-normal leading-snug text-white shadow-lg dark:bg-neutral-700 dark:text-neutral-100"
             >
               {content}
             </span>,
