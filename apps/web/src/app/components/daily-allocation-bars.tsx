@@ -26,6 +26,9 @@ interface DailyAllocationBarsProps {
   // A live, unsaved timer session accumulating on `date` — drawn as a translucent
   // segment growing into that day's free time.
   pending?: { date: string; category: string; hours: number; running: boolean } | null;
+  // Highlight one category across every bar (driven by hovering the donut legend):
+  // its segments stay full-opacity while the rest dim.
+  activeCategory?: string | null;
   // Display unit for hour figures (axis labels, totals, tooltip).
   unit?: TimeUnit;
 }
@@ -52,7 +55,7 @@ interface TooltipRow {
   segments: Array<{ key: string; value: number; color: string }>;
 }
 
-export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories, freeFocus, pending, unit = 'hr' }: DailyAllocationBarsProps) {
+export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories, freeFocus, pending, activeCategory, unit = 'hr' }: DailyAllocationBarsProps) {
   const color = colorOf ?? ((c: string) => colorForCategory(c));
   const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
   const recurringSet = new Set(recurringCategories ?? []);
@@ -197,12 +200,25 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                         s.key === FREE_KEY ? (
                           // Two stacked rects (grey + green) on the same geometry; the
                           // tween moves the geometry and `progress` crossfades colour.
-                          <g key={s.key}>
+                          <g
+                            key={s.key}
+                            opacity={activeCategory && activeCategory !== FREE_KEY ? 0.16 : 1}
+                            style={{ transition: 'opacity 0.15s ease' }}
+                          >
                             <rect x={bx} y={top} width={bw} height={h} fill={FREE_COLOR} opacity={1 - progress} />
                             <rect x={bx} y={top} width={bw} height={h} fill="url(#bar-grad-free)" opacity={progress} />
                           </g>
                         ) : (
-                          <rect key={s.key} x={bx} y={top} width={bw} height={h} fill={`url(#${gradId(s.key)})`} />
+                          <rect
+                            key={s.key}
+                            x={bx}
+                            y={top}
+                            width={bw}
+                            height={h}
+                            fill={`url(#${gradId(s.key)})`}
+                            opacity={activeCategory && activeCategory !== s.key ? 0.16 : 1}
+                            style={{ transition: 'opacity 0.15s ease' }}
+                          />
                         )
                       );
                     })}

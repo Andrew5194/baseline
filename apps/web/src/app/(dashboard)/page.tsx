@@ -13,6 +13,7 @@ import { fmtDuration } from '../../lib/time-units';
 import { useTimeUnit } from '../../lib/use-time-unit';
 import { RecurringAllocations } from '../components/recurring-allocations';
 import { ManageCategoriesModal } from '../components/manage-categories-modal';
+import { CategoryDetailModal } from '../components/category-detail-modal';
 import { Modal } from '../components/modal';
 import { apiFetch } from '../../lib/api';
 import { useTimezone } from '../../lib/use-timezone';
@@ -74,6 +75,10 @@ export default function Overview() {
   const [colorsReady, setColorsReady] = useState(false);
   const [recurringCats, setRecurringCats] = useState<string[]>([]);
   const [panel, setPanel] = useState<Panel | null>(null);
+  // Category highlighted by hovering the donut legend — cross-highlighted in the bar chart.
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  // Category whose entry-level detail breakdown is open (clicking a legend row).
+  const [detailCategory, setDetailCategory] = useState<string | null>(null);
   // Synced server-side (users.preferences via /v1/me) so it follows the user across devices.
   const [hideRecurring, setHideRecurring, hideRecurringLoaded] = usePreference('hideRecurring');
   const [allocView, setAllocView] = usePreference<'bars' | 'calendar'>('allocView', 'bars');
@@ -256,6 +261,14 @@ export default function Overview() {
   const colorMap = useMemo(() => buildColorMap(allCategories, colors), [allCategories, colors]);
   const colorOf = (c: string) => colorMap[c] ?? colorForCategory(c, colors);
 
+  // Per-category count of logged time entries (each is a task, manual log, or timer);
+  // recurring routines show 0 — they're planned allocations, not logged entries.
+  const entryCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const e of entries?.data ?? []) m[e.category] = (m[e.category] ?? 0) + 1;
+    return m;
+  }, [entries]);
+
   // Hold charts/entries until colors + the category set load (first paint uses final
   // colors, no recolor flash) and the hide-recurring pref resolves (so the donut/bars
   // mount at the right freeFocus instead of replaying the hide tween each navigation).
@@ -307,6 +320,20 @@ export default function Overview() {
       </div>
 
       <FocusTimerBar onLogged={refreshAll} />
+
+      {detailCategory && budget && entries && (
+        <CategoryDetailModal
+          category={detailCategory}
+          color={colorOf(detailCategory)}
+          entries={entries.data.filter((e) => e.category === detailCategory)}
+          hours={budget.categories.find((c) => c.category === detailCategory)?.hours ?? 0}
+          pct={budget.categories.find((c) => c.category === detailCategory)?.pct ?? 0}
+          isRecurring={recurringCats.includes(detailCategory)}
+          tz={tz}
+          unit={unit}
+          onClose={() => setDetailCategory(null)}
+        />
+      )}
 
       {editing !== null && (
         <Modal onClose={() => setEditing(null)}>
@@ -377,11 +404,14 @@ export default function Overview() {
         {ready && budget ? (
           <BudgetDonut
             categories={budget.categories}
+            entryCounts={entryCounts}
             trackedHours={budget.tracked_hours}
             freeHours={budget.free_hours}
             budget={budget.budget}
             colorOf={colorOf}
             onRecolor={recolor}
+            onActiveChange={setActiveCategory}
+            onSelectCategory={setDetailCategory}
             recurringCategories={recurringCats}
             freeFocus={hideRecurring}
             unit={unit}
@@ -431,7 +461,7 @@ export default function Overview() {
           allocView === 'calendar' ? (
             <CalendarAllocation data={barRows} categories={stackCategories} colorOf={colorOf} granularity={granularity} recurringCategories={recurringCats} freeFocus={hideRecurring} todayISO={todayKey} entries={entries?.data ?? []} tz={tz} pending={pending} unit={unit} />
           ) : (
-            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} unit={unit} />
+            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} activeCategory={activeCategory} unit={unit} />
           )
         ) : (
           <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
