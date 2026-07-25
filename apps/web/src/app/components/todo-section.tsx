@@ -480,19 +480,21 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
       {showRecurring && <RecurringTodos goals={goalsList} categories={categories} categoryColorOf={categoryColorOf} onChange={load} />}
 
       {loaded && (
-        <CompletionHeatmap
-          cells={heatmap}
-          onSelectDay={setSelectedDay}
-          selected={day}
-          countdown={countdown}
-          onPrevMonth={() => setHeatmapOffset((o) => o + 1)}
-          onNextMonth={() => setHeatmapOffset((o) => Math.max(0, o - 1))}
-          canNextMonth={heatmapOffset > 0}
-          focusStat={{ date: day, completed: dayItems.filter((t) => t.done).length, total: dayItems.length }}
-        />
+        <div className="rise" style={{ animationDelay: '40ms' }}>
+          <CompletionHeatmap
+            cells={heatmap}
+            onSelectDay={setSelectedDay}
+            selected={day}
+            countdown={countdown}
+            onPrevMonth={() => setHeatmapOffset((o) => o + 1)}
+            onNextMonth={() => setHeatmapOffset((o) => Math.max(0, o - 1))}
+            canNextMonth={heatmapOffset > 0}
+            focusStat={{ date: day, completed: dayItems.filter((t) => t.done).length, total: dayItems.length }}
+          />
+        </div>
       )}
 
-      <div className="card-modern overflow-hidden">
+      <div className="card-modern overflow-hidden rise" style={{ animationDelay: '100ms' }}>
         {/* Day header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
           <p className="text-sm font-medium text-neutral-900 dark:text-white">{fullDayLabel(day)}</p>
@@ -670,7 +672,9 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
       </div>
     </section>
 
-    <DayJournal day={day} dayLabel={fullDayLabel(day)} />
+    <div className="rise" style={{ animationDelay: '160ms' }}>
+      <DayJournal day={day} dayLabel={fullDayLabel(day)} />
+    </div>
 
     {movingTask && <MoveTaskModal item={movingTask} onClose={() => setMovingTask(null)} onMove={moveTask} />}
     </>
