@@ -48,8 +48,8 @@ export function FocusTimerBar({ onLogged }: { onLogged: () => void }) {
 
   return (
     <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 p-4 rounded-xl border border-emerald-300/70 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/[0.06]">
-      {/* Category/note + timer stay together on row 1 (min-w keeps them from squishing
-          so far that the buttons don't wrap); the controls drop to row 2 when narrow. */}
+      {/* Category/note + timer keep row 1 (min-w stops them squishing so the controls
+          stay wrapped); the controls drop to their own row on phones. */}
       <div className="flex flex-1 min-w-[10rem] items-center gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5">
@@ -64,9 +64,8 @@ export function FocusTimerBar({ onLogged }: { onLogged: () => void }) {
         <span className="flex-shrink-0 text-2xl font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
       </div>
 
-      {/* On phones the controls take their own full-width row so the category + task
-          name stay fully visible on row 1; inline on the right from `sm` up. */}
-      <div className="basis-full sm:basis-auto sm:ml-auto flex items-center gap-2 flex-shrink-0">
+      {/* Own full-width row on phones, but kept right-aligned; inline right from sm up. */}
+      <div className="basis-full sm:basis-auto sm:ml-auto flex items-center justify-end gap-2 flex-shrink-0">
         {running ? (
           <button onClick={pauseTimer} className={`${btn} border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800`}>
             Pause
