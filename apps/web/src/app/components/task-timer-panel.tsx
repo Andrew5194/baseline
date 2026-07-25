@@ -106,7 +106,7 @@ export function TaskTimerPanel({
           {taskDone ? 'No time logged.' : 'No time logged. Start the task to log time.'}
         </p>
       )}
-      {!taskDone && <TaskTimer taskId={taskId} title={title} category={category} onLogged={logged} />}
+      {!taskDone && <TaskTimer taskId={taskId} title={title} category={category} onLogged={logged} hideStart />}
     </div>
   );
 }

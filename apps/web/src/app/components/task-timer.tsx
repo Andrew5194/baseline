@@ -51,7 +51,9 @@ export function TaskTimer({
     onLogged?.();
   }
 
-  const btn = 'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors';
+  // Fluid size so the controls shrink gradually with the screen and stay on one line
+  // even in the narrow panel under a task on mobile.
+  const btn = 'py-1 rounded-lg font-medium transition-colors whitespace-nowrap text-[clamp(10px,2.5vw,11px)] px-[clamp(0.375rem,1.7vw,0.625rem)]';
 
   if (!isThis) {
     if (hideStart) return null; // timers are started from the row's kebab menu
@@ -78,10 +80,10 @@ export function TaskTimer({
   const running = timer.startedAt !== null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 rounded-lg border border-emerald-300/70 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/[0.06]">
+    <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-emerald-300/70 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/[0.06]">
       <Heartbeat running={running} />
-      <span className="text-base font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
-      <div className="ml-auto flex flex-wrap items-center gap-1.5">
+      <span className="flex-shrink-0 text-base font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
+      <div className="ml-auto flex items-center gap-1">
         {running ? (
           <button onClick={pauseTimer} className={`${btn} border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800`}>
             Pause
