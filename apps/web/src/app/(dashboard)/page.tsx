@@ -299,11 +299,11 @@ export default function Overview() {
     }`;
 
   return (
-    <div className="theme-evolve p-4 sm:p-6 lg:p-8 max-w-5xl">
+    <div className="overview-modern p-4 sm:p-6 lg:p-8 max-w-5xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">Overview</h1>
-          <p className="text-xs font-medium uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mt-0.5">{periodRangeLabel(period, tz, offset)}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <PeriodSelector
@@ -316,7 +316,7 @@ export default function Overview() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setEditing('new')}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-strong)] shadow-sm shadow-emerald-900/10 transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
             >
               <span className="text-sm leading-none">+</span>
               Add entry
@@ -390,9 +390,9 @@ export default function Overview() {
       )}
 
       {/* Budget donut for the selected period */}
-      <div className="p-6 rounded-xl border border-neutral-200/70 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 card-soft mb-6">
+      <div className="card-modern rise p-6 mb-6" style={{ animationDelay: '40ms' }}>
         <div className="flex items-center justify-between mb-5">
-          <p className="font-display text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-[0.18em]">
+          <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
             {PERIOD_LABEL[period]}
           </p>
           <div className="flex items-center gap-3">
@@ -411,7 +411,7 @@ export default function Overview() {
               >
                 <span
                   className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                    hideRecurring ? 'tranneutral-x-3.5' : 'tranneutral-x-0.5'
+                    hideRecurring ? 'translate-x-3.5' : 'translate-x-0.5'
                   }`}
                 />
               </span>
@@ -440,9 +440,9 @@ export default function Overview() {
       </div>
 
       {/* Allocation over the period — bar chart or calendar grid */}
-      <div className="p-6 rounded-xl border border-neutral-200/70 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 card-soft mb-6">
+      <div className="card-modern rise p-6 mb-6" style={{ animationDelay: '120ms' }}>
         <div className="flex items-center justify-between mb-5">
-          <p className="font-display text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-[0.18em]">
+          <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
             {allocationLabel}
           </p>
           <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
@@ -485,8 +485,8 @@ export default function Overview() {
       </div>
 
       {/* Entries list */}
-      <div className="p-6 rounded-xl border border-neutral-200/70 dark:border-neutral-800/80 bg-white dark:bg-neutral-900 card-soft">
-        <p className="font-display text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-[0.18em] mb-4">
+      <div className="card-modern rise p-6" style={{ animationDelay: '200ms' }}>
+        <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-4">
           Entries {PERIOD_LABEL[period].toLowerCase()}
         </p>
         {!ready || !entries ? (

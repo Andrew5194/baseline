@@ -167,7 +167,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
 
   return (
     <div className="flex flex-col sm:flex-row items-center gap-8">
-      <div className="relative flex-shrink-0" style={{ width: SIZE, height: SIZE }}>
+      <div className="donut-in relative flex-shrink-0" style={{ width: SIZE, height: SIZE }}>
         <svg width={SIZE} height={SIZE}>
           <defs>
             {effCategories.map((c) => {

@@ -238,7 +238,7 @@ export function CalendarAllocation({
               {HOURS.map((h) => (
                 <div
                   key={h}
-                  className="absolute right-1.5 text-[9px] text-neutral-400 dark:text-neutral-500 tabular-nums -tranneutral-y-1/2"
+                  className="absolute right-1.5 text-[9px] text-neutral-400 dark:text-neutral-500 tabular-nums -translate-y-1/2"
                   style={{ top: h * HOUR_PX }}
                 >
                   {h === 0 ? '' : fmtHour(h)}
@@ -299,7 +299,7 @@ export function CalendarAllocation({
                   style={{ top: nowTop, left: `${(nowCol / 7) * 100}%`, width: `${100 / 7}%` }}
                 >
                   <div className="h-[2px] bg-red-500/90" />
-                  <span className="absolute left-0 w-2.5 h-2.5 rounded-full bg-red-500 -tranneutral-x-1/2 -tranneutral-y-1/2" style={{ top: 1 }} />
+                  <span className="absolute left-0 w-2.5 h-2.5 rounded-full bg-red-500 -translate-x-1/2 -translate-y-1/2" style={{ top: 1 }} />
                 </div>
               )}
             </div>

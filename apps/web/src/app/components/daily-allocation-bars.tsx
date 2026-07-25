@@ -36,7 +36,7 @@ interface DailyAllocationBarsProps {
 }
 
 const FREE_KEY = 'Free';
-const FREE_SWATCH = '#94a3b8'; // solid neutral-400 so "Free" reads clearly in the tooltip
+const FREE_SWATCH = '#94a3b8'; // solid slate-400 so "Free" reads clearly in the tooltip
 const HEIGHT = 256;
 const MARGIN = { top: 18, right: 8, bottom: 22 };
 const RADIUS = 4;

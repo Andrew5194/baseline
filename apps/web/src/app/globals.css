@@ -30,32 +30,6 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ── "Evolve" design tokens (prototype, scoped via .theme-evolve) ──────────────
-   Today's Baseline, sharpened: keep the green identity (deepened to a richer jade),
-   Inter over Geist, unified radius, and subtle elevation instead of flat borders. */
-.theme-evolve {
-  --accent: #059669; /* emerald-600 — a deeper, richer jade than the old bright green */
-  --accent-strong: #047857; /* emerald-700 */
-  --accent-soft: rgba(5, 150, 105, 0.1);
-  /* Restrained, layered shadows for gentle depth (nearly-neutral tint). */
-  --shadow-soft: 0 1px 2px rgba(17, 17, 17, 0.04), 0 3px 10px rgba(17, 17, 17, 0.04);
-  --shadow-lift: 0 2px 4px rgba(17, 17, 17, 0.05), 0 12px 28px rgba(17, 17, 17, 0.08);
-  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.005em;
-}
-.font-display {
-  font-family: var(--font-body), ui-sans-serif, sans-serif;
-  letter-spacing: -0.02em;
-}
-/* Soft elevated surface — depth instead of a flat hairline border. */
-.card-soft {
-  box-shadow: var(--shadow-soft);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-.dark .card-soft {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
-}
-
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -69,6 +43,100 @@ html {
 
 .animate-fade-in {
   animation: fade-in 0.6s ease-out forwards;
+}
+
+/* ── Overview modernization (experiment, scoped via .overview-modern) ──────────
+   Keeps Baseline's identity (Geist, neutral, emerald). Adds what separates a
+   modern product from a flat template: depth, a considered canvas, and motion.
+   Scoped to a wrapper so only the Overview is affected while we experiment. */
+
+/* Considered canvas — a faint emerald aurora at the top instead of flat gray.
+   Fixed + behind content so it stays put as the page scrolls. */
+.overview-modern::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(110% 55% at 50% -8%, rgba(16, 185, 129, 0.07), transparent 55%);
+}
+.dark .overview-modern::before {
+  background: radial-gradient(110% 55% at 50% -8%, rgba(16, 185, 129, 0.1), transparent 55%);
+}
+
+/* Elevated surface — depth via layered shadow + a hairline ring, not a hard 1px
+   border. This single change is most of what makes a UI read as "real". */
+.overview-modern .card-modern {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(17, 17, 17, 0.04),
+    0 4px 12px rgba(17, 17, 17, 0.04),
+    0 0 0 1px rgba(17, 17, 17, 0.05);
+  transition: box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.overview-modern .card-modern:hover {
+  box-shadow:
+    0 2px 4px rgba(17, 17, 17, 0.05),
+    0 12px 28px rgba(17, 17, 17, 0.09),
+    0 0 0 1px rgba(17, 17, 17, 0.06);
+}
+.dark .overview-modern .card-modern {
+  background: #171717;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.dark .overview-modern .card-modern:hover {
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 16px 36px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.09);
+}
+
+/* Staggered entrance — cards rise + fade with an eased, slightly overshooting
+   curve. Respect reduced-motion. */
+.overview-modern .rise {
+  opacity: 0;
+  animation: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overview-modern .rise {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+/* Chart "comes to life" — the donut winds up and settles once on mount. */
+.overview-modern .donut-in {
+  transform-origin: center;
+  animation: donut-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+}
+@keyframes donut-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) rotate(-9deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overview-modern .donut-in {
+    animation: none;
+  }
 }
 
 /* Skeleton shimmer — a soft highlight that sweeps left → right over a gray
