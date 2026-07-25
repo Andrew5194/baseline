@@ -71,3 +71,12 @@ export async function PATCH(request: NextRequest) {
   const [user] = await db.update(users).set(set).where(eq(users.id, userId)).returning(SELECT);
   return NextResponse.json(user);
 }
+
+// DELETE /v1/me — permanently delete the current user and everything they own. Every
+// user-scoped table references users.id with ON DELETE CASCADE, so removing the one row
+// wipes accounts, sessions, integrations, events, goals, tasks, categories, journal, etc.
+export async function DELETE() {
+  const userId = await getCurrentUserId();
+  await db.delete(users).where(eq(users.id, userId));
+  return NextResponse.json({ deleted: true });
+}
