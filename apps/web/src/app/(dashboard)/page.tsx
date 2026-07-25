@@ -325,7 +325,7 @@ export default function Overview() {
 
   return (
     <div className="overview-modern p-4 sm:p-6 lg:p-8 max-w-5xl">
-      <div className="sticky top-14 md:top-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 mb-2 flex flex-col gap-3 border-b border-neutral-200/70 bg-neutral-50/80 px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 dark:border-neutral-800/70 dark:bg-neutral-950/80">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
           <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
