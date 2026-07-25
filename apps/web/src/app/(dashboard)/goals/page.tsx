@@ -243,6 +243,8 @@ export default function Goals() {
               {active.map((g, i) => (
                 <div
                   key={g.id}
+                  className="rise"
+                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
                   onDragOver={(e) => onDragOver(e, i)}
                   onDrop={(e) => e.preventDefault()}
                 >
@@ -296,16 +298,17 @@ export default function Goals() {
               {showCompleted && (
                 // Bounded + internally scrollable so 50+ completed goals never push the
                 // page down — collapsed it's still a single line; expanded it caps here.
-                <div className="mt-2 max-h-96 space-y-2 overflow-y-auto overscroll-contain pr-1">
-                  {completedSorted.map((g) => (
-                    <GoalCard
-                      key={g.id}
-                      goal={g}
-                      onChange={load}
-                      onOptimisticPatch={patchGoal}
-                      onOptimisticRemove={removeGoal}
-                      countdown={countdown}
-                    />
+                <div className="mt-2 max-h-96 space-y-2 overflow-y-auto overscroll-contain -mx-2 px-2 py-2">
+                  {completedSorted.map((g, i) => (
+                    <div key={g.id} className="rise" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                      <GoalCard
+                        goal={g}
+                        onChange={load}
+                        onOptimisticPatch={patchGoal}
+                        onOptimisticRemove={removeGoal}
+                        countdown={countdown}
+                      />
+                    </div>
                   ))}
                   {loadingCompleted && completedSorted.length === 0 && (
                     <div className="space-y-2">

@@ -182,8 +182,8 @@ export default function History() {
         </div>
       ) : (
         <div className="space-y-6">
-          {groups.map((g) => (
-            <div key={g.day}>
+          {groups.map((g, i) => (
+            <div key={g.day} className="rise" style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}>
               <p className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">
                 {g.day}
               </p>

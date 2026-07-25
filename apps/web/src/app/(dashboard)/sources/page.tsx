@@ -131,12 +131,13 @@ export default function Sources() {
       <h1 className="text-xl font-semibold tracking-tight mb-6">Sources</h1>
 
       <div className="space-y-3">
-        {CONNECTABLE.map((src) => {
+        {CONNECTABLE.map((src, idx) => {
           const integration = integrations.find((i) => i.provider === src.provider && i.status === 'connected');
           return (
             <div
               key={src.provider}
-              className="p-5 card-modern"
+              className="p-5 card-modern rise"
+              style={{ animationDelay: `${40 + idx * 60}ms` }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -189,10 +190,11 @@ export default function Sources() {
         })}
 
         {/* Upcoming integrations */}
-        {UPCOMING_SOURCES.map((source) => (
+        {UPCOMING_SOURCES.map((source, idx) => (
           <div
             key={source.name}
-            className="p-5 card-modern opacity-60"
+            className="p-5 card-modern opacity-60 rise"
+            style={{ animationDelay: `${40 + (CONNECTABLE.length + idx) * 60}ms` }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">

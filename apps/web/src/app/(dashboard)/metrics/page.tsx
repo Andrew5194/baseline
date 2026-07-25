@@ -271,7 +271,7 @@ export default function Metrics() {
       </div>
 
       {showConsistency && consistencyDef && (
-        <div className="mb-6">
+        <div className="mb-6 rise" style={{ animationDelay: '40ms' }}>
           <ConsistencyScore
             activeDays={m?.[consistencyDef.metric]?.value ?? null}
             priorActiveDays={m?.[consistencyDef.metric]?.prev ?? null}
@@ -282,11 +282,11 @@ export default function Metrics() {
         </div>
       )}
 
-      <div className="mb-6">
+      <div className="mb-6 rise" style={{ animationDelay: '100ms' }}>
         <MetricsStrip stats={stats} activeKey={active} onSelect={setActive} window={dataPeriod} />
       </div>
 
-      <div className="p-6 card-modern mb-6">
+      <div className="p-6 card-modern mb-6 rise" style={{ animationDelay: '160ms' }}>
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
             {activeDef.label} {PERIOD_LABEL[dataPeriod]}
