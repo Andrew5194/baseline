@@ -496,24 +496,9 @@ export default function Overview() {
             ))}
           </div>
         ) : entries.data.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center py-10">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v8m4-4H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium text-neutral-900 dark:text-white">No time logged yet</p>
-            <p className="mt-1 mb-4 max-w-xs text-xs text-neutral-400 dark:text-neutral-500">
-              Track where your {PERIOD_LABEL[period].toLowerCase().replace('this ', '')} goes — add an entry or start a task timer.
-            </p>
-            <button
-              onClick={() => setEditing('new')}
-              className="flex items-center gap-1 rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-            >
-              <span className="text-sm leading-none">+</span>
-              Add entry
-            </button>
-          </div>
+          <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4">
+            No entries yet. Click <span className="font-medium">Add entry</span> to log time.
+          </p>
         ) : (
           <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {entries.data.map((e) => (

@@ -476,15 +476,15 @@ export function TodoSection({
   // still sees the empty grid (the API always returns a full month).
   const loaded = todos !== null;
 
-  // Until the parent coordinates the reveal, show a skeleton that mirrors the section's
-  // shape (Tasks label + heatmap + tasks card + Notes) so the whole page can rise at once.
+  // Until the parent coordinates the reveal, show a skeleton that continues the goal
+  // list's rhythm — the same h-16 bars — so the whole page reads as one consistent
+  // column of shimmer bars (rather than a few chunky blocks) on any viewport.
   if (!reveal) {
     return (
-      <div className="mt-10 space-y-6">
-        <div className="h-5 w-14 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
-        <div className="h-36 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
-        <div className="h-56 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
-        <div className="h-40 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+      <div className="mt-10 space-y-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-16 rounded-xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        ))}
       </div>
     );
   }
