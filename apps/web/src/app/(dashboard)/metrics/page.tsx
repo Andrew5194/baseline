@@ -239,10 +239,16 @@ export default function Metrics() {
 
   if (loading && !overview) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl space-y-6">
-        <div className="h-8 w-40 bg-neutral-200 dark:bg-neutral-800 rounded shimmer" />
-        <div className="h-20 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
-        <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="h-7 w-28 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+          <div className="h-8 w-40 rounded-lg bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        </div>
+        {/* Consistency card, metrics strip, chart card */}
+        <div className="mb-6 h-28 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        <div className="mb-6 h-20 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        <div className="h-72 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
       </div>
     );
   }

@@ -171,9 +171,12 @@ export default function History() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-12 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
+        <div className="space-y-6">
+          {[0, 1].map((g) => (
+            <div key={g}>
+              <div className="mb-2 h-3 w-32 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+              <div className="h-40 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+            </div>
           ))}
         </div>
       ) : items.length === 0 ? (

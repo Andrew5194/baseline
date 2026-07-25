@@ -226,9 +226,9 @@ export default function Goals() {
       )}
 
       {active === null || !todosReady ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
+            <div key={i} className="h-14 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
           ))}
         </div>
       ) : (
