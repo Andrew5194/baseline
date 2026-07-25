@@ -35,6 +35,7 @@ interface Entry {
   timed?: boolean;
   task_id?: string | null;
   source?: string; // 'manual' | 'google_calendar' — present on the all-sources detail fetch
+  link?: string | null; // Google Calendar event URL (calendar entries only)
 }
 interface EntriesResponse {
   data: Entry[];

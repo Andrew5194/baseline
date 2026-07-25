@@ -53,7 +53,8 @@ export function normalizeCalendarEvents(
       occurredAt,
       durationMs,
       payload: {
-        category: calendarName, // time-allocation groups by this
+        category: 'Calendar', // all calendar events group under one "Calendar" bucket
+        calendar: calendarName, // the source calendar's name, kept for reference
         summary: e.summary ?? '(no title)',
         description: e.description,
         html_link: e.htmlLink,

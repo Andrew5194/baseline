@@ -11,6 +11,7 @@ export interface CategoryEntry {
   timed?: boolean;
   task_id?: string | null;
   source?: string;
+  link?: string | null;
 }
 
 // Each entry's origin — the sources that make up a category's logged time.
@@ -106,12 +107,35 @@ export function CategoryDetailModal({
           <div className="max-h-[50vh] overflow-y-auto -mx-1 px-1 divide-y divide-neutral-100 dark:divide-neutral-800">
             {sorted.map((e) => {
               const kind = entryKind(e);
-              return (
-                <div key={e.id} className="flex items-center gap-2.5 py-2 text-sm">
+              const inner = (
+                <>
                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${kind.className}`}>{kind.label}</span>
                   <span className="text-neutral-500 dark:text-neutral-400 tabular-nums text-[11px] w-28 flex-shrink-0">{when(e.occurred_at)}</span>
-                  <span className="text-neutral-700 dark:text-neutral-300 truncate flex-1">{e.note || '—'}</span>
+                  <span className="flex-1 min-w-0 flex items-center gap-1 text-neutral-700 dark:text-neutral-300">
+                    <span className="truncate">{e.note || '—'}</span>
+                    {e.link && (
+                      <svg className="w-3 h-3 flex-shrink-0 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    )}
+                  </span>
                   <span className="text-neutral-900 dark:text-white font-medium tabular-nums flex-shrink-0">{fmtDuration(e.hours, unit)}</span>
+                </>
+              );
+              return e.link ? (
+                <a
+                  key={e.id}
+                  href={e.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open in Google Calendar"
+                  className="group flex items-center gap-2.5 py-2 text-sm -mx-1 px-1 rounded-md cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors"
+                >
+                  {inner}
+                </a>
+              ) : (
+                <div key={e.id} className="flex items-center gap-2.5 py-2 text-sm">
+                  {inner}
                 </div>
               );
             })}

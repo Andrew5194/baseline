@@ -16,7 +16,7 @@ const entryFromRow = (r: {
   source: string;
   payload: unknown;
 }) => {
-  const p = (r.payload ?? {}) as { category?: string; note?: string; summary?: string; timed?: boolean; task_id?: string };
+  const p = (r.payload ?? {}) as { category?: string; note?: string; summary?: string; html_link?: string; timed?: boolean; task_id?: string };
   return {
     id: r.id,
     occurred_at: r.occurredAt,
@@ -27,6 +27,7 @@ const entryFromRow = (r: {
     timed: p.timed === true,
     task_id: p.task_id ?? null,
     source: r.source,
+    link: p.html_link ?? null, // calendar events link back to the Google Calendar entry
   };
 };
 
