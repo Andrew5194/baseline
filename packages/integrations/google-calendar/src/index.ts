@@ -3,6 +3,7 @@ export {
   exchangeCodeForToken,
   refreshAccessToken,
   fetchGoogleUser,
+  revokeGoogleToken,
   type GoogleTokenResponse,
 } from './oauth';
 

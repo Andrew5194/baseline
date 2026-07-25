@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, users } from '@baseline/db';
-import { eq, sql, type SQL } from 'drizzle-orm';
+import { db, users, integrations } from '@baseline/db';
+import { eq, and, sql, type SQL } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../lib/user';
+import { revokeIntegrations } from '../../../lib/revoke-integrations';
 
 // Whether `tz` is a valid IANA timezone the runtime understands.
 function isValidTimeZone(tz: string): boolean {
@@ -77,6 +78,15 @@ export async function PATCH(request: NextRequest) {
 // wipes accounts, sessions, integrations, events, goals, tasks, categories, journal, etc.
 export async function DELETE() {
   const userId = await getCurrentUserId();
+
+  // Best-effort: revoke each connected integration's OAuth grant with the provider so
+  // Baseline is removed from the user's authorized apps (not just forgotten locally).
+  const connected = await db
+    .select({ provider: integrations.provider, accessToken: integrations.accessToken, refreshToken: integrations.refreshToken })
+    .from(integrations)
+    .where(and(eq(integrations.userId, userId), eq(integrations.status, 'connected')));
+  await revokeIntegrations(connected);
+
   await db.delete(users).where(eq(users.id, userId));
   return NextResponse.json({ deleted: true });
 }
