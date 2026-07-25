@@ -142,7 +142,15 @@ function MoveTaskModal({
   );
 }
 
-export function TodoSection({ countdown = false }: { countdown?: boolean } = {}) {
+export function TodoSection({
+  countdown = false,
+  // When provided, gates the reveal: the parent coordinates a single page-wide
+  // entrance, so the section shows a skeleton until `reveal` is true, then rises.
+  reveal = true,
+  // Called once the first /v1/todos fetch settles (success or error), so the parent
+  // knows this section is ready to reveal.
+  onReady,
+}: { countdown?: boolean; reveal?: boolean; onReady?: () => void } = {}) {
   const tz = useTimezone();
   const [unit] = useTimeUnit();
   const [todos, setTodos] = useState<Todo[] | null>(null);
@@ -164,6 +172,12 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   // Which month the completion heatmap shows — 0 = current, 1 = last month, …
   const [heatmapOffset, setHeatmapOffset] = useState(0);
   const activeTimer = useFocusTimer();
+  // First-load-settled flag → reported to the parent so it can reveal the page.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    if (settled) onReady?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled]);
 
   const load = useCallback(
     () =>
@@ -208,7 +222,9 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   );
 
   useEffect(() => {
-    load();
+    // Mark settled once the first todos fetch resolves — success OR failure — so a
+    // todos error can never wedge the page waiting to reveal.
+    load().finally(() => setSettled(true));
     loadGoals();
     loadCategories();
     loadCatColors();
@@ -460,6 +476,19 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   // still sees the empty grid (the API always returns a full month).
   const loaded = todos !== null;
 
+  // Until the parent coordinates the reveal, show a skeleton that mirrors the section's
+  // shape (Tasks label + heatmap + tasks card + Notes) so the whole page can rise at once.
+  if (!reveal) {
+    return (
+      <div className="mt-10 space-y-6">
+        <div className="h-5 w-14 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        <div className="h-36 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        <div className="h-56 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        <div className="h-40 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+      </div>
+    );
+  }
+
   return (
     <>
     <section className="mt-10">
@@ -479,20 +508,36 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
 
       {showRecurring && <RecurringTodos goals={goalsList} categories={categories} categoryColorOf={categoryColorOf} onChange={load} />}
 
-      {loaded && (
-        <CompletionHeatmap
-          cells={heatmap}
-          onSelectDay={setSelectedDay}
-          selected={day}
-          countdown={countdown}
-          onPrevMonth={() => setHeatmapOffset((o) => o + 1)}
-          onNextMonth={() => setHeatmapOffset((o) => Math.max(0, o - 1))}
-          canNextMonth={heatmapOffset > 0}
-          focusStat={{ date: day, completed: dayItems.filter((t) => t.done).length, total: dayItems.length }}
-        />
+      {loaded ? (
+        <div className="rise" style={{ animationDelay: '40ms' }}>
+          <CompletionHeatmap
+            cells={heatmap}
+            onSelectDay={setSelectedDay}
+            selected={day}
+            countdown={countdown}
+            onPrevMonth={() => setHeatmapOffset((o) => o + 1)}
+            onNextMonth={() => setHeatmapOffset((o) => Math.max(0, o - 1))}
+            canNextMonth={heatmapOffset > 0}
+            focusStat={{ date: day, completed: dayItems.filter((t) => t.done).length, total: dayItems.length }}
+          />
+        </div>
+      ) : (
+        // Reserve the heatmap's space while /v1/todos loads (mirrors its real layout)
+        // so it doesn't sit empty and pop in late.
+        <div className="p-5 card-modern mb-6">
+          <div className="mb-4 space-y-1.5">
+            <div className="h-7 w-44 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+            <div className="h-3 w-24 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from({ length: 31 }).map((_, i) => (
+              <div key={i} className="w-4 h-4 rounded-[4px] bg-neutral-200 dark:bg-neutral-800" />
+            ))}
+          </div>
+        </div>
       )}
 
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+      <div className="card-modern overflow-hidden rise" style={{ animationDelay: '100ms' }}>
         {/* Day header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
           <p className="text-sm font-medium text-neutral-900 dark:text-white">{fullDayLabel(day)}</p>
@@ -670,7 +715,9 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
       </div>
     </section>
 
-    <DayJournal day={day} dayLabel={fullDayLabel(day)} />
+    <div className="rise" style={{ animationDelay: '160ms' }}>
+      <DayJournal day={day} dayLabel={fullDayLabel(day)} />
+    </div>
 
     {movingTask && <MoveTaskModal item={movingTask} onClose={() => setMovingTask(null)} onMove={moveTask} />}
     </>

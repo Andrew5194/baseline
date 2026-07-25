@@ -111,7 +111,7 @@ export function RecurringAllocations({ knownCategories, colorOf, onChange }: Rec
   const existing = new Set(items.filter((i) => i.category).map((i) => (i.category as string).toLowerCase()));
 
   return (
-    <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 space-y-4">
+    <div className="p-5 card-modern space-y-4">
       <div>
         <p className="text-sm font-medium text-neutral-900 dark:text-white">Recurring allocations</p>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">

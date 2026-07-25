@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { formatDelta, explainDelta } from '../../lib/format-delta';
 import { Tooltip } from './tooltip';
 
@@ -25,6 +26,19 @@ export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta
   const circumference = 2 * Math.PI * radius;
   const progress = score !== null ? (score / 100) * circumference : 0;
 
+  // Fill the ring clockwise on mount: start empty (full dash offset), then transition
+  // to the real offset. Reduced-motion starts filled (no draw). The existing CSS
+  // transition on the arc animates the change.
+  // NB: the `window` prop shadows the global here — read reduced-motion off globalThis.
+  const prefersReduced = typeof globalThis !== 'undefined' && !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const [drawn, setDrawn] = useState(prefersReduced);
+  useEffect(() => {
+    if (drawn) return;
+    const id = requestAnimationFrame(() => setDrawn(true));
+    return () => cancelAnimationFrame(id);
+  }, [drawn]);
+  const dashoffset = drawn ? circumference - progress : circumference;
+
   const f = formatDelta(delta, activeDays);
   const deltaColor = toneColor[f.tone];
   const deltaText = `${f.text} vs prior ${window}`;
@@ -40,7 +54,7 @@ export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta
   const scoreColor = score === null ? '#a3a3a3' : score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center gap-6">
+    <div className="p-5 card-modern flex items-center gap-6">
       {/* Ring */}
       <div className="flex-shrink-0 relative">
         <svg width="128" height="128" viewBox="0 0 128 128">
@@ -54,13 +68,13 @@ export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={circumference}
-            strokeDashoffset={circumference - progress}
+            strokeDashoffset={dashoffset}
             transform="rotate(-90 64 64)"
             className="transition-all duration-700 ease-out"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold tracking-tight">{score !== null ? `${score}` : '—'}</span>
+          <span className="text-3xl font-bold tracking-tight tabular-nums">{score !== null ? `${score}` : '—'}</span>
           <span className="text-[10px] text-neutral-400 dark:text-neutral-500 -mt-0.5">%</span>
         </div>
       </div>

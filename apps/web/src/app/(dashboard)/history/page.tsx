@@ -150,7 +150,7 @@ export default function History() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">History</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">History</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Everything that&apos;s happened, most recent first</p>
         </div>
         <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 self-start sm:self-auto">
@@ -182,12 +182,12 @@ export default function History() {
         </div>
       ) : (
         <div className="space-y-6">
-          {groups.map((g) => (
-            <div key={g.day}>
+          {groups.map((g, i) => (
+            <div key={g.day} className="rise" style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}>
               <p className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">
                 {g.day}
               </p>
-              <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 divide-y divide-neutral-100 dark:divide-neutral-800">
+              <div className="card-modern divide-y divide-neutral-100 dark:divide-neutral-800">
                 {g.items.map((ev) => {
                   const meta = eventMeta(ev.event_type);
                   const repo = repoOf(ev.payload);

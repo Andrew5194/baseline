@@ -251,7 +251,7 @@ export default function Metrics() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Metrics</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Metrics</h1>
           <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -271,7 +271,7 @@ export default function Metrics() {
       </div>
 
       {showConsistency && consistencyDef && (
-        <div className="mb-6">
+        <div className="mb-6 rise" style={{ animationDelay: '40ms' }}>
           <ConsistencyScore
             activeDays={m?.[consistencyDef.metric]?.value ?? null}
             priorActiveDays={m?.[consistencyDef.metric]?.prev ?? null}
@@ -282,11 +282,11 @@ export default function Metrics() {
         </div>
       )}
 
-      <div className="mb-6">
+      <div className="mb-6 rise" style={{ animationDelay: '100ms' }}>
         <MetricsStrip stats={stats} activeKey={active} onSelect={setActive} window={dataPeriod} />
       </div>
 
-      <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
+      <div className="p-6 card-modern mb-6 rise" style={{ animationDelay: '160ms' }}>
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
             {activeDef.label} {PERIOD_LABEL[dataPeriod]}

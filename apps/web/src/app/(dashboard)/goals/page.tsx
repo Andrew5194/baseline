@@ -22,6 +22,10 @@ export default function Goals() {
   const [completedLoaded, setCompletedLoaded] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
   const [adding, setAdding] = useState(false);
+  // The Tasks section (TodoSection) fetches its own data; it reports readiness here so
+  // the whole page can reveal — goal cards + Tasks/Notes — in one coordinated cascade,
+  // like Overview/Metrics, instead of two separate waves.
+  const [todosReady, setTodosReady] = useState(false);
   // Count-down mode — reframes due dates and task counts as "time/tasks left". Synced
   // server-side (users.preferences via /v1/me) so it follows the user across devices.
   const [countdown, setCountdown] = usePreference('goalsCountdown');
@@ -179,7 +183,7 @@ export default function Goals() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 mb-6">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight">Goals</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Goals</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Things you want to accomplish
           </p>
@@ -221,7 +225,7 @@ export default function Goals() {
         </Modal>
       )}
 
-      {active === null ? (
+      {active === null || !todosReady ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
@@ -243,6 +247,8 @@ export default function Goals() {
               {active.map((g, i) => (
                 <div
                   key={g.id}
+                  className="rise"
+                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
                   onDragOver={(e) => onDragOver(e, i)}
                   onDrop={(e) => e.preventDefault()}
                 >
@@ -296,16 +302,17 @@ export default function Goals() {
               {showCompleted && (
                 // Bounded + internally scrollable so 50+ completed goals never push the
                 // page down — collapsed it's still a single line; expanded it caps here.
-                <div className="mt-2 max-h-96 space-y-2 overflow-y-auto overscroll-contain pr-1">
-                  {completedSorted.map((g) => (
-                    <GoalCard
-                      key={g.id}
-                      goal={g}
-                      onChange={load}
-                      onOptimisticPatch={patchGoal}
-                      onOptimisticRemove={removeGoal}
-                      countdown={countdown}
-                    />
+                <div className="mt-2 max-h-96 space-y-2 overflow-y-auto overscroll-contain -mx-2 px-2 py-2">
+                  {completedSorted.map((g, i) => (
+                    <div key={g.id} className="rise" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                      <GoalCard
+                        goal={g}
+                        onChange={load}
+                        onOptimisticPatch={patchGoal}
+                        onOptimisticRemove={removeGoal}
+                        countdown={countdown}
+                      />
+                    </div>
                   ))}
                   {loadingCompleted && completedSorted.length === 0 && (
                     <div className="space-y-2">
@@ -331,9 +338,17 @@ export default function Goals() {
             </div>
           )}
 
-          <TodoSection countdown={countdown} />
         </>
       )}
+
+      {/* Always mounted so it prefetches /v1/todos in parallel with the goals list;
+          it reports readiness up (setTodosReady) and only reveals its cards once the
+          whole page is ready, so everything rises together. */}
+      <TodoSection
+        countdown={countdown}
+        reveal={active !== null && todosReady}
+        onReady={() => setTodosReady(true)}
+      />
     </div>
   );
 }

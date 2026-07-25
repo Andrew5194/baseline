@@ -100,7 +100,7 @@ export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string })
         <h2 className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">Notes</h2>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+      <div className="card-modern overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
           <p className="text-sm font-medium text-neutral-900 dark:text-white">{dayLabel}</p>
           {saving ? (

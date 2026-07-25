@@ -1,9 +1,16 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 // Lightweight centered modal: dimmed backdrop, click-outside and Escape to close.
+// Rendered through a portal on document.body so it always positions against the
+// viewport — a transformed ancestor (e.g. a `.rise` entrance) would otherwise
+// become the containing block for its `fixed` layer and break positioning.
 export function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -16,7 +23,9 @@ export function Modal({ children, onClose }: { children: React.ReactNode; onClos
     };
   }, [onClose]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" aria-hidden="true" />
       {/* Close on a click that lands on this wrapper itself (the area around the dialog),
@@ -31,6 +40,7 @@ export function Modal({ children, onClose }: { children: React.ReactNode; onClos
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -166,7 +166,7 @@ export function ManageCategoriesModal({ onChange }: { onChange: () => void }) {
   }
 
   return (
-    <div className="w-full p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <div className="w-full p-5 card-modern">
       <h2 className="text-sm font-semibold text-neutral-900 dark:text-white mb-1">Manage categories</h2>
       <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
         Create categories and set their colors. Time tracked on goals and tasks rolls up into these.

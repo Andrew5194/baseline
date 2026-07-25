@@ -67,6 +67,42 @@ const gradId = (name: string) => `donut-grad-${name.replace(/[^a-zA-Z0-9]/g, '-'
 // "0.9", "1", "1.1" while the hide-recurring tween runs.
 const fmt1 = (n: number) => n.toFixed(1);
 
+// Count up 0 → value once on mount, then hand off to the live value so a running
+// timer (and the hide-recurring tween) keep updating the number afterward. The intro
+// scales the *live* value by an eased 0 → 1 progress (rather than capturing a
+// mount-time target), clamped at 0 — so it always starts at 0 and never flashes a
+// negative while displayTracked settles for a frame.
+function useCountUp(target: number, durationMs = 1150): number {
+  const [k, setK] = useState(0); // eased intro progress, 0 → 1
+  const doneRef = useRef(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      doneRef.current = true;
+      setK(1);
+      return;
+    }
+    const start = performance.now();
+    // ease-in-out: a slow start so the low numbers actually tick by (not front-loaded).
+    const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / durationMs);
+      setK(ease(p));
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else {
+        doneRef.current = true;
+        setK(1);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // Intro plays exactly once; live changes flow through the doneRef branch below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (doneRef.current) return target;
+  return Math.max(0, target) * k;
+}
+
 export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecolor, onActiveChange, onSelectCategory, recurringCategories, freeFocus, unit = 'hr', onCycleUnit, pending }: BudgetDonutProps) {
   const baseColor = colorOf ?? ((c: string) => colorForCategory(c));
   // Fold a live timer session into the totals: add its hours to the matching category
@@ -124,6 +160,36 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
   // jump in coarse 0.6-min steps.
   const displayTracked = effTracked - recurringTotal * progress;
   const displayFree = freeBudget - displayTracked;
+  // Intro count-up for the hero figure (falls through to the live value once done).
+  const animatedTracked = useCountUp(displayTracked);
+
+  // Clockwise draw-in: a wedge clip grows 0 → 360° from the top once on mount, so
+  // the ring fills in clockwise. Dropped when complete to avoid clipping artifacts.
+  const [sweep, setSweep] = useState(0);
+  const sweepDoneRef = useRef(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      sweepDoneRef.current = true;
+      setSweep(1);
+      return;
+    }
+    const start = performance.now();
+    const dur = 950;
+    const ease = (x: number) => 1 - Math.pow(1 - x, 3);
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      setSweep(ease(p));
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else {
+        sweepDoneRef.current = true;
+        setSweep(1);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const slicePct = (hours: number) => (freeBudget > 0 ? Math.round((hours / freeBudget) * 1000) / 10 : 0);
 
   const orderedCats = [
@@ -165,6 +231,17 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
     drawValue: s.free ? Math.max(0.01, s.value - boost) : Math.max(s.value, minSlice),
   }));
 
+  // Wedge that covers the donut and grows clockwise from 12 o'clock as `sweep` → 1.
+  const sweepActive = !sweepDoneRef.current && sweep < 1;
+  const swC = SIZE / 2;
+  const swR = SIZE; // large enough to fully cover the ring
+  const sweepDeg = Math.min(359.999, sweep * 360);
+  const swPt = (deg: number) => {
+    const a = ((deg - 90) * Math.PI) / 180; // -90° = top; increasing deg = clockwise
+    return `${swC + swR * Math.cos(a)},${swC + swR * Math.sin(a)}`;
+  };
+  const sweepPath = `M${swC},${swC} L${swPt(0)} A${swR},${swR} 0 ${sweepDeg > 180 ? 1 : 0} 1 ${swPt(sweepDeg)} Z`;
+
   return (
     <div className="flex flex-col sm:flex-row items-center gap-8">
       <div className="relative flex-shrink-0" style={{ width: SIZE, height: SIZE }}>
@@ -186,7 +263,12 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
               <stop offset="55%" stopColor="rgba(16,185,129,0.16)" />
               <stop offset="100%" stopColor="rgba(16,185,129,0.08)" />
             </linearGradient>
+            {/* Intro clockwise-fill wedge */}
+            <clipPath id="donut-sweep-clip">
+              <path d={sweepPath} />
+            </clipPath>
           </defs>
+          <g clipPath={sweepActive ? 'url(#donut-sweep-clip)' : undefined}>
           <Group top={SIZE / 2} left={SIZE / 2}>
             <Pie
               data={drawSlices}
@@ -227,6 +309,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
               }
             </Pie>
           </Group>
+          </g>
         </svg>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <button
@@ -252,9 +335,10 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
               <>
                 <span
                   className="font-bold text-neutral-900 dark:text-white tabular-nums leading-tight"
+                  // Size from the final value so the intro count-up doesn't resize the font.
                   style={{ fontSize: fitFontPx(fmtDurationNum(displayTracked, unit), 30) }}
                 >
-                  {fmtDurationNum(displayTracked, unit)}
+                  {fmtDurationNum(animatedTracked, unit)}
                 </span>
                 <span className="text-[11px] text-neutral-400 dark:text-neutral-500">of {fmtDurationNum(freeBudget, unit)} {freeFocus ? 'free' : 'total'} {UNIT_META[unit].word}</span>
                 <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{pct}% {freeFocus ? 'focused' : 'tracked'}</span>

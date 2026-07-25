@@ -118,7 +118,7 @@ export function RecurringTodos({
   const newGoal = goals.find((g) => g.id === label.goalId) ?? null;
 
   return (
-    <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 space-y-4 mb-4">
+    <div className="p-5 card-modern space-y-4 mb-4">
       <div>
         <p className="text-sm font-medium text-neutral-900 dark:text-white">Recurring tasks</p>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">

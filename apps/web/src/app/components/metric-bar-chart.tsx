@@ -96,6 +96,7 @@ export function MetricBarChart({
               <rect x={0} y={y(average) - 7} width={innerW} height={14} fill="transparent" style={{ cursor: 'pointer' }} onClick={() => setAvgOpen((o) => !o)} />
             )}
 
+            <g className="bars-draw">
             {data.map((d) => {
               const bx = x(d.date) ?? 0;
               const top = y(d.value);
@@ -127,6 +128,7 @@ export function MetricBarChart({
                 </g>
               );
             })}
+            </g>
 
             {average != null && average > 0 && (
               <g style={{ pointerEvents: 'none' }}>
