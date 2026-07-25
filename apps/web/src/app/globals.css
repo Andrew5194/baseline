@@ -50,20 +50,6 @@ html {
    modern product from a flat template: depth, a considered canvas, and motion.
    Scoped to a wrapper so only the Overview is affected while we experiment. */
 
-/* Considered canvas — a faint emerald aurora at the top instead of flat gray.
-   Fixed + behind content so it stays put as the page scrolls. */
-.overview-modern::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(110% 55% at 50% -8%, rgba(16, 185, 129, 0.07), transparent 55%);
-}
-.dark .overview-modern::before {
-  background: radial-gradient(110% 55% at 50% -8%, rgba(16, 185, 129, 0.1), transparent 55%);
-}
-
 /* Elevated surface — depth via layered shadow + a hairline ring, not a hard 1px
    border. This single change is most of what makes a UI read as "real". */
 .overview-modern .card-modern {
