@@ -159,6 +159,34 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
   const displayFree = freeBudget - displayTracked;
   // Intro count-up for the hero figure (falls through to the live value once done).
   const animatedTracked = useCountUp(displayTracked);
+
+  // Clockwise draw-in: a wedge clip grows 0 → 360° from the top once on mount, so
+  // the ring fills in clockwise. Dropped when complete to avoid clipping artifacts.
+  const [sweep, setSweep] = useState(0);
+  const sweepDoneRef = useRef(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      sweepDoneRef.current = true;
+      setSweep(1);
+      return;
+    }
+    const start = performance.now();
+    const dur = 950;
+    const ease = (x: number) => 1 - Math.pow(1 - x, 3);
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      setSweep(ease(p));
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else {
+        sweepDoneRef.current = true;
+        setSweep(1);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const slicePct = (hours: number) => (freeBudget > 0 ? Math.round((hours / freeBudget) * 1000) / 10 : 0);
 
   const orderedCats = [
@@ -200,9 +228,20 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
     drawValue: s.free ? Math.max(0.01, s.value - boost) : Math.max(s.value, minSlice),
   }));
 
+  // Wedge that covers the donut and grows clockwise from 12 o'clock as `sweep` → 1.
+  const sweepActive = !sweepDoneRef.current && sweep < 1;
+  const swC = SIZE / 2;
+  const swR = SIZE; // large enough to fully cover the ring
+  const sweepDeg = Math.min(359.999, sweep * 360);
+  const swPt = (deg: number) => {
+    const a = ((deg - 90) * Math.PI) / 180; // -90° = top; increasing deg = clockwise
+    return `${swC + swR * Math.cos(a)},${swC + swR * Math.sin(a)}`;
+  };
+  const sweepPath = `M${swC},${swC} L${swPt(0)} A${swR},${swR} 0 ${sweepDeg > 180 ? 1 : 0} 1 ${swPt(sweepDeg)} Z`;
+
   return (
     <div className="flex flex-col sm:flex-row items-center gap-8">
-      <div className="donut-in relative flex-shrink-0" style={{ width: SIZE, height: SIZE }}>
+      <div className="relative flex-shrink-0" style={{ width: SIZE, height: SIZE }}>
         <svg width={SIZE} height={SIZE}>
           <defs>
             {effCategories.map((c) => {
@@ -221,7 +260,12 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
               <stop offset="55%" stopColor="rgba(16,185,129,0.16)" />
               <stop offset="100%" stopColor="rgba(16,185,129,0.08)" />
             </linearGradient>
+            {/* Intro clockwise-fill wedge */}
+            <clipPath id="donut-sweep-clip">
+              <path d={sweepPath} />
+            </clipPath>
           </defs>
+          <g clipPath={sweepActive ? 'url(#donut-sweep-clip)' : undefined}>
           <Group top={SIZE / 2} left={SIZE / 2}>
             <Pie
               data={drawSlices}
@@ -262,6 +306,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
               }
             </Pie>
           </Group>
+          </g>
         </svg>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <button
