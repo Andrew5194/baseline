@@ -2,17 +2,8 @@
 
 import { useState } from 'react';
 import { API_URL } from '../../lib/api';
-import { useFocusTimer, elapsedMs, pauseTimer, resumeTimer, clearTimer } from '../../lib/focus-timer';
+import { useFocusTimer, elapsedMs, formatElapsed, pauseTimer, resumeTimer, clearTimer } from '../../lib/focus-timer';
 import { Heartbeat } from './heartbeat';
-
-function fmt(ms: number): string {
-  const total = Math.floor(ms / 1000);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-}
 
 // A live focus session, shown on the Overview while a timer is running/paused.
 // Stopping it logs a time entry for the elapsed duration.
@@ -66,7 +57,7 @@ export function FocusTimerBar({ onLogged }: { onLogged: () => void }) {
         {timer.note && <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">{timer.note}</p>}
       </div>
 
-      <span className="text-2xl font-semibold tabular-nums text-neutral-900 dark:text-white">{fmt(ms)}</span>
+      <span className="text-2xl font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
 
       <div className="flex items-center gap-2 flex-shrink-0">
         {running ? (

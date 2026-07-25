@@ -37,6 +37,16 @@ export function elapsedMs(s: FocusTimerState | null): number {
   return s.accumulatedMs + (s.startedAt ? Date.now() - s.startedAt : 0);
 }
 
+// A running elapsed duration as mm:ss (or h:mm:ss once past an hour).
+export function formatElapsed(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
 export function startTimer(category: string, note: string, taskId?: string) {
   writeTimer({ category, note, startedAt: Date.now(), accumulatedMs: 0, taskId });
 }

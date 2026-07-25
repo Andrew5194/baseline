@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, categoryColors } from '@baseline/db';
 import { eq, and } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../lib/user';
-
-// Accept #rgb / #rrggbb hex colors only.
-const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+import { HEX } from '../../../lib/hex';
 
 // GET /v1/category-colors — the user's category color overrides as { category: color }.
 export async function GET() {

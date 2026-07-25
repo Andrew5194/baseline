@@ -2,17 +2,8 @@
 
 import { useState } from 'react';
 import { API_URL } from '../../lib/api';
-import { useFocusTimer, elapsedMs, startTimer, pauseTimer, resumeTimer, clearTimer } from '../../lib/focus-timer';
+import { useFocusTimer, elapsedMs, formatElapsed, startTimer, pauseTimer, resumeTimer, clearTimer } from '../../lib/focus-timer';
 import { Heartbeat } from './heartbeat';
-
-function fmt(ms: number): string {
-  const total = Math.floor(ms / 1000);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-}
 
 // A per-task focus timer sharing the single global timer (so it also shows on the
 // Overview), tagged with this task's id. Stopping logs a time entry.
@@ -89,7 +80,7 @@ export function TaskTimer({
   return (
     <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-emerald-300/70 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/[0.06]">
       <Heartbeat running={running} />
-      <span className="text-base font-semibold tabular-nums text-neutral-900 dark:text-white">{fmt(ms)}</span>
+      <span className="text-base font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
       <div className="flex-1" />
       <div className="flex items-center gap-1.5">
         {running ? (
