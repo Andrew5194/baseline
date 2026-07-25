@@ -67,6 +67,38 @@ const gradId = (name: string) => `donut-grad-${name.replace(/[^a-zA-Z0-9]/g, '-'
 // "0.9", "1", "1.1" while the hide-recurring tween runs.
 const fmt1 = (n: number) => n.toFixed(1);
 
+// Count up 0 → value once on mount, then hand off to the live value so a running
+// timer (and the hide-recurring tween) keep updating the number afterward.
+function useCountUp(target: number, durationMs = 900): number {
+  const [display, setDisplay] = useState(0);
+  const doneRef = useRef(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      doneRef.current = true;
+      setDisplay(target);
+      return;
+    }
+    const start = performance.now();
+    const to = target; // capture the mount-time value; the intro runs to it
+    const ease = (x: number) => 1 - Math.pow(1 - x, 3);
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / durationMs);
+      setDisplay(to * ease(p));
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else {
+        doneRef.current = true;
+        setDisplay(to);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // Intro plays exactly once; live changes flow through the doneRef branch below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return doneRef.current ? target : display;
+}
+
 export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecolor, onActiveChange, onSelectCategory, recurringCategories, freeFocus, unit = 'hr', onCycleUnit, pending }: BudgetDonutProps) {
   const baseColor = colorOf ?? ((c: string) => colorForCategory(c));
   // Fold a live timer session into the totals: add its hours to the matching category
@@ -124,6 +156,8 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
   // jump in coarse 0.6-min steps.
   const displayTracked = effTracked - recurringTotal * progress;
   const displayFree = freeBudget - displayTracked;
+  // Intro count-up for the hero figure (falls through to the live value once done).
+  const animatedTracked = useCountUp(displayTracked);
   const slicePct = (hours: number) => (freeBudget > 0 ? Math.round((hours / freeBudget) * 1000) / 10 : 0);
 
   const orderedCats = [
@@ -252,9 +286,10 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
               <>
                 <span
                   className="font-bold text-neutral-900 dark:text-white tabular-nums leading-tight"
+                  // Size from the final value so the intro count-up doesn't resize the font.
                   style={{ fontSize: fitFontPx(fmtDurationNum(displayTracked, unit), 30) }}
                 >
-                  {fmtDurationNum(displayTracked, unit)}
+                  {fmtDurationNum(animatedTracked, unit)}
                 </span>
                 <span className="text-[11px] text-neutral-400 dark:text-neutral-500">of {fmtDurationNum(freeBudget, unit)} {freeFocus ? 'free' : 'total'} {UNIT_META[unit].word}</span>
                 <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{pct}% {freeFocus ? 'focused' : 'tracked'}</span>
