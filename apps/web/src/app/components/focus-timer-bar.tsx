@@ -64,7 +64,9 @@ export function FocusTimerBar({ onLogged }: { onLogged: () => void }) {
         <span className="flex-shrink-0 text-2xl font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
       </div>
 
-      <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+      {/* On phones the controls take their own full-width row so the category + task
+          name stay fully visible on row 1; inline on the right from `sm` up. */}
+      <div className="basis-full sm:basis-auto sm:ml-auto flex items-center gap-2 flex-shrink-0">
         {running ? (
           <button onClick={pauseTimer} className={`${btn} border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800`}>
             Pause
