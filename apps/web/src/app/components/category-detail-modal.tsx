@@ -64,7 +64,16 @@ export function CategoryDetailModal({
       <div className="w-[460px] max-w-full p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg">
         <div className="flex items-center gap-2.5 mb-1">
           <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: color }} />
-          <h2 className="text-base font-semibold tracking-tight text-neutral-900 dark:text-white truncate">{category}</h2>
+          <h2 className="flex-1 text-base font-semibold tracking-tight text-neutral-900 dark:text-white truncate">{category}</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="flex-shrink-0 -mr-1 p-1 rounded-md text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">Where this category&apos;s numbers come from.</p>
 

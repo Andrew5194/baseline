@@ -29,6 +29,8 @@ interface DailyAllocationBarsProps {
   // Highlight one category across every bar (driven by hovering the donut legend):
   // its segments stay full-opacity while the rest dim.
   activeCategory?: string | null;
+  // Clicking a category segment opens its detail breakdown (same as the legend).
+  onSelectCategory?: (category: string) => void;
   // Display unit for hour figures (axis labels, totals, tooltip).
   unit?: TimeUnit;
 }
@@ -55,7 +57,7 @@ interface TooltipRow {
   segments: Array<{ key: string; value: number; color: string }>;
 }
 
-export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories, freeFocus, pending, activeCategory, unit = 'hr' }: DailyAllocationBarsProps) {
+export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax = 24, recurringCategories, freeFocus, pending, activeCategory, onSelectCategory, unit = 'hr' }: DailyAllocationBarsProps) {
   const color = colorOf ?? ((c: string) => colorForCategory(c));
   const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
   const recurringSet = new Set(recurringCategories ?? []);
@@ -234,13 +236,24 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                       />
                     )}
                   </Group>
-                  {/* Transparent hover target */}
+                  {/* Transparent hover + click target. A click maps its y to the category
+                      segment under the cursor and opens that category's detail. */}
                   <rect
                     x={bx}
                     y={0}
                     width={bw}
                     height={innerH}
                     fill="transparent"
+                    className={onSelectCategory ? 'cursor-pointer' : undefined}
+                    onClick={
+                      onSelectCategory
+                        ? (e) => {
+                            const yInner = e.clientY - e.currentTarget.getBoundingClientRect().top;
+                            const seg = segs.find((s) => yScale(s.y1) <= yInner && yInner <= yScale(s.y0));
+                            if (seg && seg.key !== FREE_KEY) onSelectCategory(seg.key);
+                          }
+                        : undefined
+                    }
                     onMouseEnter={() => {
                       setHovered(iso);
                       showTooltip({

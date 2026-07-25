@@ -461,7 +461,7 @@ export default function Overview() {
           allocView === 'calendar' ? (
             <CalendarAllocation data={barRows} categories={stackCategories} colorOf={colorOf} granularity={granularity} recurringCategories={recurringCats} freeFocus={hideRecurring} todayISO={todayKey} entries={entries?.data ?? []} tz={tz} pending={pending} unit={unit} />
           ) : (
-            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} activeCategory={activeCategory} unit={unit} />
+            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} activeCategory={activeCategory} onSelectCategory={setDetailCategory} unit={unit} />
           )
         ) : (
           <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
