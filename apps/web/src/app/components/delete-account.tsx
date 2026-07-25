@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { API_URL, apiFetch } from '../../lib/api';
 import { Modal } from './modal';
 
-const CONFIRM_PHRASE = 'I want to delete my account.';
+const CONFIRM_PHRASE = 'I want to delete my account';
 
 // Danger-zone card + confirmation modal for permanently deleting the account. Requires
 // typing the confirmation phrase; on success it deletes every trace of the user (the API
