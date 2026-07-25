@@ -183,7 +183,7 @@ export default function Goals() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 mb-6">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight">Goals</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Goals</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Things you want to accomplish
           </p>

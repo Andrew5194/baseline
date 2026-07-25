@@ -251,7 +251,7 @@ export default function Metrics() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Metrics</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Metrics</h1>
           <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">

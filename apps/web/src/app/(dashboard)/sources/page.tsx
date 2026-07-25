@@ -116,7 +116,7 @@ export default function Sources() {
   if (loading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
-        <h1 className="text-xl font-semibold tracking-tight mb-6">Sources</h1>
+        <h1 className="text-2xl font-semibold tracking-tight mb-6">Sources</h1>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-20 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
@@ -128,7 +128,7 @@ export default function Sources() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
-      <h1 className="text-xl font-semibold tracking-tight mb-6">Sources</h1>
+      <h1 className="text-2xl font-semibold tracking-tight mb-6">Sources</h1>
 
       <div className="space-y-3">
         {CONNECTABLE.map((src, idx) => {
