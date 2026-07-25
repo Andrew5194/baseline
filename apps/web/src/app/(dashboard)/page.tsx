@@ -299,7 +299,7 @@ export default function Overview() {
     }`;
 
   return (
-    <div className="overview-modern p-4 sm:p-6 lg:p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>

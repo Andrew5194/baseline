@@ -45,14 +45,14 @@ html {
   animation: fade-in 0.6s ease-out forwards;
 }
 
-/* ── Overview modernization (experiment, scoped via .overview-modern) ──────────
-   Keeps Baseline's identity (Geist, neutral, emerald). Adds what separates a
-   modern product from a flat template: depth, a considered canvas, and motion.
-   Scoped to a wrapper so only the Overview is affected while we experiment. */
+/* ── Modernization utilities (global) ─────────────────────────────────────────
+   Keeps Baseline's identity (Geist, neutral, emerald) and adds the craft that
+   separates a modern product from a flat template: depth + motion. Applied app-wide
+   for a consistent surface/entrance language. */
 
 /* Elevated surface — depth via layered shadow + a hairline ring, not a hard 1px
    border. This single change is most of what makes a UI read as "real". */
-.overview-modern .card-modern {
+.card-modern {
   background: #ffffff;
   border-radius: 16px;
   box-shadow:
@@ -60,7 +60,7 @@ html {
     0 4px 12px rgba(17, 17, 17, 0.04),
     0 0 0 1px rgba(17, 17, 17, 0.05);
 }
-.dark .overview-modern .card-modern {
+.dark .card-modern {
   background: #171717;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.4),
@@ -70,7 +70,7 @@ html {
 
 /* Staggered entrance — cards rise + fade with an eased, slightly overshooting
    curve. Respect reduced-motion. */
-.overview-modern .rise {
+.rise {
   opacity: 0;
   animation: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
@@ -85,21 +85,15 @@ html {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .overview-modern .rise {
+  .rise {
     opacity: 1;
-    animation: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .overview-modern .donut-in {
     animation: none;
   }
 }
 
 /* Bars rise into a static frame (gridlines/axis stay put) once on mount.
    transform-box keeps the SVG group's own box as the transform reference. */
-.overview-modern .bars-draw {
+.bars-draw {
   transform-box: fill-box;
   transform-origin: bottom;
   animation: bars-draw 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
@@ -115,7 +109,7 @@ html {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .overview-modern .bars-draw {
+  .bars-draw {
     animation: none;
   }
 }
