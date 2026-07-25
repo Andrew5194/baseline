@@ -30,21 +30,22 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ── "Warm & friendly" design tokens (prototype, scoped via .theme-warm) ───────
-   Warm stone canvas, a friendly green accent, soft depth, generous rounding. */
-.theme-warm {
-  --accent: #10b981; /* emerald-500 */
-  --accent-strong: #059669; /* emerald-600 */
-  --accent-soft: rgba(16, 185, 129, 0.12);
-  /* Warm, layered shadows (tinted with a stone hue, not pure black). */
-  --shadow-soft: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 14px rgba(28, 25, 23, 0.05);
-  --shadow-lift: 0 2px 4px rgba(28, 25, 23, 0.05), 0 14px 32px rgba(28, 25, 23, 0.09);
+/* ── "Evolve" design tokens (prototype, scoped via .theme-evolve) ──────────────
+   Today's Baseline, sharpened: keep the green identity (deepened to a richer jade),
+   Inter over Geist, unified radius, and subtle elevation instead of flat borders. */
+.theme-evolve {
+  --accent: #059669; /* emerald-600 — a deeper, richer jade than the old bright green */
+  --accent-strong: #047857; /* emerald-700 */
+  --accent-soft: rgba(5, 150, 105, 0.1);
+  /* Restrained, layered shadows for gentle depth (nearly-neutral tint). */
+  --shadow-soft: 0 1px 2px rgba(17, 17, 17, 0.04), 0 3px 10px rgba(17, 17, 17, 0.04);
+  --shadow-lift: 0 2px 4px rgba(17, 17, 17, 0.05), 0 12px 28px rgba(17, 17, 17, 0.08);
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.006em;
+  letter-spacing: -0.005em;
 }
 .font-display {
   font-family: var(--font-body), ui-sans-serif, sans-serif;
-  letter-spacing: -0.018em;
+  letter-spacing: -0.02em;
 }
 /* Soft elevated surface — depth instead of a flat hairline border. */
 .card-soft {

@@ -36,7 +36,7 @@ interface DailyAllocationBarsProps {
 }
 
 const FREE_KEY = 'Free';
-const FREE_SWATCH = '#94a3b8'; // solid stone-400 so "Free" reads clearly in the tooltip
+const FREE_SWATCH = '#94a3b8'; // solid neutral-400 so "Free" reads clearly in the tooltip
 const HEIGHT = 256;
 const MARGIN = { top: 18, right: 8, bottom: 22 };
 const RADIUS = 4;
@@ -91,7 +91,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
 
   if (data.length === 0) {
     return (
-      <div className="h-64 flex items-center justify-center text-sm text-stone-400 dark:text-stone-500">
+      <div className="h-64 flex items-center justify-center text-sm text-neutral-400 dark:text-neutral-500">
         No data yet — add an entry to see your time fill up.
       </div>
     );
@@ -119,7 +119,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
   const step = Math.max(1, Math.ceil(data.length / maxLabels));
 
   return (
-    <div ref={ref} className="relative h-64 text-stone-200 dark:text-stone-800">
+    <div ref={ref} className="relative h-64 text-neutral-200 dark:text-neutral-800">
       {width > 0 && (
         <svg width={width} height={HEIGHT}>
           <defs>
@@ -294,7 +294,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                       fontSize={11}
                       fontWeight={600}
                       fill="currentColor"
-                      className="text-stone-700 dark:text-stone-200"
+                      className="text-neutral-700 dark:text-neutral-200"
                     >
                       {fmtDuration(total, unit)}
                     </text>
@@ -329,10 +329,10 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
 
       {tooltipOpen && tooltipData && (
         <TooltipWithBounds left={tooltipLeft} top={tooltipTop} style={{ position: 'absolute', pointerEvents: 'none' }}>
-          <div className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-[11px] shadow-lg dark:border-stone-700 dark:bg-stone-900">
+          <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[11px] shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
             <div className="flex items-center justify-between gap-4 mb-1.5">
-              <span className="font-medium text-stone-900 dark:text-white">{fullLabel(tooltipData.iso)}</span>
-              <span className="text-stone-400 dark:text-stone-500 tabular-nums">{fmtDuration(tooltipData.total, unit)}</span>
+              <span className="font-medium text-neutral-900 dark:text-white">{fullLabel(tooltipData.iso)}</span>
+              <span className="text-neutral-400 dark:text-neutral-500 tabular-nums">{fmtDuration(tooltipData.total, unit)}</span>
             </div>
             {tooltipData.segments.map((s) => {
               const isFree = s.key === FREE_KEY;
@@ -342,15 +342,15 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                     className={`w-2 h-2 flex-shrink-0 ${isFree ? 'rounded-full' : 'rounded-sm'}`}
                     style={{ backgroundColor: s.color }}
                   />
-                  <span className={isFree ? 'text-stone-400 dark:text-stone-500' : 'text-stone-600 dark:text-stone-300'}>
+                  <span className={isFree ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-600 dark:text-neutral-300'}>
                     {isFree && freeFocus ? 'Focus time' : s.key}
                   </span>
                   {recurringSet.has(s.key) && (
-                    <span className="text-stone-400 dark:text-stone-500" title="Recurring routine">
+                    <span className="text-neutral-400 dark:text-neutral-500" title="Recurring routine">
                       <RecurringIcon className="w-2.5 h-2.5" />
                     </span>
                   )}
-                  <span className="ml-auto pl-4 font-medium text-stone-900 dark:text-white tabular-nums">{fmtDuration(s.value, unit)}</span>
+                  <span className="ml-auto pl-4 font-medium text-neutral-900 dark:text-white tabular-nums">{fmtDuration(s.value, unit)}</span>
                 </div>
               );
             })}

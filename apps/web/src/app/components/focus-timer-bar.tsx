@@ -53,32 +53,32 @@ export function FocusTimerBar({ onLogged }: { onLogged: () => void }) {
       <div className="flex flex-1 min-w-[10rem] items-center gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5">
-            <p className="text-sm font-medium text-stone-900 dark:text-white truncate">
+            <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
               {timer.category}
-              {!running && <span className="ml-2 text-xs font-normal text-stone-400 dark:text-stone-500">Paused</span>}
+              {!running && <span className="ml-2 text-xs font-normal text-neutral-400 dark:text-neutral-500">Paused</span>}
             </p>
             <Heartbeat running={running} />
           </div>
-          {timer.note && <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{timer.note}</p>}
+          {timer.note && <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">{timer.note}</p>}
         </div>
-        <span className="flex-shrink-0 text-2xl font-semibold tabular-nums text-stone-900 dark:text-white">{formatElapsed(ms)}</span>
+        <span className="flex-shrink-0 text-2xl font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
       </div>
 
       {/* Own full-width row on phones, but kept right-aligned; inline right from sm up. */}
       <div className="basis-full sm:basis-auto sm:ml-auto flex items-center justify-end gap-2 flex-shrink-0">
         {running ? (
-          <button onClick={pauseTimer} className={`${btn} border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-800`}>
+          <button onClick={pauseTimer} className={`${btn} border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800`}>
             Pause
           </button>
         ) : (
-          <button onClick={resumeTimer} className={`${btn} border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-800`}>
+          <button onClick={resumeTimer} className={`${btn} border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800`}>
             Resume
           </button>
         )}
         <button onClick={stop} disabled={saving} className={`${btn} bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50`}>
           {saving ? 'Saving…' : 'Stop & log'}
         </button>
-        <button onClick={() => clearTimer()} aria-label="Discard session" className="text-stone-400 dark:text-stone-500 hover:text-red-500 dark:hover:text-red-400 text-lg leading-none px-1">
+        <button onClick={() => clearTimer()} aria-label="Discard session" className="text-neutral-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400 text-lg leading-none px-1">
           ×
         </button>
       </div>
