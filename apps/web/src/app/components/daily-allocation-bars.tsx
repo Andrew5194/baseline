@@ -161,6 +161,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
               </text>
             ))}
 
+            <g className="bars-draw">
             {data.map((row) => {
               const iso = String(row.date);
               const bx = x(iso) ?? 0;
@@ -302,6 +303,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                 </Group>
               );
             })}
+            </g>
 
             {/* x-axis labels */}
             {data.map((row, i) => {

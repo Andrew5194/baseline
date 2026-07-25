@@ -139,6 +139,29 @@ html {
   }
 }
 
+/* Bars rise into a static frame (gridlines/axis stay put) once on mount.
+   transform-box keeps the SVG group's own box as the transform reference. */
+.overview-modern .bars-draw {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: bars-draw 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+@keyframes bars-draw {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scaleY(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overview-modern .bars-draw {
+    animation: none;
+  }
+}
+
 /* Skeleton shimmer — a soft highlight that sweeps left → right over a gray
    placeholder to indicate loading. Pair with a bg-neutral-200/800 base. */
 @keyframes shimmer {

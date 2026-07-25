@@ -15,6 +15,7 @@ import { RecurringAllocations } from '../components/recurring-allocations';
 import { ManageCategoriesModal } from '../components/manage-categories-modal';
 import { CategoryDetailModal } from '../components/category-detail-modal';
 import { Modal } from '../components/modal';
+import { CommandPalette, type Command } from '../components/command-palette';
 import { apiFetch } from '../../lib/api';
 import { useTimezone } from '../../lib/use-timezone';
 import { usePreference } from '../../lib/use-preference';
@@ -147,6 +148,30 @@ export default function Overview() {
     const order = ['min', 'hr', 'day'] as const;
     setUnit(order[(order.indexOf(unit) + 1) % order.length]);
   };
+
+  // ⌘K command palette — jump to the Overview's actions without reaching for the mouse.
+  const commands = useMemo<Command[]>(
+    () => {
+      const setPeriodNow = (p: Period) => {
+        setPeriod(p);
+        setOffset(0);
+      };
+      return [
+        { id: 'add', group: 'Log', label: 'Add time entry', keywords: 'new log track record', run: () => setEditing('new') },
+        { id: 'week', group: 'Period', label: 'This week', keywords: 'range 7 days', hint: period === 'week' ? 'current' : undefined, run: () => setPeriodNow('week') },
+        { id: 'month', group: 'Period', label: 'This month', keywords: 'range 30 days', hint: period === 'month' ? 'current' : undefined, run: () => setPeriodNow('month') },
+        { id: 'year', group: 'Period', label: 'This year', keywords: 'range 12 months', hint: period === 'year' ? 'current' : undefined, run: () => setPeriodNow('year') },
+        { id: 'bars', group: 'View', label: 'Bar chart view', keywords: 'graph allocation', run: () => setAllocView('bars') },
+        { id: 'calendar', group: 'View', label: 'Calendar view', keywords: 'grid allocation', run: () => setAllocView('calendar') },
+        { id: 'hide-recurring', group: 'View', label: 'Toggle hide recurring routines', keywords: 'free focus', hint: hideRecurring ? 'on' : 'off', run: () => setHideRecurring(!hideRecurring) },
+        { id: 'unit', group: 'View', label: 'Change time unit', keywords: 'minutes hours days min hr day', hint: unit, run: cycleUnit },
+        { id: 'recurring', group: 'Manage', label: 'Recurring routines', keywords: 'schedule allocation', run: () => setPanel('recurring') },
+        { id: 'categories', group: 'Manage', label: 'Manage categories', keywords: 'colors tags', run: () => setPanel('categories') },
+      ];
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [period, unit, hideRecurring, allocView],
+  );
 
   async function deleteEntry(id: string) {
     // Optimistic: drop the row immediately instead of waiting on the DELETE plus
@@ -306,6 +331,7 @@ export default function Overview() {
           <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <CommandPalette commands={commands} />
           <PeriodSelector
             value={period}
             onChange={(p) => {
@@ -496,9 +522,24 @@ export default function Overview() {
             ))}
           </div>
         ) : entries.data.length === 0 ? (
-          <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4">
-            No entries yet. Click <span className="font-medium">Add entry</span> to log time.
-          </p>
+          <div className="flex flex-col items-center justify-center text-center py-10">
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v8m4-4H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-neutral-900 dark:text-white">No time logged yet</p>
+            <p className="mt-1 mb-4 max-w-xs text-xs text-neutral-400 dark:text-neutral-500">
+              Track where your {PERIOD_LABEL[period].toLowerCase().replace('this ', '')} goes — add an entry or start a task timer.
+            </p>
+            <button
+              onClick={() => setEditing('new')}
+              className="flex items-center gap-1 rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
+            >
+              <span className="text-sm leading-none">+</span>
+              Add entry
+            </button>
+          </div>
         ) : (
           <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {entries.data.map((e) => (
