@@ -184,7 +184,7 @@ export function TimezoneSetting() {
   }
 
   return (
-    <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <div className="p-5 card-modern">
       <div className="flex items-center gap-2 mb-1">
         <p className="text-sm font-medium">Timezone</p>
         {saving && <span className="text-[10px] text-neutral-400">Saving…</span>}

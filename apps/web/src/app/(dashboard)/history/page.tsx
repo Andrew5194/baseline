@@ -187,7 +187,7 @@ export default function History() {
               <p className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">
                 {g.day}
               </p>
-              <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 divide-y divide-neutral-100 dark:divide-neutral-800">
+              <div className="card-modern divide-y divide-neutral-100 dark:divide-neutral-800">
                 {g.items.map((ev) => {
                   const meta = eventMeta(ev.event_type);
                   const repo = repoOf(ev.payload);

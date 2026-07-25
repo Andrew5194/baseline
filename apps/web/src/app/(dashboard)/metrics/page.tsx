@@ -286,7 +286,7 @@ export default function Metrics() {
         <MetricsStrip stats={stats} activeKey={active} onSelect={setActive} window={dataPeriod} />
       </div>
 
-      <div className="p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
+      <div className="p-6 card-modern mb-6">
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
             {activeDef.label} {PERIOD_LABEL[dataPeriod]}

@@ -492,7 +492,7 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
         />
       )}
 
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+      <div className="card-modern overflow-hidden">
         {/* Day header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
           <p className="text-sm font-medium text-neutral-900 dark:text-white">{fullDayLabel(day)}</p>

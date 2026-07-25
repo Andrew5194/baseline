@@ -136,7 +136,7 @@ export default function Sources() {
           return (
             <div
               key={src.provider}
-              className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+              className="p-5 card-modern"
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -192,7 +192,7 @@ export default function Sources() {
         {UPCOMING_SOURCES.map((source) => (
           <div
             key={source.name}
-            className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 opacity-60"
+            className="p-5 card-modern opacity-60"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">

@@ -78,7 +78,7 @@ export function CompletionHeatmap({
   const monthTotal = cells.reduce((a, c) => a + c.total, 0);
 
   return (
-    <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mb-6">
+    <div className="p-5 card-modern mb-6">
       <div className="flex items-start justify-between mb-4">
         <div className="min-w-0">
           {focus ? (
