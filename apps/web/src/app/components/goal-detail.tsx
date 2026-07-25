@@ -199,14 +199,14 @@ export function GoalDetail({
                 if (e.key === 'Escape') setCustomizing(false);
               }}
               placeholder="New category name"
-              className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+              className="w-full h-10 text-sm px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
             />
           ) : (
             <div className="relative">
               <select
                 value={cat ?? ''}
                 onChange={(e) => onSelectCategory(e.target.value)}
-                className="w-full appearance-none text-sm pl-3 pr-9 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+                className="w-full h-10 appearance-none text-sm pl-3 pr-9 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
               >
                 <option value="">Uncategorized</option>
                 {[...new Set([...PRESET_CATEGORIES, ...known, ...(cat ? [cat] : [])])].map((c) => (
@@ -243,7 +243,7 @@ export function GoalDetail({
             type="date"
             value={due}
             onChange={(e) => saveDue(e.target.value)}
-            className="w-full text-sm px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+            className="w-full h-10 text-sm px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:leading-[2.5rem]"
           />
         </div>
       </div>
