@@ -34,6 +34,7 @@ interface Entry {
   note: string | null;
   timed?: boolean;
   task_id?: string | null;
+  source?: string; // 'manual' | 'google_calendar' — present on the all-sources detail fetch
 }
 interface EntriesResponse {
   data: Entry[];
@@ -77,8 +78,10 @@ export default function Overview() {
   const [panel, setPanel] = useState<Panel | null>(null);
   // Category highlighted by hovering the donut legend — cross-highlighted in the bar chart.
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  // Category whose entry-level detail breakdown is open (clicking a legend row).
+  // Category whose entry-level detail breakdown is open (clicking a legend row or bar).
   const [detailCategory, setDetailCategory] = useState<string | null>(null);
+  // Entries behind that modal — fetched on demand with all sources (manual + calendar).
+  const [detailEntries, setDetailEntries] = useState<Entry[] | null>(null);
   // Synced server-side (users.preferences via /v1/me) so it follows the user across devices.
   const [hideRecurring, setHideRecurring, hideRecurringLoaded] = usePreference('hideRecurring');
   const [allocView, setAllocView] = usePreference<'bars' | 'calendar'>('allocView', 'bars');
@@ -261,13 +264,25 @@ export default function Overview() {
   const colorMap = useMemo(() => buildColorMap(allCategories, colors), [allCategories, colors]);
   const colorOf = (c: string) => colorMap[c] ?? colorForCategory(c, colors);
 
-  // Per-category count of logged time entries (each is a task, manual log, or timer);
-  // recurring routines show 0 — they're planned allocations, not logged entries.
-  const entryCounts = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const e of entries?.data ?? []) m[e.category] = (m[e.category] ?? 0) + 1;
-    return m;
-  }, [entries]);
+  // Load the open category's underlying entries (all sources) when the detail modal opens.
+  useEffect(() => {
+    if (!detailCategory) {
+      setDetailEntries(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailEntries(null);
+    apiFetch<{ data: Entry[] }>(`/v1/time-entries?period=${period}&offset=${offset}&all_sources=1`)
+      .then((r) => {
+        if (!cancelled) setDetailEntries(r.data.filter((e) => e.category === detailCategory));
+      })
+      .catch(() => {
+        if (!cancelled) setDetailEntries([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detailCategory, period, offset]);
 
   // Hold charts/entries until colors + the category set load (first paint uses final
   // colors, no recolor flash) and the hide-recurring pref resolves (so the donut/bars
@@ -321,11 +336,12 @@ export default function Overview() {
 
       <FocusTimerBar onLogged={refreshAll} />
 
-      {detailCategory && budget && entries && (
+      {detailCategory && budget && (
         <CategoryDetailModal
           category={detailCategory}
           color={colorOf(detailCategory)}
-          entries={entries.data.filter((e) => e.category === detailCategory)}
+          entries={detailEntries}
+          entryCount={budget.categories.find((c) => c.category === detailCategory)?.entries ?? 0}
           hours={budget.categories.find((c) => c.category === detailCategory)?.hours ?? 0}
           pct={budget.categories.find((c) => c.category === detailCategory)?.pct ?? 0}
           isRecurring={recurringCats.includes(detailCategory)}
@@ -404,7 +420,6 @@ export default function Overview() {
         {ready && budget ? (
           <BudgetDonut
             categories={budget.categories}
-            entryCounts={entryCounts}
             trackedHours={budget.tracked_hours}
             freeHours={budget.free_hours}
             budget={budget.budget}

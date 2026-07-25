@@ -10,23 +10,25 @@ export interface CategoryEntry {
   note: string | null;
   timed?: boolean;
   task_id?: string | null;
+  source?: string;
 }
 
-// Each entry's origin, matching how "Entries" is defined: a task-linked session, a
-// running/paused timer, or a manually typed log.
+// Each entry's origin — the sources that make up a category's logged time.
 function entryKind(e: CategoryEntry): { label: string; className: string } {
+  if (e.source === 'google_calendar') return { label: 'Calendar', className: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' };
   if (e.task_id) return { label: 'Task', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' };
   if (e.timed) return { label: 'Timer', className: 'bg-sky-500/10 text-sky-600 dark:text-sky-400' };
   return { label: 'Manual', className: 'bg-neutral-500/10 text-neutral-500 dark:text-neutral-400' };
 }
 
-// Shows where a category's "Entries" and "Time Logged" numbers come from: the individual
-// logged entries behind them, plus (for recurring routines) the planned allocation that
-// the entries alone don't account for.
+// Shows where a category's Entries and Time Logged numbers come from: the individual
+// logged entries behind them (manual, timer, task, or calendar), plus — for recurring
+// routines — the planned allocation the entries alone don't account for.
 export function CategoryDetailModal({
   category,
   color,
   entries,
+  entryCount,
   hours,
   pct,
   isRecurring,
@@ -36,7 +38,8 @@ export function CategoryDetailModal({
 }: {
   category: string;
   color: string;
-  entries: CategoryEntry[];
+  entries: CategoryEntry[] | null; // null while loading
+  entryCount: number;
   hours: number;
   pct: number;
   isRecurring: boolean;
@@ -44,17 +47,17 @@ export function CategoryDetailModal({
   unit: TimeUnit;
   onClose: () => void;
 }) {
-  const sorted = entries.slice().sort((a, b) => +new Date(b.occurred_at) - +new Date(a.occurred_at));
+  const sorted = (entries ?? []).slice().sort((a, b) => +new Date(b.occurred_at) - +new Date(a.occurred_at));
   const loggedFromEntries = Math.round(sorted.reduce((s, e) => s + e.hours, 0) * 10) / 10;
-  // For recurring routines, the table's hours include the planned allocation on top of any
-  // logged entries — surface that remainder so the numbers reconcile.
-  const allocationHours = Math.round(Math.max(hours - loggedFromEntries, 0) * 10) / 10;
+  // Any gap between the table's hours and the logged entries is the recurring-routine
+  // allocation folded into the budget — surface it so the numbers reconcile.
+  const allocationHours = entries ? Math.round(Math.max(hours - loggedFromEntries, 0) * 10) / 10 : 0;
 
   const when = (iso: string) =>
     new Date(iso).toLocaleString('en-US', { timeZone: tz, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
   const stats: Array<[string, string]> = [
-    ['Entries', String(entries.length)],
+    ['Entries', String(entryCount)],
     ['Time Logged', fmtDuration(hours, unit)],
     ['% Total', `${pct}%`],
   ];
@@ -87,7 +90,13 @@ export function CategoryDetailModal({
           ))}
         </div>
 
-        {sorted.length === 0 ? (
+        {entries === null ? (
+          <div className="space-y-2 py-1">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-8 bg-neutral-200 dark:bg-neutral-800 rounded-md shimmer" />
+            ))}
+          </div>
+        ) : sorted.length === 0 ? (
           <p className="text-sm text-neutral-400 dark:text-neutral-500 py-2">
             {isRecurring
               ? 'No individual entries — this time comes entirely from a recurring routine allocation.'

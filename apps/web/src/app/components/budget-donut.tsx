@@ -11,12 +11,13 @@ export interface BudgetCategory {
   category: string;
   hours: number;
   pct: number;
+  // Count of real logged events behind `hours` (manual, timer, or calendar). Recurring
+  // routines are 0 — their hours are a planned allocation, not logged events.
+  entries: number;
 }
 
 interface BudgetDonutProps {
   categories: BudgetCategory[];
-  // Per-category count of logged entries (task/manual/timer) for the legend's Entries column.
-  entryCounts?: Record<string, number>;
   trackedHours: number;
   freeHours: number;
   budget: number;
@@ -66,7 +67,7 @@ const gradId = (name: string) => `donut-grad-${name.replace(/[^a-zA-Z0-9]/g, '-'
 // "0.9", "1", "1.1" while the hide-recurring tween runs.
 const fmt1 = (n: number) => n.toFixed(1);
 
-export function BudgetDonut({ categories, entryCounts, trackedHours, budget, colorOf, onRecolor, onActiveChange, onSelectCategory, recurringCategories, freeFocus, unit = 'hr', onCycleUnit, pending }: BudgetDonutProps) {
+export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecolor, onActiveChange, onSelectCategory, recurringCategories, freeFocus, unit = 'hr', onCycleUnit, pending }: BudgetDonutProps) {
   const baseColor = colorOf ?? ((c: string) => colorForCategory(c));
   // Fold a live timer session into the totals: add its hours to the matching category
   // (or introduce a new one), so the donut grows in real time and reverts when cleared.
@@ -76,7 +77,7 @@ export function BudgetDonut({ categories, entryCounts, trackedHours, budget, col
     ? categories
     : categories.some((c) => c.category === pendingCat)
       ? categories.map((c) => (c.category === pendingCat ? { ...c, hours: c.hours + pendingHours } : c))
-      : [...categories, { category: pendingCat, hours: pendingHours, pct: 0 }];
+      : [...categories, { category: pendingCat, hours: pendingHours, pct: 0, entries: 0 }];
   const effTracked = trackedHours + pendingHours;
   const freeColor = freeFocus ? FREE_FOCUS_COLOR : FREE_COLOR;
   const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
@@ -317,7 +318,7 @@ export function BudgetDonut({ categories, entryCounts, trackedHours, budget, col
                     </span>
                   )}
                 </span>
-                <span className="w-12 text-right text-[11px] text-neutral-500 dark:text-neutral-400 tabular-nums flex-shrink-0">{entryCounts?.[c.category] ?? 0}</span>
+                <span className="w-12 text-right text-[11px] text-neutral-500 dark:text-neutral-400 tabular-nums flex-shrink-0">{c.entries}</span>
                 <span className="w-20 text-right text-neutral-900 dark:text-white font-medium tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(c.hours, unit)}</span>
                 <span className="w-12 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{fmt1(slicePct(c.hours))}%</span>
               </div>
