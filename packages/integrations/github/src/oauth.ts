@@ -6,7 +6,9 @@ export async function revokeGitHubGrant(
   clientSecret: string,
   accessToken: string,
 ): Promise<void> {
-  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  // btoa (not Buffer) so this package type-checks without @types/node; client
+  // id/secret are ASCII, so Latin1 base64 is correct.
+  const basic = btoa(`${clientId}:${clientSecret}`);
   await fetch(`https://api.github.com/applications/${clientId}/grant`, {
     method: 'DELETE',
     headers: {
