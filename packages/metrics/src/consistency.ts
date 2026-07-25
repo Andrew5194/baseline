@@ -4,7 +4,8 @@ import { dayKeyInTz, startOfDayInTz, addLocalDays } from './tz';
 /**
  * Consistency of daily output over the window: 0-100, where 100 = committed every
  * day equally, 0 = all commits on one day. Uses coefficient of variation (lower CV
- * = more consistent). Score = max(0, 100 - CV * 100), capped at 100.
+ * = more consistent). Score = max(0, 100 - CV * 50), capped at 100 — the ×50 sets how
+ * harshly variance is penalized (score reaches 0 at CV = 2).
  */
 export function consistencyScoreV1(
   events: EventInput[],
