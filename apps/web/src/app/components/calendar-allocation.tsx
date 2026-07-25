@@ -161,16 +161,16 @@ export function CalendarAllocation({
     createPortal(
       <div
         style={{ position: 'fixed', top: hover.y + 14, left: Math.min(hover.x + 14, (typeof window !== 'undefined' ? window.innerWidth : 9999) - 236), zIndex: 60 }}
-        className="pointer-events-none max-w-[220px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl px-3 py-2 text-xs"
+        className="pointer-events-none max-w-[220px] rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-xl px-3 py-2 text-xs"
       >
-        <div className="flex items-center gap-2 font-medium text-slate-900 dark:text-white">
+        <div className="flex items-center gap-2 font-medium text-stone-900 dark:text-white">
           <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: hover.color }} />
           <span className="truncate">{hover.cat}</span>
         </div>
-        <div className="text-slate-500 dark:text-slate-400 mt-0.5 font-num tabular-nums">
+        <div className="text-stone-500 dark:text-stone-400 mt-0.5 tabular-nums">
           {hover.range} · {fmtDuration(hover.hours, unit)}
         </div>
-        {hover.note && <div className="text-slate-500 dark:text-slate-400 mt-0.5">{hover.note}</div>}
+        {hover.note && <div className="text-stone-500 dark:text-stone-400 mt-0.5">{hover.note}</div>}
       </div>,
       document.body,
     );
@@ -178,18 +178,18 @@ export function CalendarAllocation({
   // "+N more" modal listing every event for the chosen day/month.
   const modalNode = expanded && (
     <Modal onClose={() => setExpanded(null)}>
-      <div className="w-[440px] max-w-full p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg">
+      <div className="w-[440px] max-w-full p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-lg">
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{expanded.title}</h2>
-          <span className="text-[11px] text-slate-400 dark:text-slate-500">{expanded.events.length} event{expanded.events.length === 1 ? '' : 's'}</span>
+          <h2 className="text-sm font-semibold text-stone-900 dark:text-white">{expanded.title}</h2>
+          <span className="text-[11px] text-stone-400 dark:text-stone-500">{expanded.events.length} event{expanded.events.length === 1 ? '' : 's'}</span>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1 divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1 divide-y divide-stone-100 dark:divide-stone-800">
           {expanded.events.map((e, i) => (
             <div key={i} className="flex items-center gap-2.5 py-2 text-sm">
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color(e.category) }} />
-              <span className="text-slate-800 dark:text-slate-200 truncate flex-1">{e.note || e.category}</span>
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-num tabular-nums flex-shrink-0">{eventRange(e, true)}</span>
-              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 font-num tabular-nums w-12 text-right flex-shrink-0">{fmtDuration(e.hours, unit)}</span>
+              <span className="text-stone-800 dark:text-stone-200 truncate flex-1">{e.note || e.category}</span>
+              <span className="text-[11px] text-stone-400 dark:text-stone-500 tabular-nums flex-shrink-0">{eventRange(e, true)}</span>
+              <span className="text-xs font-medium text-stone-700 dark:text-stone-300 tabular-nums w-12 text-right flex-shrink-0">{fmtDuration(e.hours, unit)}</span>
             </div>
           ))}
         </div>
@@ -216,10 +216,10 @@ export function CalendarAllocation({
               const today = todayISO === date;
               return (
                 <div key={date} className="text-center pb-1.5">
-                  <div className={`text-[10px] font-medium ${today ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <div className={`text-[10px] font-medium ${today ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500'}`}>
                     {weekdayOf(date)}
                   </div>
-                  <div className={`text-xs font-num tabular-nums ${today ? 'font-semibold text-teal-600 dark:text-teal-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                  <div className={`text-xs tabular-nums ${today ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-stone-600 dark:text-stone-300'}`}>
                     {Number(date.split('-')[2])}
                   </div>
                 </div>
@@ -229,7 +229,7 @@ export function CalendarAllocation({
         </div>
 
         {/* Scrollable hour grid */}
-        <div className="max-h-[520px] overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="max-h-[520px] overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-800">
           <div className="flex" style={{ height: 24 * HOUR_PX }}>
             {/* Hour labels */}
             <div className="w-12 flex-shrink-0 relative">
@@ -238,7 +238,7 @@ export function CalendarAllocation({
               {HOURS.map((h) => (
                 <div
                   key={h}
-                  className="absolute right-1.5 text-[9px] text-slate-400 dark:text-slate-500 font-num tabular-nums -translate-y-1/2"
+                  className="absolute right-1.5 text-[9px] text-stone-400 dark:text-stone-500 tabular-nums -transtone-y-1/2"
                   style={{ top: h * HOUR_PX }}
                 >
                   {h === 0 ? '' : fmtHour(h)}
@@ -251,10 +251,10 @@ export function CalendarAllocation({
               {dates.map((date) => {
                 const today = todayISO === date;
                 return (
-                  <div key={date} className={`relative border-l border-slate-100 dark:border-slate-800 ${today ? 'bg-teal-500/[0.04]' : ''}`}>
+                  <div key={date} className={`relative border-l border-stone-100 dark:border-stone-800 ${today ? 'bg-emerald-500/[0.04]' : ''}`}>
                     {/* Hour gridlines */}
                     {HOURS.map((h) => (
-                      <div key={h} className="absolute left-0 right-0 border-t border-slate-100 dark:border-slate-800/70" style={{ top: h * HOUR_PX }} />
+                      <div key={h} className="absolute left-0 right-0 border-t border-stone-100 dark:border-stone-800/70" style={{ top: h * HOUR_PX }} />
                     ))}
                     {/* Entry blocks */}
                     {(blocksByDate.get(date) ?? []).map((b, i) => (
@@ -299,7 +299,7 @@ export function CalendarAllocation({
                   style={{ top: nowTop, left: `${(nowCol / 7) * 100}%`, width: `${100 / 7}%` }}
                 >
                   <div className="h-[2px] bg-red-500/90" />
-                  <span className="absolute left-0 w-2.5 h-2.5 rounded-full bg-red-500 -translate-x-1/2 -translate-y-1/2" style={{ top: 1 }} />
+                  <span className="absolute left-0 w-2.5 h-2.5 rounded-full bg-red-500 -transtone-x-1/2 -transtone-y-1/2" style={{ top: 1 }} />
                 </div>
               )}
             </div>
@@ -323,14 +323,14 @@ export function CalendarAllocation({
             return (
               <div
                 key={date}
-                className={`rounded-lg border p-3 ${current ? 'border-teal-400 dark:border-teal-500/50' : 'border-slate-200 dark:border-slate-800'}`}
+                className={`rounded-lg border p-3 ${current ? 'border-emerald-400 dark:border-emerald-500/50' : 'border-stone-200 dark:border-stone-800'}`}
               >
                 <div className="flex items-baseline justify-between mb-2">
-                  <p className={`text-sm font-semibold ${current ? 'text-teal-600 dark:text-teal-400' : 'text-slate-700 dark:text-slate-200'}`}>{MONTHS[m - 1]}</p>
-                  {evs.length > 0 && <span className="text-[10px] text-slate-400 dark:text-slate-500">{evs.length} event{evs.length === 1 ? '' : 's'}</span>}
+                  <p className={`text-sm font-semibold ${current ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-700 dark:text-stone-200'}`}>{MONTHS[m - 1]}</p>
+                  {evs.length > 0 && <span className="text-[10px] text-stone-400 dark:text-stone-500">{evs.length} event{evs.length === 1 ? '' : 's'}</span>}
                 </div>
                 {evs.length === 0 ? (
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">No events</p>
+                  <p className="text-[11px] text-stone-400 dark:text-stone-500">No events</p>
                 ) : (
                   <div className="space-y-1">
                     {evs.slice(0, CAP).map((e, i) => {
@@ -344,15 +344,15 @@ export function CalendarAllocation({
                           onMouseLeave={() => setHover(null)}
                         >
                           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c }} />
-                          <span className="w-5 text-right font-num tabular-nums text-slate-400 dark:text-slate-500 flex-shrink-0">{day}</span>
-                          <span className="truncate text-slate-700 dark:text-slate-300">{e.note || e.category}</span>
+                          <span className="w-5 text-right tabular-nums text-stone-400 dark:text-stone-500 flex-shrink-0">{day}</span>
+                          <span className="truncate text-stone-700 dark:text-stone-300">{e.note || e.category}</span>
                         </div>
                       );
                     })}
                     {evs.length > CAP && (
                       <button
                         onClick={() => setExpanded({ title: `${MONTHS[m - 1]} ${date.slice(0, 4)}`, events: evs })}
-                        className="text-[10px] font-medium text-teal-600 dark:text-teal-400 hover:underline pl-3"
+                        className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline pl-3"
                       >
                         +{evs.length - CAP} more
                       </button>
@@ -380,7 +380,7 @@ export function CalendarAllocation({
     <>
       <div className="grid grid-cols-7 gap-1.5 mb-1.5">
         {WEEKDAYS.map((w) => (
-          <span key={w} className="text-[10px] font-medium text-slate-400 dark:text-slate-500 text-center">
+          <span key={w} className="text-[10px] font-medium text-stone-400 dark:text-stone-500 text-center">
             {w}
           </span>
         ))}
@@ -397,10 +397,10 @@ export function CalendarAllocation({
             <div
               key={date}
               className={`rounded-lg border p-1.5 flex flex-col gap-1 min-h-[92px] ${
-                today ? 'border-teal-400 dark:border-teal-500/50' : 'border-slate-200 dark:border-slate-800'
+                today ? 'border-emerald-400 dark:border-emerald-500/50' : 'border-stone-200 dark:border-stone-800'
               }`}
             >
-              <span className={`text-[11px] font-num tabular-nums ${today ? 'font-semibold text-teal-600 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400'}`}>
+              <span className={`text-[11px] tabular-nums ${today ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-stone-500 dark:text-stone-400'}`}>
                 {d}
               </span>
               <div className="space-y-0.5">
@@ -422,7 +422,7 @@ export function CalendarAllocation({
                 {evs.length > CAP && (
                   <button
                     onClick={() => setExpanded({ title: dayTitle(date), events: evs })}
-                    className="block text-[9px] font-medium text-teal-600 dark:text-teal-400 hover:underline pl-1"
+                    className="block text-[9px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline pl-1"
                   >
                     +{evs.length - CAP} more
                   </button>

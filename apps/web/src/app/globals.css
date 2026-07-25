@@ -30,25 +30,29 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ── "Instrument" design tokens (prototype, scoped via .theme-instrument) ──────
-   Cool-slate neutrals + a teal signal accent + a display/body/mono type system.
-   Applied on a wrapper so it only affects the screen we're prototyping. */
-.theme-instrument {
-  --accent: #0d9488; /* teal-600 */
-  --accent-strong: #0f766e; /* teal-700 */
-  --accent-soft: rgba(13, 148, 136, 0.1);
+/* ── "Warm & friendly" design tokens (prototype, scoped via .theme-warm) ───────
+   Warm stone canvas, a friendly green accent, soft depth, generous rounding. */
+.theme-warm {
+  --accent: #10b981; /* emerald-500 */
+  --accent-strong: #059669; /* emerald-600 */
+  --accent-soft: rgba(16, 185, 129, 0.12);
+  /* Warm, layered shadows (tinted with a stone hue, not pure black). */
+  --shadow-soft: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 14px rgba(28, 25, 23, 0.05);
+  --shadow-lift: 0 2px 4px rgba(28, 25, 23, 0.05), 0 14px 32px rgba(28, 25, 23, 0.09);
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.006em;
 }
-/* Display type for headings + section labels. */
 .font-display {
-  font-family: var(--font-display), ui-sans-serif, sans-serif;
-  letter-spacing: -0.015em;
+  font-family: var(--font-body), ui-sans-serif, sans-serif;
+  letter-spacing: -0.018em;
 }
-/* Tabular monospaced numerals — the signature treatment for every metric. */
-.font-num {
-  font-family: var(--font-num), ui-monospace, "SF Mono", monospace;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
+/* Soft elevated surface — depth instead of a flat hairline border. */
+.card-soft {
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.dark .card-soft {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 @keyframes fade-in {

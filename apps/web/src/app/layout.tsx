@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,22 +12,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// "Instrument" design direction: Space Grotesk (display) + Inter (body) + JetBrains Mono
-// (tabular numerals). Exposed as CSS variables; applied per-screen while we prototype.
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
-const inter = Inter({
+// "Warm & friendly" design direction: one friendly geometric sans for everything,
+// exposed as a CSS variable and applied per-screen while we prototype.
+const jakarta = Plus_Jakarta_Sans({
   variable: "--font-body",
   subsets: ["latin"],
-});
-
-const jetBrainsMono = JetBrains_Mono({
-  variable: "--font-num",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {

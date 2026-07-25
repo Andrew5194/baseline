@@ -294,16 +294,16 @@ export default function Overview() {
   const tabClass = (p: Panel) =>
     `px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
       panel === p
-        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-        : 'border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+        ? 'bg-stone-900 dark:bg-white text-white dark:text-stone-900'
+        : 'border border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'
     }`;
 
   return (
-    <div className="theme-instrument p-4 sm:p-6 lg:p-8 max-w-5xl">
+    <div className="theme-warm p-4 sm:p-6 lg:p-8 max-w-5xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Overview</h1>
-          <p className="font-num text-xs font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-0.5">{periodRangeLabel(period, tz, offset)}</p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-stone-900 dark:text-white">Overview</h1>
+          <p className="text-xs font-medium uppercase tracking-widest text-stone-400 dark:text-stone-500 mt-0.5">{periodRangeLabel(period, tz, offset)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <PeriodSelector
@@ -316,7 +316,7 @@ export default function Overview() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setEditing('new')}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-strong)] shadow-sm shadow-teal-900/10 transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-strong)] shadow-sm shadow-emerald-900/10 transition-colors"
             >
               <span className="text-sm leading-none">+</span>
               Add entry
@@ -390,9 +390,9 @@ export default function Overview() {
       )}
 
       {/* Budget donut for the selected period */}
-      <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mb-6">
+      <div className="p-6 rounded-2xl border border-stone-200/70 dark:border-stone-800/80 bg-white dark:bg-stone-900 card-soft mb-6">
         <div className="flex items-center justify-between mb-5">
-          <p className="font-display text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-[0.18em]">
+          <p className="font-display text-[11px] font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-[0.18em]">
             {PERIOD_LABEL[period]}
           </p>
           <div className="flex items-center gap-3">
@@ -403,15 +403,15 @@ export default function Overview() {
               title="Hide recurring routines to focus on free time"
               className="flex items-center gap-2"
             >
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Hide recurring</span>
+              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">Hide recurring</span>
               <span
                 className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                  hideRecurring ? 'bg-teal-500' : 'bg-slate-300 dark:bg-slate-600'
+                  hideRecurring ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-stone-600'
                 }`}
               >
                 <span
                   className={`inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition-transform ${
-                    hideRecurring ? 'translate-x-3.5' : 'translate-x-0.5'
+                    hideRecurring ? 'transtone-x-3.5' : 'transtone-x-0.5'
                   }`}
                 />
               </span>
@@ -435,17 +435,17 @@ export default function Overview() {
             pending={pending}
           />
         ) : (
-          <div className="h-[200px] bg-slate-200 dark:bg-slate-800 rounded-lg shimmer" />
+          <div className="h-[200px] bg-stone-200 dark:bg-stone-800 rounded-lg shimmer" />
         )}
       </div>
 
       {/* Allocation over the period — bar chart or calendar grid */}
-      <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mb-6">
+      <div className="p-6 rounded-2xl border border-stone-200/70 dark:border-stone-800/80 bg-white dark:bg-stone-900 card-soft mb-6">
         <div className="flex items-center justify-between mb-5">
-          <p className="font-display text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-[0.18em]">
+          <p className="font-display text-[11px] font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-[0.18em]">
             {allocationLabel}
           </p>
-          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800">
+          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-stone-100 dark:bg-stone-800">
             {(['bars', 'calendar'] as const).map((v) => (
               <button
                 key={v}
@@ -456,8 +456,8 @@ export default function Overview() {
                 aria-pressed={allocView === v}
                 className={`p-1.5 rounded-md transition-colors ${
                   allocView === v
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                    ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-white shadow-sm'
+                    : 'text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300'
                 }`}
               >
                 {v === 'bars' ? (
@@ -480,42 +480,42 @@ export default function Overview() {
             <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} activeCategory={activeCategory} onSelectCategory={setDetailCategory} unit={unit} />
           )
         ) : (
-          <div className="h-64 bg-slate-200 dark:bg-slate-800 rounded-lg shimmer" />
+          <div className="h-64 bg-stone-200 dark:bg-stone-800 rounded-lg shimmer" />
         )}
       </div>
 
       {/* Entries list */}
-      <div className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <p className="font-display text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-[0.18em] mb-4">
+      <div className="p-6 rounded-2xl border border-stone-200/70 dark:border-stone-800/80 bg-white dark:bg-stone-900 card-soft">
+        <p className="font-display text-[11px] font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-[0.18em] mb-4">
           Entries {PERIOD_LABEL[period].toLowerCase()}
         </p>
         {!ready || !entries ? (
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg shimmer" />
+              <div key={i} className="h-10 bg-stone-200 dark:bg-stone-800 rounded-lg shimmer" />
             ))}
           </div>
         ) : entries.data.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500 py-4">
+          <p className="text-sm text-stone-400 dark:text-stone-500 py-4">
             No entries yet. Click <span className="font-medium">Add entry</span> to log time.
           </p>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-stone-100 dark:divide-stone-800">
             {entries.data.map((e) => (
               <div
                 key={e.id}
                 onClick={() => setEditing(e)}
-                className="flex items-center gap-3 py-2.5 group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 -mx-2 px-2 rounded-lg transition-colors"
+                className="flex items-center gap-3 py-2.5 group cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/40 -mx-2 px-2 rounded-lg transition-colors"
               >
                 <span
                   className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
                   style={{ backgroundColor: colorOf(e.category) }}
                 />
-                <span className="text-sm text-slate-900 dark:text-white w-32 truncate">{e.category}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500 w-16">{fmtDate(e.occurred_at, tz)}</span>
-                <span className="text-sm text-slate-600 dark:text-slate-400 flex-1 truncate">{e.note}</span>
+                <span className="text-sm text-stone-900 dark:text-white w-32 truncate">{e.category}</span>
+                <span className="text-xs text-stone-400 dark:text-stone-500 w-16">{fmtDate(e.occurred_at, tz)}</span>
+                <span className="text-sm text-stone-600 dark:text-stone-400 flex-1 truncate">{e.note}</span>
                 {e.timed && (
-                  <span className="hidden sm:block text-xs text-slate-400 dark:text-slate-500 font-num tabular-nums flex-shrink-0">
+                  <span className="hidden sm:block text-xs text-stone-400 dark:text-stone-500 tabular-nums flex-shrink-0">
                     {timeRange(e.occurred_at, e.hours, tz)}
                   </span>
                 )}
@@ -525,21 +525,21 @@ export default function Overview() {
                     onClick={(ev) => ev.stopPropagation()}
                     aria-label="Go to task"
                     title="Open this task in Goals"
-                    className="flex-shrink-0 text-slate-300 dark:text-slate-600 hover:text-teal-500 dark:hover:text-teal-400 transition-colors"
+                    className="flex-shrink-0 text-stone-300 dark:text-stone-600 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 5h5m0 0v5m0-5L9.5 14.5M18 13v5a1 1 0 01-1 1H6a1 1 0 01-1-1V7a1 1 0 011-1h5" />
                     </svg>
                   </Link>
                 )}
-                <span className="text-sm font-medium text-slate-900 dark:text-white font-num tabular-nums">{fmtDuration(e.hours, unit)}</span>
+                <span className="text-sm font-medium text-stone-900 dark:text-white tabular-nums">{fmtDuration(e.hours, unit)}</span>
                 <button
                   onClick={(ev) => {
                     ev.stopPropagation();
                     deleteEntry(e.id);
                   }}
                   aria-label="Delete entry"
-                  className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-lg leading-none px-1"
+                  className="text-stone-300 dark:text-stone-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-lg leading-none px-1"
                 >
                   ×
                 </button>

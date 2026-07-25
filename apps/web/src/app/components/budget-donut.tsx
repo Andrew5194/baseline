@@ -58,7 +58,7 @@ const THICK = 26;
 const CENTER_W = 2 * (RADIUS - THICK);
 function fitFontPx(str: string, maxPx: number): number {
   const availPx = CENTER_W - 28; // leave room for the button's horizontal padding
-  const needed = availPx / (0.62 * Math.max(str.length, 1)); // ~digit width at font-num tabular-nums
+  const needed = availPx / (0.62 * Math.max(str.length, 1)); // ~digit width at tabular-nums
   return Math.min(maxPx, Math.max(13, needed));
 }
 const FREE_SWATCH = '#94a3b8';
@@ -240,24 +240,24 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
             {activeSlice ? (
               <>
                 <span
-                  className="font-bold text-slate-900 dark:text-white font-num tabular-nums leading-tight"
+                  className="font-bold text-stone-900 dark:text-white tabular-nums leading-tight"
                   style={{ fontSize: fitFontPx(fmtDuration(activeSlice.value, unit), 24) }}
                 >
                   {fmtDuration(activeSlice.value, unit)}
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 max-w-[7rem] truncate">{activeSlice.name}</span>
-                <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-0.5 font-num tabular-nums">{fmt1(activeSlice.pct)}% of budget</span>
+                <span className="text-[11px] text-stone-500 dark:text-stone-400 max-w-[7rem] truncate">{activeSlice.name}</span>
+                <span className="text-[11px] font-medium text-stone-400 dark:text-stone-500 mt-0.5 tabular-nums">{fmt1(activeSlice.pct)}% of budget</span>
               </>
             ) : (
               <>
                 <span
-                  className="font-bold text-slate-900 dark:text-white font-num tabular-nums leading-tight"
+                  className="font-bold text-stone-900 dark:text-white tabular-nums leading-tight"
                   style={{ fontSize: fitFontPx(fmtDurationNum(displayTracked, unit), 30) }}
                 >
                   {fmtDurationNum(displayTracked, unit)}
                 </span>
-                <span className="text-[11px] text-slate-400 dark:text-slate-500">of {fmtDurationNum(freeBudget, unit)} {freeFocus ? 'free' : 'total'} {UNIT_META[unit].word}</span>
-                <span className="text-[11px] font-medium text-teal-600 dark:text-teal-400 mt-0.5">{pct}% {freeFocus ? 'focused' : 'tracked'}</span>
+                <span className="text-[11px] text-stone-400 dark:text-stone-500">of {fmtDurationNum(freeBudget, unit)} {freeFocus ? 'free' : 'total'} {UNIT_META[unit].word}</span>
+                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{pct}% {freeFocus ? 'focused' : 'tracked'}</span>
               </>
             )}
           </button>
@@ -266,7 +266,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
 
       <div className="flex-1 w-full">
         {/* Column headers for the per-category table. */}
-        <div className="flex items-baseline gap-2.5 pb-1.5 mb-1.5 border-b border-slate-100 dark:border-slate-800 text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        <div className="flex items-baseline gap-2.5 pb-1.5 mb-1.5 border-b border-stone-100 dark:border-stone-800 text-[10px] font-medium uppercase tracking-wide text-stone-400 dark:text-stone-500">
           <span className="w-2.5 flex-shrink-0" />
           <span className="flex-1 min-w-0">Category</span>
           <span className="w-12 text-right flex-shrink-0">Entries</span>
@@ -275,7 +275,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
         </div>
         <div className="space-y-2">
           {effCategories.length === 0 ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500">No tracked hours yet.</p>
+            <p className="text-sm text-stone-400 dark:text-stone-500">No tracked hours yet.</p>
           ) : (
             effCategories
               .filter((c) => !(freeFocus && recurringSet.has(c.category)))
@@ -311,25 +311,25 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
                   <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: colorVal(c.category) }} />
                 )}
                 <span className="flex-1 min-w-0 flex items-baseline gap-1.5">
-                  <span className="text-slate-700 dark:text-slate-300 truncate">{c.category}</span>
+                  <span className="text-stone-700 dark:text-stone-300 truncate">{c.category}</span>
                   {recurringSet.has(c.category) && (
-                    <span className="text-slate-400 dark:text-slate-500 self-center flex-shrink-0" title="Recurring routine">
+                    <span className="text-stone-400 dark:text-stone-500 self-center flex-shrink-0" title="Recurring routine">
                       <RecurringIcon className="w-3 h-3" />
                     </span>
                   )}
                 </span>
-                <span className="w-12 text-right text-[11px] text-slate-500 dark:text-slate-400 font-num tabular-nums flex-shrink-0">{c.entries}</span>
-                <span className="w-20 text-right text-slate-900 dark:text-white font-medium font-num tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(c.hours, unit)}</span>
-                <span className="w-12 text-right text-[11px] text-slate-400 dark:text-slate-500 font-num tabular-nums flex-shrink-0">{fmt1(slicePct(c.hours))}%</span>
+                <span className="w-12 text-right text-[11px] text-stone-500 dark:text-stone-400 tabular-nums flex-shrink-0">{c.entries}</span>
+                <span className="w-20 text-right text-stone-900 dark:text-white font-medium tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(c.hours, unit)}</span>
+                <span className="w-12 text-right text-[11px] text-stone-400 dark:text-stone-500 tabular-nums flex-shrink-0">{fmt1(slicePct(c.hours))}%</span>
               </div>
             ))
           )}
-          <div className="flex items-baseline gap-2.5 text-sm pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-baseline gap-2.5 text-sm pt-2 border-t border-stone-100 dark:border-stone-800">
             <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: freeSwatch }} />
-            <span className="flex-1 min-w-0 truncate text-slate-400 dark:text-slate-500">{freeFocus ? 'Focus time' : 'Free'}</span>
-            <span className="w-12 text-right text-[11px] text-slate-400 dark:text-slate-500 font-num tabular-nums flex-shrink-0">—</span>
-            <span className="w-20 text-right text-slate-500 dark:text-slate-400 font-medium font-num tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(displayFree, unit)}</span>
-            <span className="w-12 text-right text-[11px] text-slate-400 dark:text-slate-500 font-num tabular-nums flex-shrink-0">{fmt1(freePct)}%</span>
+            <span className="flex-1 min-w-0 truncate text-stone-400 dark:text-stone-500">{freeFocus ? 'Focus time' : 'Free'}</span>
+            <span className="w-12 text-right text-[11px] text-stone-400 dark:text-stone-500 tabular-nums flex-shrink-0">—</span>
+            <span className="w-20 text-right text-stone-500 dark:text-stone-400 font-medium tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(displayFree, unit)}</span>
+            <span className="w-12 text-right text-[11px] text-stone-400 dark:text-stone-500 tabular-nums flex-shrink-0">{fmt1(freePct)}%</span>
           </div>
         </div>
       </div>
