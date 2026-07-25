@@ -586,7 +586,7 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
                       onOpen={() => prefetchTaskEntries(t.id)}
                       items={[
                         {
-                          label: 'Start timer',
+                          label: 'Start Task',
                           icon: (
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                               <path d="M8 5v14l11-7z" />

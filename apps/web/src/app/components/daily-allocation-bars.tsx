@@ -111,8 +111,12 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
   const bw = x.bandwidth();
   const yTicks = [0, 1, 2, 3, 4].map((i) => Math.round((yMax * i) / 4));
 
-  const maxLabels = Math.max(1, Math.floor(innerW / 18));
-  const step = Math.ceil(data.length / maxLabels);
+  // Evenly-spaced x labels sized to fit the width — one every `step` bars, homogeneous.
+  // Wider gap for the year view's month names, tighter for day numbers.
+  const isYear = data.every((row) => String(row.date).endsWith('-01'));
+  const labelPx = compact ? 30 : isYear ? 34 : 18;
+  const maxLabels = Math.max(1, Math.floor(innerW / labelPx));
+  const step = Math.max(1, Math.ceil(data.length / maxLabels));
 
   return (
     <div ref={ref} className="relative h-64 text-neutral-200 dark:text-neutral-800">
@@ -304,7 +308,7 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
               const iso = String(row.date);
               const isToday = !!todayISO && iso === todayISO;
               const isMonthStart = !compact && iso.endsWith('-01');
-              if (!(i % step === 0 || isToday || isMonthStart)) return null;
+              if (i % step !== 0) return null; // homogeneous spacing — one label every `step` bars
               return (
                 <text
                   key={`x${iso}`}
