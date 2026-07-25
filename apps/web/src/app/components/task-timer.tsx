@@ -81,9 +81,11 @@ export function TaskTimer({
   const running = timer.startedAt !== null;
 
   return (
-    <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-emerald-300/70 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/[0.06]">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-2.5 py-2 rounded-lg border border-emerald-300/70 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/[0.06]">
       <Heartbeat running={running} />
       <span className="flex-shrink-0 text-base font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
+      {/* Controls stay on row 1 while there's room (shrinking via the fluid `btn`), then
+          wrap together onto a second row under the timer when the screen is too narrow. */}
       <div className="ml-auto flex items-center gap-1">
         {running ? (
           <button onClick={pauseTimer} className={`${btn} border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800`}>
