@@ -239,10 +239,33 @@ export default function Metrics() {
 
   if (loading && !overview) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl space-y-6">
-        <div className="h-8 w-40 bg-neutral-200 dark:bg-neutral-800 rounded shimmer" />
-        <div className="h-20 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
-        <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+        {/* Real header shows immediately (like the other pages) — only the content shimmers. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Metrics</h1>
+            <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <SourceDropdown value={source} onChange={changeSource} sources={SOURCES} />
+            <PeriodSelector
+              value={period}
+              onChange={(p) => {
+                setPeriod(p);
+                setOffset(0);
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="mb-2">
+          <PeriodNav offset={offset} onChange={setOffset} />
+        </div>
+
+        <div className="mt-6 space-y-6">
+          <div className="h-20 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
+          <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
+        </div>
       </div>
     );
   }
