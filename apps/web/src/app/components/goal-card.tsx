@@ -123,7 +123,7 @@ export function GoalCard({
   }
 
   return (
-    <div data-goal-card className="group card-modern overflow-hidden">
+    <div data-goal-card className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
       <div
         className={`flex items-center gap-3 p-4 select-none ${editing ? '' : 'cursor-pointer'}`}
         onClick={editing ? undefined : toggleExpand}
