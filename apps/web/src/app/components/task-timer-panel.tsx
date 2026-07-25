@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useFocusTimer } from '../../lib/focus-timer';
 import { TaskTimer } from './task-timer';
 import { type TimeUnit, fmtDuration } from '../../lib/time-units';
 import {
@@ -50,6 +51,8 @@ export function TaskTimerPanel({
   // Seed from cache so a re-open paints instantly; null = no cache yet → shimmer
   // while the first fetch runs.
   const [entries, setEntries] = useState<TaskEntry[] | null>(() => getCachedTaskEntries(taskId) ?? null);
+  // Is the global timer currently running for THIS task? (drives the empty-state copy)
+  const timerRunningHere = useFocusTimer()?.taskId === taskId;
 
   const load = useCallback(() => {
     fetchTaskEntries(taskId).then(setEntries);
@@ -98,11 +101,12 @@ export function TaskTimerPanel({
           ))}
         </ul>
       ) : null}
-      {!taskDone ? (
-        <TaskTimer taskId={taskId} title={title} category={category} onLogged={logged} hideStart />
-      ) : entries && entries.length === 0 ? (
-        <p className="text-xs text-neutral-400 dark:text-neutral-500">No sessions logged.</p>
-      ) : null}
+      {entries && entries.length === 0 && !timerRunningHere && (
+        <p className="text-xs text-neutral-400 dark:text-neutral-500">
+          {taskDone ? 'No time logged.' : 'No time logged. Start the task to log time.'}
+        </p>
+      )}
+      {!taskDone && <TaskTimer taskId={taskId} title={title} category={category} onLogged={logged} hideStart />}
     </div>
   );
 }

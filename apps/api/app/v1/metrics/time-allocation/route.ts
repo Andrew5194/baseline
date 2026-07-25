@@ -68,11 +68,23 @@ export async function GET(request: NextRequest) {
   const curr = hoursByCategoryV1(ei, start, end);
   const prev = hoursByCategoryV1(ei, prevStart, start);
 
+  // Count real logged events per category in the current window — every source that
+  // contributes duration (manual, timers, calendar). Recurring synthetic events aren't
+  // in `rows`, so routines correctly count 0.
+  const entryCounts: Record<string, number> = {};
+  for (const r of rows) {
+    if (r.occurredAt >= start && r.occurredAt < end) {
+      const cat = (r.payload as { category?: string } | null)?.category;
+      if (typeof cat === 'string' && cat) entryCounts[cat] = (entryCounts[cat] ?? 0) + 1;
+    }
+  }
+
   const catStats = Object.entries(curr)
     .map(([category, hours]) => ({
       category,
       hours,
       pct: round1((hours / budgetHours) * 100),
+      entries: entryCounts[category] ?? 0,
       delta: computeDelta(hours, prev[category] ?? null),
     }))
     .sort((a, b) => b.hours - a.hours);

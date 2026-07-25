@@ -13,6 +13,7 @@ import { fmtDuration } from '../../lib/time-units';
 import { useTimeUnit } from '../../lib/use-time-unit';
 import { RecurringAllocations } from '../components/recurring-allocations';
 import { ManageCategoriesModal } from '../components/manage-categories-modal';
+import { CategoryDetailModal } from '../components/category-detail-modal';
 import { Modal } from '../components/modal';
 import { apiFetch } from '../../lib/api';
 import { useTimezone } from '../../lib/use-timezone';
@@ -33,6 +34,8 @@ interface Entry {
   note: string | null;
   timed?: boolean;
   task_id?: string | null;
+  source?: string; // 'manual' | 'google_calendar' — present on the all-sources detail fetch
+  link?: string | null; // Google Calendar event URL (calendar entries only)
 }
 interface EntriesResponse {
   data: Entry[];
@@ -74,6 +77,12 @@ export default function Overview() {
   const [colorsReady, setColorsReady] = useState(false);
   const [recurringCats, setRecurringCats] = useState<string[]>([]);
   const [panel, setPanel] = useState<Panel | null>(null);
+  // Category highlighted by hovering the donut legend — cross-highlighted in the bar chart.
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  // Category whose entry-level detail breakdown is open (clicking a legend row or bar).
+  const [detailCategory, setDetailCategory] = useState<string | null>(null);
+  // Entries behind that modal — fetched on demand with all sources (manual + calendar).
+  const [detailEntries, setDetailEntries] = useState<Entry[] | null>(null);
   // Synced server-side (users.preferences via /v1/me) so it follows the user across devices.
   const [hideRecurring, setHideRecurring, hideRecurringLoaded] = usePreference('hideRecurring');
   const [allocView, setAllocView] = usePreference<'bars' | 'calendar'>('allocView', 'bars');
@@ -256,6 +265,26 @@ export default function Overview() {
   const colorMap = useMemo(() => buildColorMap(allCategories, colors), [allCategories, colors]);
   const colorOf = (c: string) => colorMap[c] ?? colorForCategory(c, colors);
 
+  // Load the open category's underlying entries (all sources) when the detail modal opens.
+  useEffect(() => {
+    if (!detailCategory) {
+      setDetailEntries(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailEntries(null);
+    apiFetch<{ data: Entry[] }>(`/v1/time-entries?period=${period}&offset=${offset}&all_sources=1`)
+      .then((r) => {
+        if (!cancelled) setDetailEntries(r.data.filter((e) => e.category === detailCategory));
+      })
+      .catch(() => {
+        if (!cancelled) setDetailEntries([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detailCategory, period, offset]);
+
   // Hold charts/entries until colors + the category set load (first paint uses final
   // colors, no recolor flash) and the hide-recurring pref resolves (so the donut/bars
   // mount at the right freeFocus instead of replaying the hide tween each navigation).
@@ -307,6 +336,21 @@ export default function Overview() {
       </div>
 
       <FocusTimerBar onLogged={refreshAll} />
+
+      {detailCategory && budget && (
+        <CategoryDetailModal
+          category={detailCategory}
+          color={colorOf(detailCategory)}
+          entries={detailEntries}
+          entryCount={budget.categories.find((c) => c.category === detailCategory)?.entries ?? 0}
+          hours={budget.categories.find((c) => c.category === detailCategory)?.hours ?? 0}
+          pct={budget.categories.find((c) => c.category === detailCategory)?.pct ?? 0}
+          isRecurring={recurringCats.includes(detailCategory)}
+          tz={tz}
+          unit={unit}
+          onClose={() => setDetailCategory(null)}
+        />
+      )}
 
       {editing !== null && (
         <Modal onClose={() => setEditing(null)}>
@@ -382,6 +426,8 @@ export default function Overview() {
             budget={budget.budget}
             colorOf={colorOf}
             onRecolor={recolor}
+            onActiveChange={setActiveCategory}
+            onSelectCategory={setDetailCategory}
             recurringCategories={recurringCats}
             freeFocus={hideRecurring}
             unit={unit}
@@ -431,7 +477,7 @@ export default function Overview() {
           allocView === 'calendar' ? (
             <CalendarAllocation data={barRows} categories={stackCategories} colorOf={colorOf} granularity={granularity} recurringCategories={recurringCats} freeFocus={hideRecurring} todayISO={todayKey} entries={entries?.data ?? []} tz={tz} pending={pending} unit={unit} />
           ) : (
-            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} unit={unit} />
+            <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} activeCategory={activeCategory} onSelectCategory={setDetailCategory} unit={unit} />
           )
         ) : (
           <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />

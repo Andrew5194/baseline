@@ -18,8 +18,15 @@ export function Modal({ children, onClose }: { children: React.ReactNode; onClos
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div className="relative flex min-h-full items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" aria-hidden="true" />
+      {/* Close on a click that lands on this wrapper itself (the area around the dialog),
+          not on the dialog or its children. */}
+      <div
+        className="relative flex min-h-full items-center justify-center p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
         <div role="dialog" aria-modal="true" className="relative z-10 w-full max-w-md">
           {children}
         </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, events, resolveCategoryId } from '@baseline/db';
-import { eq, and, gte, lt, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, gte, lt, gt, desc, asc, sql } from 'drizzle-orm';
 import { EVENT_TYPES, manualTimeEntryPayload } from '@baseline/events';
 import { getCurrentUserId, getUserTimezone } from '../../../lib/user';
 import { periodBounds, isPeriod, offsetNow, parseOffset } from '../../../lib/period';
@@ -13,17 +13,21 @@ const entryFromRow = (r: {
   id: string;
   occurredAt: Date;
   durationMs: number | null;
+  source: string;
   payload: unknown;
 }) => {
-  const p = (r.payload ?? {}) as { category?: string; note?: string; timed?: boolean; task_id?: string };
+  const p = (r.payload ?? {}) as { category?: string; note?: string; summary?: string; html_link?: string; timed?: boolean; task_id?: string };
   return {
     id: r.id,
     occurred_at: r.occurredAt,
     hours: Math.round(((r.durationMs ?? 0) / HOUR_MS) * 100) / 100,
     category: p.category ?? 'Other',
-    note: p.note ?? null,
+    // Calendar events carry their title in `summary`, manual entries a free-text `note`.
+    note: p.note ?? p.summary ?? null,
     timed: p.timed === true,
     task_id: p.task_id ?? null,
+    source: r.source,
+    link: p.html_link ?? null, // calendar events link back to the Google Calendar entry
   };
 };
 
@@ -37,7 +41,7 @@ export async function GET(request: NextRequest) {
   const taskId = request.nextUrl.searchParams.get('task_id');
   if (taskId) {
     const taskRows = await db
-      .select({ id: events.id, occurredAt: events.occurredAt, durationMs: events.durationMs, payload: events.payload })
+      .select({ id: events.id, occurredAt: events.occurredAt, durationMs: events.durationMs, source: events.source, payload: events.payload })
       .from(events)
       .where(and(eq(events.userId, userId), eq(events.source, 'manual'), sql`${events.payload} ->> 'task_id' = ${taskId}`))
       .orderBy(asc(events.occurredAt));
@@ -54,16 +58,24 @@ export async function GET(request: NextRequest) {
   const { start, end } = periodBounds(periodParam, offsetNow(periodParam, new Date(), tz, offset), tz);
 
   const manual = and(eq(events.userId, userId), eq(events.source, 'manual'));
+  // ?all_sources=1 also returns calendar events (any duration-bearing source that feeds
+  // the budget), so the category detail view can show every entry behind a category's
+  // hours. The default stays manual-only — the editable entries list isn't for calendar.
+  const allSources = request.nextUrl.searchParams.get('all_sources') === '1';
+  const rowFilter = allSources
+    ? and(eq(events.userId, userId), sql`${events.source} in ('manual','google_calendar')`, gt(events.durationMs, 0))
+    : manual;
 
   const rows = await db
     .select({
       id: events.id,
       occurredAt: events.occurredAt,
       durationMs: events.durationMs,
+      source: events.source,
       payload: events.payload,
     })
     .from(events)
-    .where(and(manual, gte(events.occurredAt, start), lt(events.occurredAt, end)))
+    .where(and(rowFilter, gte(events.occurredAt, start), lt(events.occurredAt, end)))
     .orderBy(desc(events.occurredAt));
 
   // Distinct categories across all of the user's manual entries (for the form).
@@ -137,6 +149,7 @@ export async function POST(request: NextRequest) {
       id: events.id,
       occurredAt: events.occurredAt,
       durationMs: events.durationMs,
+      source: events.source,
       payload: events.payload,
     });
 

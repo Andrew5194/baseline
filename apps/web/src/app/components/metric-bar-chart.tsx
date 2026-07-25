@@ -58,8 +58,11 @@ export function MetricBarChart({
   const bw = x.bandwidth();
   const yTicks = y.ticks(4).filter((t) => Number.isInteger(t));
 
-  // Label density mirrors the Overview chart; today + month starts always shown.
-  const maxLabels = Math.max(1, Math.floor(innerW / (compact ? 30 : 18)));
+  // Evenly-spaced x labels sized to fit the width — one every `step` bars, homogeneous.
+  // Wider gap for the year view's month names, tighter for day numbers.
+  const isYear = data.every((d) => d.date.endsWith('-01'));
+  const labelPx = compact ? 30 : isYear ? 34 : 18;
+  const maxLabels = Math.max(1, Math.floor(innerW / labelPx));
   const step = Math.max(1, Math.ceil(data.length / maxLabels));
 
   return (
@@ -137,7 +140,7 @@ export function MetricBarChart({
             {data.map((d, i) => {
               const isToday = !!todayISO && d.date === todayISO;
               const isMonthStart = !compact && d.date.endsWith('-01');
-              if (!(i % step === 0 || isToday || isMonthStart)) return null;
+              if (i % step !== 0) return null; // homogeneous spacing — one label every `step` bars
               return (
                 <text
                   key={`x${d.date}`}

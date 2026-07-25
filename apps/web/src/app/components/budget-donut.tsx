@@ -11,6 +11,9 @@ export interface BudgetCategory {
   category: string;
   hours: number;
   pct: number;
+  // Count of real logged events behind `hours` (manual, timer, or calendar). Recurring
+  // routines are 0 — their hours are a planned allocation, not logged events.
+  entries: number;
 }
 
 interface BudgetDonutProps {
@@ -21,6 +24,11 @@ interface BudgetDonutProps {
   colorOf?: (category: string) => string;
   // When provided, legend swatches become color pickers that persist the choice.
   onRecolor?: (category: string, color: string) => void;
+  // Notified whenever the hovered category changes (donut slice or legend row), so a
+  // parent can cross-highlight the same category elsewhere (e.g. the bar chart).
+  onActiveChange?: (category: string | null) => void;
+  // Clicking a legend category opens its detail breakdown.
+  onSelectCategory?: (category: string) => void;
   // Categories sourced from a recurring routine, marked with a repeat glyph.
   recurringCategories?: string[];
   // When true, recurring routines are hidden and free time is shown in green.
@@ -59,7 +67,7 @@ const gradId = (name: string) => `donut-grad-${name.replace(/[^a-zA-Z0-9]/g, '-'
 // "0.9", "1", "1.1" while the hide-recurring tween runs.
 const fmt1 = (n: number) => n.toFixed(1);
 
-export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecolor, recurringCategories, freeFocus, unit = 'hr', onCycleUnit, pending }: BudgetDonutProps) {
+export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecolor, onActiveChange, onSelectCategory, recurringCategories, freeFocus, unit = 'hr', onCycleUnit, pending }: BudgetDonutProps) {
   const baseColor = colorOf ?? ((c: string) => colorForCategory(c));
   // Fold a live timer session into the totals: add its hours to the matching category
   // (or introduce a new one), so the donut grows in real time and reverts when cleared.
@@ -69,7 +77,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
     ? categories
     : categories.some((c) => c.category === pendingCat)
       ? categories.map((c) => (c.category === pendingCat ? { ...c, hours: c.hours + pendingHours } : c))
-      : [...categories, { category: pendingCat, hours: pendingHours, pct: 0 }];
+      : [...categories, { category: pendingCat, hours: pendingHours, pct: 0, entries: 0 }];
   const effTracked = trackedHours + pendingHours;
   const freeColor = freeFocus ? FREE_FOCUS_COLOR : FREE_COLOR;
   const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
@@ -77,6 +85,11 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
   const [draft, setDraft] = useState<Record<string, string>>({});
   const colorVal = (c: string) => draft[c] ?? baseColor(c);
   const [active, setActive] = useState<string | null>(null);
+  // Update the local highlight and notify the parent (for cross-highlighting the bar chart).
+  const changeActive = (c: string | null) => {
+    setActive(c);
+    onActiveChange?.(c);
+  };
 
   // Tween 0 → 1 (show routines → free focus) so the arcs grow/shrink smoothly each
   // frame, instead of jumping via a CSS path morph.
@@ -193,7 +206,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
                   // value tween grows the arc and `progress` crossfades the colour.
                   if (s.free) {
                     return (
-                      <g key={s.name} onMouseEnter={() => setActive(s.name)} onMouseLeave={() => setActive(null)} style={{ cursor: 'default' }}>
+                      <g key={s.name} onMouseEnter={() => changeActive(s.name)} onMouseLeave={() => changeActive(null)} style={{ cursor: 'default' }}>
                         <path d={d} fill={FREE_COLOR} opacity={(1 - progress) * dim} />
                         <path d={d} fill="url(#donut-grad-free)" opacity={progress * dim} />
                       </g>
@@ -204,8 +217,8 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
                       key={s.name}
                       d={d}
                       fill={`url(#${gradId(s.name)})`}
-                      onMouseEnter={() => setActive(s.name)}
-                      onMouseLeave={() => setActive(null)}
+                      onMouseEnter={() => changeActive(s.name)}
+                      onMouseLeave={() => changeActive(null)}
                       style={{ transition: 'opacity 0.15s ease', cursor: 'default' }}
                       opacity={dim}
                     />
@@ -251,55 +264,73 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
         </div>
       </div>
 
-      <div className="flex-1 w-full space-y-2">
-        {effCategories.length === 0 ? (
-          <p className="text-sm text-neutral-400 dark:text-neutral-500">No tracked hours yet.</p>
-        ) : (
-          effCategories
-            .filter((c) => !(freeFocus && recurringSet.has(c.category)))
-            .map((c) => (
-            <div
-              key={c.category}
-              className={`flex items-baseline gap-2.5 text-sm rounded-md -mx-1 px-1 py-0.5 transition-colors ${
-                c.category === pendingCat && pending?.running ? 'legend-shimmer' : ''
-              }`}
-              style={{ backgroundColor: active === c.category ? 'rgba(148,163,184,0.12)' : 'transparent' }}
-              onMouseEnter={() => setActive(c.category)}
-              onMouseLeave={() => setActive(null)}
-            >
-              {onRecolor ? (
-                <label className="relative w-2.5 h-2.5 flex-shrink-0 cursor-pointer self-center" title={`Change ${c.category} color`}>
-                  <span className="block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: colorVal(c.category) }} />
-                  <input
-                    type="color"
-                    aria-label={`Color for ${c.category}`}
-                    value={colorVal(c.category)}
-                    onChange={(e) => setDraft((d) => ({ ...d, [c.category]: e.target.value }))}
-                    onBlur={(e) => onRecolor(c.category, e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                </label>
-              ) : (
-                <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: colorVal(c.category) }} />
-              )}
-              <span className="flex-1 min-w-0 flex items-baseline gap-1.5">
-                <span className="text-neutral-700 dark:text-neutral-300 truncate">{c.category}</span>
-                {recurringSet.has(c.category) && (
-                  <span className="text-neutral-400 dark:text-neutral-500 self-center flex-shrink-0" title="Recurring routine">
-                    <RecurringIcon className="w-3 h-3" />
-                  </span>
+      <div className="flex-1 w-full">
+        {/* Column headers for the per-category table. */}
+        <div className="flex items-baseline gap-2.5 pb-1.5 mb-1.5 border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+          <span className="w-2.5 flex-shrink-0" />
+          <span className="flex-1 min-w-0">Category</span>
+          <span className="w-12 text-right flex-shrink-0">Entries</span>
+          <span className="w-20 text-right flex-shrink-0">Time Logged</span>
+          <span className="w-12 text-right flex-shrink-0">% Total</span>
+        </div>
+        <div className="space-y-2">
+          {effCategories.length === 0 ? (
+            <p className="text-sm text-neutral-400 dark:text-neutral-500">No tracked hours yet.</p>
+          ) : (
+            effCategories
+              .filter((c) => !(freeFocus && recurringSet.has(c.category)))
+              .map((c) => (
+              <div
+                key={c.category}
+                className={`flex items-baseline gap-2.5 text-sm rounded-md -mx-1 px-1 py-0.5 transition-colors ${
+                  onSelectCategory ? 'cursor-pointer' : ''
+                } ${c.category === pendingCat && pending?.running ? 'legend-shimmer' : ''}`}
+                style={{ backgroundColor: active === c.category ? 'rgba(148,163,184,0.12)' : 'transparent' }}
+                onMouseEnter={() => changeActive(c.category)}
+                onMouseLeave={() => changeActive(null)}
+                onClick={() => onSelectCategory?.(c.category)}
+                title={onSelectCategory ? `See the entries behind ${c.category}` : undefined}
+              >
+                {onRecolor ? (
+                  <label
+                    className="relative w-2.5 h-2.5 flex-shrink-0 cursor-pointer self-center"
+                    title={`Change ${c.category} color`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: colorVal(c.category) }} />
+                    <input
+                      type="color"
+                      aria-label={`Color for ${c.category}`}
+                      value={colorVal(c.category)}
+                      onChange={(e) => setDraft((d) => ({ ...d, [c.category]: e.target.value }))}
+                      onBlur={(e) => onRecolor(c.category, e.target.value)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </label>
+                ) : (
+                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: colorVal(c.category) }} />
                 )}
-              </span>
-              <span className="flex-shrink-0 text-right text-neutral-900 dark:text-white font-medium tabular-nums whitespace-nowrap">{fmtDuration(c.hours, unit)}</span>
-              <span className="w-10 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{fmt1(slicePct(c.hours))}%</span>
-            </div>
-          ))
-        )}
-        <div className="flex items-baseline gap-2.5 text-sm pt-2 border-t border-neutral-100 dark:border-neutral-800">
-          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: freeSwatch }} />
-          <span className="flex-1 min-w-0 truncate text-neutral-400 dark:text-neutral-500">{freeFocus ? 'Focus time' : 'Free'}</span>
-          <span className="flex-shrink-0 text-right text-neutral-500 dark:text-neutral-400 font-medium tabular-nums whitespace-nowrap">{fmtDuration(displayFree, unit)}</span>
-          <span className="w-10 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{fmt1(freePct)}%</span>
+                <span className="flex-1 min-w-0 flex items-baseline gap-1.5">
+                  <span className="text-neutral-700 dark:text-neutral-300 truncate">{c.category}</span>
+                  {recurringSet.has(c.category) && (
+                    <span className="text-neutral-400 dark:text-neutral-500 self-center flex-shrink-0" title="Recurring routine">
+                      <RecurringIcon className="w-3 h-3" />
+                    </span>
+                  )}
+                </span>
+                <span className="w-12 text-right text-[11px] text-neutral-500 dark:text-neutral-400 tabular-nums flex-shrink-0">{c.entries}</span>
+                <span className="w-20 text-right text-neutral-900 dark:text-white font-medium tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(c.hours, unit)}</span>
+                <span className="w-12 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{fmt1(slicePct(c.hours))}%</span>
+              </div>
+            ))
+          )}
+          <div className="flex items-baseline gap-2.5 text-sm pt-2 border-t border-neutral-100 dark:border-neutral-800">
+            <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: freeSwatch }} />
+            <span className="flex-1 min-w-0 truncate text-neutral-400 dark:text-neutral-500">{freeFocus ? 'Focus time' : 'Free'}</span>
+            <span className="w-12 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">—</span>
+            <span className="w-20 text-right text-neutral-500 dark:text-neutral-400 font-medium tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(displayFree, unit)}</span>
+            <span className="w-12 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{fmt1(freePct)}%</span>
+          </div>
         </div>
       </div>
     </div>

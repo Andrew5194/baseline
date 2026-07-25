@@ -167,17 +167,17 @@ export function GoalCard({
           ) : (
             <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 min-w-0">
               <span
-                className={`order-2 md:order-1 min-w-0 block text-sm break-words md:truncate ${
+                className={`min-w-0 block text-sm break-words md:truncate ${
                   goal.done ? 'line-through text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-white'
                 }`}
               >
                 {goal.title}
               </span>
               {(goal.category || due) && (
-                <div className="order-1 md:order-2 flex flex-wrap items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   {goal.category && (
                     <span
-                      className="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+                      className="flex-shrink-0 max-w-[10rem] truncate text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
                       title="Time on this goal rolls up to this category"
                     >
                       {goal.category}
