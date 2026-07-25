@@ -47,38 +47,38 @@ export function FocusTimerBar({ onLogged }: { onLogged: () => void }) {
   const btn = 'py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap text-[clamp(11px,2.4vw,12px)] px-[clamp(0.5rem,1.8vw,0.75rem)]';
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 p-4 rounded-xl border border-emerald-300/70 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/[0.06]">
+    <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 p-4 rounded-xl border border-teal-300/70 dark:border-teal-500/30 bg-teal-50/70 dark:bg-teal-500/[0.06]">
       {/* Category/note + timer keep row 1 (min-w stops them squishing so the controls
           stay wrapped); the controls drop to their own row on phones. */}
       <div className="flex flex-1 min-w-[10rem] items-center gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5">
-            <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
               {timer.category}
-              {!running && <span className="ml-2 text-xs font-normal text-neutral-400 dark:text-neutral-500">Paused</span>}
+              {!running && <span className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">Paused</span>}
             </p>
             <Heartbeat running={running} />
           </div>
-          {timer.note && <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">{timer.note}</p>}
+          {timer.note && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{timer.note}</p>}
         </div>
-        <span className="flex-shrink-0 text-2xl font-semibold tabular-nums text-neutral-900 dark:text-white">{formatElapsed(ms)}</span>
+        <span className="flex-shrink-0 text-2xl font-semibold font-num tabular-nums text-slate-900 dark:text-white">{formatElapsed(ms)}</span>
       </div>
 
       {/* Own full-width row on phones, but kept right-aligned; inline right from sm up. */}
       <div className="basis-full sm:basis-auto sm:ml-auto flex items-center justify-end gap-2 flex-shrink-0">
         {running ? (
-          <button onClick={pauseTimer} className={`${btn} border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800`}>
+          <button onClick={pauseTimer} className={`${btn} border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800`}>
             Pause
           </button>
         ) : (
-          <button onClick={resumeTimer} className={`${btn} border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800`}>
+          <button onClick={resumeTimer} className={`${btn} border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800`}>
             Resume
           </button>
         )}
-        <button onClick={stop} disabled={saving} className={`${btn} bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50`}>
+        <button onClick={stop} disabled={saving} className={`${btn} bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-50`}>
           {saving ? 'Saving…' : 'Stop & log'}
         </button>
-        <button onClick={() => clearTimer()} aria-label="Discard session" className="text-neutral-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400 text-lg leading-none px-1">
+        <button onClick={() => clearTimer()} aria-label="Discard session" className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 text-lg leading-none px-1">
           ×
         </button>
       </div>

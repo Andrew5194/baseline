@@ -30,6 +30,27 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ── "Instrument" design tokens (prototype, scoped via .theme-instrument) ──────
+   Cool-slate neutrals + a teal signal accent + a display/body/mono type system.
+   Applied on a wrapper so it only affects the screen we're prototyping. */
+.theme-instrument {
+  --accent: #0d9488; /* teal-600 */
+  --accent-strong: #0f766e; /* teal-700 */
+  --accent-soft: rgba(13, 148, 136, 0.1);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+/* Display type for headings + section labels. */
+.font-display {
+  font-family: var(--font-display), ui-sans-serif, sans-serif;
+  letter-spacing: -0.015em;
+}
+/* Tabular monospaced numerals — the signature treatment for every metric. */
+.font-num {
+  font-family: var(--font-num), ui-monospace, "SF Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
