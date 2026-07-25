@@ -479,7 +479,7 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
 
       {showRecurring && <RecurringTodos goals={goalsList} categories={categories} categoryColorOf={categoryColorOf} onChange={load} />}
 
-      {loaded && (
+      {loaded ? (
         <div className="rise" style={{ animationDelay: '40ms' }}>
           <CompletionHeatmap
             cells={heatmap}
@@ -491,6 +491,20 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
             canNextMonth={heatmapOffset > 0}
             focusStat={{ date: day, completed: dayItems.filter((t) => t.done).length, total: dayItems.length }}
           />
+        </div>
+      ) : (
+        // Reserve the heatmap's space while /v1/todos loads (mirrors its real layout)
+        // so it doesn't sit empty and pop in late.
+        <div className="p-5 card-modern mb-6">
+          <div className="mb-4 space-y-1.5">
+            <div className="h-7 w-44 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+            <div className="h-3 w-24 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from({ length: 31 }).map((_, i) => (
+              <div key={i} className="w-4 h-4 rounded-[4px] bg-neutral-200 dark:bg-neutral-800" />
+            ))}
+          </div>
         </div>
       )}
 

@@ -68,28 +68,30 @@ const gradId = (name: string) => `donut-grad-${name.replace(/[^a-zA-Z0-9]/g, '-'
 const fmt1 = (n: number) => n.toFixed(1);
 
 // Count up 0 → value once on mount, then hand off to the live value so a running
-// timer (and the hide-recurring tween) keep updating the number afterward.
+// timer (and the hide-recurring tween) keep updating the number afterward. The intro
+// scales the *live* value by an eased 0 → 1 progress (rather than capturing a
+// mount-time target), clamped at 0 — so it always starts at 0 and never flashes a
+// negative while displayTracked settles for a frame.
 function useCountUp(target: number, durationMs = 1150): number {
-  const [display, setDisplay] = useState(0);
+  const [k, setK] = useState(0); // eased intro progress, 0 → 1
   const doneRef = useRef(false);
   useEffect(() => {
     if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       doneRef.current = true;
-      setDisplay(target);
+      setK(1);
       return;
     }
     const start = performance.now();
-    const to = target; // capture the mount-time value; the intro runs to it
     // ease-in-out: a slow start so the low numbers actually tick by (not front-loaded).
     const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
     let raf = 0;
     const tick = (now: number) => {
       const p = Math.min(1, (now - start) / durationMs);
-      setDisplay(to * ease(p));
+      setK(ease(p));
       if (p < 1) raf = requestAnimationFrame(tick);
       else {
         doneRef.current = true;
-        setDisplay(to);
+        setK(1);
       }
     };
     raf = requestAnimationFrame(tick);
@@ -97,7 +99,8 @@ function useCountUp(target: number, durationMs = 1150): number {
     // Intro plays exactly once; live changes flow through the doneRef branch below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return doneRef.current ? target : display;
+  if (doneRef.current) return target;
+  return Math.max(0, target) * k;
 }
 
 export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecolor, onActiveChange, onSelectCategory, recurringCategories, freeFocus, unit = 'hr', onCycleUnit, pending }: BudgetDonutProps) {
