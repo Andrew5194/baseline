@@ -1,6 +1,18 @@
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo';
+const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
+
+// Revoke a Google token. Passing the refresh token revokes the whole grant, removing us
+// from the user's authorized-apps list. Best-effort: an already-invalid token returns
+// 400 and is fine to ignore. Throws only on network failure.
+export async function revokeGoogleToken(token: string): Promise<void> {
+  await fetch(GOOGLE_REVOKE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ token }).toString(),
+  });
+}
 
 // Read-only calendar access, plus basic identity so we can label the connection.
 const SCOPES = [

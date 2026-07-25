@@ -1,12 +1,14 @@
 import { getDb } from '@baseline/db';
 import { sql } from 'drizzle-orm';
 
-type Kind = 'login' | 'signup';
+type Kind = 'login' | 'signup' | 'export';
 
-// Fixed-window limits: at most `limit` of this action per `windowMs` per client IP.
+// Fixed-window limits: at most `limit` of this action per `windowMs`, per identifier
+// (client IP for auth actions; user id for authenticated ones like export).
 const CONFIG: Record<Kind, { limit: number; windowMs: number }> = {
-  login: { limit: 5, windowMs: 60_000 }, //        5 login attempts / minute
-  signup: { limit: 3, windowMs: 60 * 60_000 }, //  3 sign-ups        / hour
+  login: { limit: 5, windowMs: 60_000 }, //         5 login attempts / minute
+  signup: { limit: 3, windowMs: 60 * 60_000 }, //   3 sign-ups        / hour
+  export: { limit: 10, windowMs: 60 * 60_000 }, // 10 data exports    / hour / user
 };
 
 // Client IP from the proxy chain (first hop is the real client).
@@ -18,10 +20,10 @@ export function clientIp(headers: Headers): string {
 // True when the request is allowed. One atomic upsert bumps a per-(action,IP,window)
 // counter shared across all Cloud Run instances. Fails OPEN on any DB error so a
 // hiccup in the limiter never locks users out of auth.
-export async function allow(kind: Kind, ip: string): Promise<boolean> {
+export async function allow(kind: Kind, id: string): Promise<boolean> {
   const { limit, windowMs } = CONFIG[kind];
   const bucket = Math.floor(Date.now() / windowMs);
-  const key = `${kind}:${ip}:${bucket}`;
+  const key = `${kind}:${id}:${bucket}`;
   // ISO string, not a Date: drizzle's execute() can't bind a Date param (Postgres
   // casts the ISO string to timestamptz).
   const expiresAt = new Date((bucket + 1) * windowMs).toISOString();

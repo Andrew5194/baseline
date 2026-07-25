@@ -2,6 +2,7 @@ export {
   buildAuthorizationUrl,
   exchangeCodeForToken,
   fetchGitHubUser,
+  revokeGitHubGrant,
 } from './oauth';
 
 export {

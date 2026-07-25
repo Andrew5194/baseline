@@ -1,3 +1,25 @@
+// Revoke the app's entire OAuth grant for a user (DELETE .../grant), removing it from
+// their authorized-apps list and invalidating all tokens. Authenticated with the app's
+// client_id:client_secret. Best-effort — an already-revoked grant returns 404.
+export async function revokeGitHubGrant(
+  clientId: string,
+  clientSecret: string,
+  accessToken: string,
+): Promise<void> {
+  // btoa (not Buffer) so this package type-checks without @types/node; client
+  // id/secret are ASCII, so Latin1 base64 is correct.
+  const basic = btoa(`${clientId}:${clientSecret}`);
+  await fetch(`https://api.github.com/applications/${clientId}/grant`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Basic ${basic}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ access_token: accessToken }),
+  });
+}
+
 export function buildAuthorizationUrl(
   clientId: string,
   redirectUri: string,
