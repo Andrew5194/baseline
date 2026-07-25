@@ -239,12 +239,23 @@ export function GoalDetail({
               </button>
             )}
           </div>
-          <input
-            type="date"
-            value={due}
-            onChange={(e) => saveDue(e.target.value)}
-            className="w-full h-10 text-sm px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:leading-[2.5rem]"
-          />
+          <div className="relative">
+            <input
+              type="date"
+              value={due}
+              onChange={(e) => saveDue(e.target.value)}
+              className="w-full min-w-0 h-10 appearance-none text-sm pl-3 pr-9 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:leading-[2.5rem] [&::-webkit-calendar-picker-indicator]:opacity-0"
+            />
+            <svg
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
         </div>
       </div>
 
