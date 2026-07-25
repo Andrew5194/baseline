@@ -2,21 +2,20 @@
 
 import { useState } from 'react';
 import { API_URL, apiFetch } from '../../lib/api';
-import { useMe } from '../../lib/me';
 import { Modal } from './modal';
 
+const CONFIRM_PHRASE = 'I want to delete my account.';
+
 // Danger-zone card + confirmation modal for permanently deleting the account. Requires
-// typing the account email to confirm; on success it deletes every trace of the user
-// (the API cascades all data), clears the JWT session cookie, and lands on sign-in.
+// typing the confirmation phrase; on success it deletes every trace of the user (the API
+// cascades all data), clears the JWT session cookie, and lands on sign-in.
 export function DeleteAccount() {
-  const { me } = useMe();
-  const email = me?.email ?? '';
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canDelete = email.length > 0 && confirm.trim().toLowerCase() === email.toLowerCase();
+  const canDelete = confirm.trim().toLowerCase() === CONFIRM_PHRASE.toLowerCase();
 
   async function handleDelete() {
     if (!canDelete || deleting) return;
@@ -71,15 +70,15 @@ export function DeleteAccount() {
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
               This permanently deletes your account and <span className="font-medium">all</span> of your data. This action cannot be undone.
             </p>
-            <label className="block mt-4 mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              Type <span className="text-neutral-700 dark:text-neutral-200">{email || 'your email'}</span> to confirm
+            <label className="block mt-4 mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+              Type <span className="font-semibold text-neutral-700 dark:text-neutral-200">{CONFIRM_PHRASE}</span> to confirm
             </label>
             <input
               autoFocus
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleDelete()}
-              placeholder={email}
+              placeholder={CONFIRM_PHRASE}
               autoComplete="off"
               className="w-full h-10 text-sm px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500"
             />
