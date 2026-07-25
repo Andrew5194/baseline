@@ -73,9 +73,8 @@ export function clearTimer() {
   writeTimer(null);
 }
 
-// Subscribe to the timer. Returns null on the server and the first client render
-// (avoids a hydration mismatch), then hydrates from localStorage after mount.
-// While running, re-renders once per second so a live clock can tick.
+// Subscribe to the timer: null on the server + first client render (no hydration
+// mismatch), then hydrates after mount; re-renders once a second while running.
 export function useFocusTimer(): FocusTimerState | null {
   const [state, setState] = useState<FocusTimerState | null>(null);
   const [, setTick] = useState(0);
