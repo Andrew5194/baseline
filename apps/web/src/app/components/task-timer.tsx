@@ -52,8 +52,9 @@ export function TaskTimer({
   }
 
   // Fluid size so the controls shrink gradually with the screen and stay on one line
-  // even in the narrow panel under a task on mobile.
-  const btn = 'py-1 rounded-lg font-medium transition-colors whitespace-nowrap text-[clamp(10px,2.5vw,11px)] px-[clamp(0.375rem,1.7vw,0.625rem)]';
+  // even in the narrow panel under a task on mobile. The floor is low enough that they
+  // keep shrinking through phone widths (~320–440px) rather than pinning early.
+  const btn = 'py-1 rounded-lg font-medium transition-colors whitespace-nowrap text-[clamp(8px,2.5vw,11px)] px-[clamp(0.1875rem,1.5vw,0.625rem)]';
 
   if (!isThis) {
     if (hideStart) return null; // timers are started from the row's kebab menu
