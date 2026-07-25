@@ -476,16 +476,65 @@ export function TodoSection({
   // still sees the empty grid (the API always returns a full month).
   const loaded = todos !== null;
 
-  // Until the parent coordinates the reveal, show a skeleton that continues the goal
-  // list's rhythm — the same h-16 bars — so the whole page reads as one consistent
-  // column of shimmer bars (rather than a few chunky blocks) on any viewport.
+  // Until the parent coordinates the reveal, show a skeleton that mirrors the real
+  // layout — Tasks header, the heatmap card + its cell grid, the task card with rows,
+  // and the Notes card — so the page reads as its own structure filling in (not
+  // generic bars). The heatmap grid wraps by width exactly like the real one.
   if (!reveal) {
     return (
-      <div className="mt-10 space-y-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-16 rounded-xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
-        ))}
-      </div>
+      <>
+        <section className="mt-10">
+          {/* Tasks header */}
+          <div className="mb-3 flex items-baseline justify-between">
+            <div className="h-4 w-14 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+            <div className="h-6 w-24 rounded-lg bg-neutral-200 dark:bg-neutral-800 shimmer" />
+          </div>
+
+          {/* Heatmap card */}
+          <div className="p-5 card-modern mb-6">
+            <div className="mb-4 space-y-1.5">
+              <div className="h-7 w-40 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+              <div className="h-3 w-24 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {Array.from({ length: 31 }).map((_, i) => (
+                <div key={i} className="h-4 w-4 rounded-[4px] bg-neutral-200 dark:bg-neutral-800" />
+              ))}
+            </div>
+          </div>
+
+          {/* Tasks card: header + task rows */}
+          <div className="card-modern overflow-hidden">
+            <div className="border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
+              <div className="h-4 w-32 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+            </div>
+            <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="h-4 w-4 flex-shrink-0 rounded-[5px] bg-neutral-200 dark:bg-neutral-800" />
+                  <div
+                    className="h-4 flex-1 rounded bg-neutral-200 shimmer dark:bg-neutral-800"
+                    style={{ maxWidth: `${68 - i * 14}%` }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Notes card */}
+        <section className="mt-10">
+          <div className="mb-3 h-4 w-14 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+          <div className="card-modern overflow-hidden">
+            <div className="border-b border-neutral-100 px-4 py-3 dark:border-neutral-800">
+              <div className="h-4 w-28 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+            </div>
+            <div className="p-4">
+              <div className="h-16 w-full rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+            </div>
+          </div>
+        </section>
+      </>
     );
   }
 
