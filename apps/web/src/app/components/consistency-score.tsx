@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDelta, explainDelta } from '../../lib/format-delta';
 import { Tooltip } from './tooltip';
 
@@ -17,41 +17,6 @@ const toneColor: Record<'up' | 'down' | 'neutral', string> = {
   down: 'text-red-500',
   neutral: 'text-neutral-400',
 };
-
-// Count the score up 0 → value once it first resolves, then follow live updates —
-// mirrors the Overview donut's hero count-up so the two read the same.
-function useCountUpScore(target: number | null, durationMs = 1000): number | null {
-  const [display, setDisplay] = useState(0);
-  const doneRef = useRef(false);
-  const startedRef = useRef(false);
-  useEffect(() => {
-    if (target === null || doneRef.current || startedRef.current) return;
-    startedRef.current = true;
-    const reduce = typeof globalThis !== 'undefined' && !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) {
-      doneRef.current = true;
-      setDisplay(target);
-      return;
-    }
-    const start = performance.now();
-    const to = target;
-    const ease = (x: number) => 1 - Math.pow(1 - x, 3);
-    let raf = 0;
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / durationMs);
-      setDisplay(Math.round(to * ease(p)));
-      if (p < 1) raf = requestAnimationFrame(tick);
-      else {
-        doneRef.current = true;
-        setDisplay(to);
-      }
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, durationMs]);
-  if (target === null) return null;
-  return doneRef.current ? target : display;
-}
 
 export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta, window }: ConsistencyScoreProps) {
   const score = activeDays !== null && totalDays > 0 ? Math.round((activeDays / totalDays) * 100) : null;
@@ -73,7 +38,6 @@ export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta
     return () => cancelAnimationFrame(id);
   }, [drawn]);
   const dashoffset = drawn ? circumference - progress : circumference;
-  const animatedScore = useCountUpScore(score);
 
   const f = formatDelta(delta, activeDays);
   const deltaColor = toneColor[f.tone];
@@ -110,7 +74,7 @@ export function ConsistencyScore({ activeDays, priorActiveDays, totalDays, delta
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold tracking-tight tabular-nums">{animatedScore !== null ? `${animatedScore}` : '—'}</span>
+          <span className="text-3xl font-bold tracking-tight tabular-nums">{score !== null ? `${score}` : '—'}</span>
           <span className="text-[10px] text-neutral-400 dark:text-neutral-500 -mt-0.5">%</span>
         </div>
       </div>
