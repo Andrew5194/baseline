@@ -14,12 +14,13 @@ export interface CategoryEntry {
   link?: string | null;
 }
 
-// Each entry's origin — the sources that make up a category's logged time.
-function entryKind(e: CategoryEntry): { label: string; className: string } {
-  if (e.source === 'google_calendar') return { label: 'Calendar', className: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' };
-  if (e.task_id) return { label: 'Task', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' };
-  if (e.timed) return { label: 'Timer', className: 'bg-sky-500/10 text-sky-600 dark:text-sky-400' };
-  return { label: 'Manual', className: 'bg-neutral-500/10 text-neutral-500 dark:text-neutral-400' };
+// Each entry's origin — the sources that make up a category's logged time. The badge is
+// tinted with the category's own color (passed in), so it matches the donut/legend.
+function entryKind(e: CategoryEntry): string {
+  if (e.source === 'google_calendar') return 'Calendar';
+  if (e.task_id) return 'Task';
+  if (e.timed) return 'Timer';
+  return 'Manual';
 }
 
 // Shows where a category's Entries and Time Logged numbers come from: the individual
@@ -109,7 +110,7 @@ export function CategoryDetailModal({
               const kind = entryKind(e);
               const inner = (
                 <>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${kind.className}`}>{kind.label}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0" style={{ backgroundColor: `${color}22`, color }}>{kind}</span>
                   <span className="text-neutral-500 dark:text-neutral-400 tabular-nums text-[11px] w-28 flex-shrink-0">{when(e.occurred_at)}</span>
                   <span className="flex-1 min-w-0 flex items-center gap-1 text-neutral-700 dark:text-neutral-300">
                     <span className="truncate">{e.note || '—'}</span>
