@@ -35,7 +35,7 @@ export function ExportData() {
     <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
       <p className="text-sm font-medium mb-1">Export data</p>
       <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
-        Download all your data — goals, tasks, time entries, categories, and journal — as a JSON file.
+        Download all your data as a JSON file.
       </p>
       <button
         onClick={handleExport}

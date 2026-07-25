@@ -51,8 +51,7 @@ export function DeleteAccount() {
     <div className="p-5 rounded-xl border border-red-200 dark:border-red-500/30 bg-white dark:bg-neutral-900">
       <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">Delete account</p>
       <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
-        Permanently delete your account and all associated data — goals, tasks, time entries,
-        categories, and connected integrations. This can&apos;t be undone.
+        Permanently delete your account and all associated data. This cannot be undone.
       </p>
       <button
         onClick={() => {
