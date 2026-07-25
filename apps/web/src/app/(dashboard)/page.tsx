@@ -15,7 +15,6 @@ import { RecurringAllocations } from '../components/recurring-allocations';
 import { ManageCategoriesModal } from '../components/manage-categories-modal';
 import { CategoryDetailModal } from '../components/category-detail-modal';
 import { Modal } from '../components/modal';
-import { CommandPalette, type Command } from '../components/command-palette';
 import { apiFetch } from '../../lib/api';
 import { useTimezone } from '../../lib/use-timezone';
 import { usePreference } from '../../lib/use-preference';
@@ -148,30 +147,6 @@ export default function Overview() {
     const order = ['min', 'hr', 'day'] as const;
     setUnit(order[(order.indexOf(unit) + 1) % order.length]);
   };
-
-  // ⌘K command palette — jump to the Overview's actions without reaching for the mouse.
-  const commands = useMemo<Command[]>(
-    () => {
-      const setPeriodNow = (p: Period) => {
-        setPeriod(p);
-        setOffset(0);
-      };
-      return [
-        { id: 'add', group: 'Log', label: 'Add time entry', keywords: 'new log track record', run: () => setEditing('new') },
-        { id: 'week', group: 'Period', label: 'This week', keywords: 'range 7 days', hint: period === 'week' ? 'current' : undefined, run: () => setPeriodNow('week') },
-        { id: 'month', group: 'Period', label: 'This month', keywords: 'range 30 days', hint: period === 'month' ? 'current' : undefined, run: () => setPeriodNow('month') },
-        { id: 'year', group: 'Period', label: 'This year', keywords: 'range 12 months', hint: period === 'year' ? 'current' : undefined, run: () => setPeriodNow('year') },
-        { id: 'bars', group: 'View', label: 'Bar chart view', keywords: 'graph allocation', run: () => setAllocView('bars') },
-        { id: 'calendar', group: 'View', label: 'Calendar view', keywords: 'grid allocation', run: () => setAllocView('calendar') },
-        { id: 'hide-recurring', group: 'View', label: 'Toggle hide recurring routines', keywords: 'free focus', hint: hideRecurring ? 'on' : 'off', run: () => setHideRecurring(!hideRecurring) },
-        { id: 'unit', group: 'View', label: 'Change time unit', keywords: 'minutes hours days min hr day', hint: unit, run: cycleUnit },
-        { id: 'recurring', group: 'Manage', label: 'Recurring routines', keywords: 'schedule allocation', run: () => setPanel('recurring') },
-        { id: 'categories', group: 'Manage', label: 'Manage categories', keywords: 'colors tags', run: () => setPanel('categories') },
-      ];
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [period, unit, hideRecurring, allocView],
-  );
 
   async function deleteEntry(id: string) {
     // Optimistic: drop the row immediately instead of waiting on the DELETE plus
@@ -331,7 +306,6 @@ export default function Overview() {
           <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{periodRangeLabel(period, tz, offset)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <CommandPalette commands={commands} />
           <PeriodSelector
             value={period}
             onChange={(p) => {
