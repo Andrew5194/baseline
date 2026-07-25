@@ -142,7 +142,15 @@ function MoveTaskModal({
   );
 }
 
-export function TodoSection({ countdown = false }: { countdown?: boolean } = {}) {
+export function TodoSection({
+  countdown = false,
+  // When provided, gates the reveal: the parent coordinates a single page-wide
+  // entrance, so the section shows a skeleton until `reveal` is true, then rises.
+  reveal = true,
+  // Called once the first /v1/todos fetch settles (success or error), so the parent
+  // knows this section is ready to reveal.
+  onReady,
+}: { countdown?: boolean; reveal?: boolean; onReady?: () => void } = {}) {
   const tz = useTimezone();
   const [unit] = useTimeUnit();
   const [todos, setTodos] = useState<Todo[] | null>(null);
@@ -164,6 +172,12 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   // Which month the completion heatmap shows — 0 = current, 1 = last month, …
   const [heatmapOffset, setHeatmapOffset] = useState(0);
   const activeTimer = useFocusTimer();
+  // First-load-settled flag → reported to the parent so it can reveal the page.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    if (settled) onReady?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled]);
 
   const load = useCallback(
     () =>
@@ -208,7 +222,9 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   );
 
   useEffect(() => {
-    load();
+    // Mark settled once the first todos fetch resolves — success OR failure — so a
+    // todos error can never wedge the page waiting to reveal.
+    load().finally(() => setSettled(true));
     loadGoals();
     loadCategories();
     loadCatColors();
@@ -459,6 +475,19 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
   // Show the heatmap once the month has loaded, even with no tasks, so a fresh account
   // still sees the empty grid (the API always returns a full month).
   const loaded = todos !== null;
+
+  // Until the parent coordinates the reveal, show a skeleton that mirrors the section's
+  // shape (Tasks label + heatmap + tasks card + Notes) so the whole page can rise at once.
+  if (!reveal) {
+    return (
+      <div className="mt-10 space-y-6">
+        <div className="h-5 w-14 rounded bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        <div className="h-36 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        <div className="h-56 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+        <div className="h-40 rounded-2xl bg-neutral-200 dark:bg-neutral-800 shimmer" />
+      </div>
+    );
+  }
 
   return (
     <>

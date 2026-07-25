@@ -22,6 +22,10 @@ export default function Goals() {
   const [completedLoaded, setCompletedLoaded] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
   const [adding, setAdding] = useState(false);
+  // The Tasks section (TodoSection) fetches its own data; it reports readiness here so
+  // the whole page can reveal — goal cards + Tasks/Notes — in one coordinated cascade,
+  // like Overview/Metrics, instead of two separate waves.
+  const [todosReady, setTodosReady] = useState(false);
   // Count-down mode — reframes due dates and task counts as "time/tasks left". Synced
   // server-side (users.preferences via /v1/me) so it follows the user across devices.
   const [countdown, setCountdown] = usePreference('goalsCountdown');
@@ -221,7 +225,7 @@ export default function Goals() {
         </Modal>
       )}
 
-      {active === null ? (
+      {active === null || !todosReady ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
@@ -334,9 +338,17 @@ export default function Goals() {
             </div>
           )}
 
-          <TodoSection countdown={countdown} />
         </>
       )}
+
+      {/* Always mounted so it prefetches /v1/todos in parallel with the goals list;
+          it reports readiness up (setTodosReady) and only reveals its cards once the
+          whole page is ready, so everything rises together. */}
+      <TodoSection
+        countdown={countdown}
+        reveal={active !== null && todosReady}
+        onReady={() => setTodosReady(true)}
+      />
     </div>
   );
 }
