@@ -40,3 +40,14 @@ export async function getUserTimezone(userId: string): Promise<string> {
     .limit(1);
   return u?.timezone || 'UTC';
 }
+
+// Timezone + account-creation time in one row read, for callers that need both and
+// shouldn't issue two queries for the same row (e.g. the baseline overview).
+export async function getUser(userId: string): Promise<{ timezone: string; createdAt: Date } | null> {
+  const [u] = await db
+    .select({ timezone: users.timezone, createdAt: users.createdAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return u ?? null;
+}

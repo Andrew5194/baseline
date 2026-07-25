@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, events, goals, todos, users } from '@baseline/db';
+import { db, events, goals, todos } from '@baseline/db';
 import { eq, and, gte, lt, isNotNull } from 'drizzle-orm';
 import { dayKeyInTz, computeDelta } from '@baseline/metrics';
-import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
+import { getCurrentUserId, getUser } from '../../../../../lib/user';
 import { periodBounds, isPeriod, offsetNow, parseOffset } from '../../../../../lib/period';
 
 const HOUR_MS = 3_600_000;
@@ -22,7 +22,8 @@ const within = (rows: Stamp[], s: Date, e: Date) => rows.filter((v) => v.at >= s
 // same elapsed slice of the prior period.
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
-  const tz = await getUserTimezone(userId);
+  const user = await getUser(userId);
+  const tz = user?.timezone || 'UTC';
   const periodParam = request.nextUrl.searchParams.get('period') || 'week';
   if (!isPeriod(periodParam)) {
     return NextResponse.json({ error: 'Invalid period', code: 'INVALID_PERIOD' }, { status: 400 });
@@ -67,8 +68,7 @@ export async function GET(request: NextRequest) {
   const granularity: 'day' | 'month' = periodParam === 'year' ? 'month' : 'day';
   const todayKey = dayKeyInTz(now, tz);
 
-  const [userRow, allGoals, allTasks, allEntries] = await Promise.all([
-    db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId)).limit(1),
+  const [allGoals, allTasks, allEntries] = await Promise.all([
     db.select({ completedAt: goals.completedAt }).from(goals).where(and(eq(goals.userId, userId), isNotNull(goals.completedAt))),
     db.select({ completedAt: todos.completedAt }).from(todos).where(and(eq(todos.userId, userId), isNotNull(todos.completedAt))),
     db.select({ occurredAt: events.occurredAt, durationMs: events.durationMs }).from(events).where(and(eq(events.userId, userId), eq(events.source, 'manual'))),
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
   // Day/month buckets from account creation to today, inclusive — the denominator for
   // the all-time average.
-  const startKey = userRow[0] ? dayKeyInTz(userRow[0].createdAt, tz) : todayKey;
+  const startKey = user ? dayKeyInTz(user.createdAt, tz) : todayKey;
   const spanCount = (unit: 'day' | 'month'): number => {
     const [fy, fm, fd] = startKey.split('-').map(Number);
     const [ty, tm, td] = todayKey.split('-').map(Number);

@@ -127,9 +127,8 @@ export default function Overview() {
     loadBudget();
     loadPeriod();
     loadRecurring();
-    // A data change here (time entry added/deleted, session logged) can change a
-    // category's linked-item count. Tell the co-mounted categories panel to refresh
-    // so its "N linked" badges don't lag; it only reloads when actually open.
+    // A data change can shift a category's linked-item count — nudge the co-mounted
+    // categories panel so its "N linked" badges don't lag (it reloads only when open).
     window.dispatchEvent(new CustomEvent('baseline:categories-changed'));
   };
 
@@ -173,10 +172,8 @@ export default function Overview() {
     window.dispatchEvent(new CustomEvent('baseline:categories-changed'));
   }
 
-  // The chart's scale follows the FETCHED data's granularity (daily.granularity),
-  // not `period`. Otherwise a period switch flips the scale synchronously while the
-  // previous period's data is still loading, briefly rendering e.g. year totals on a
-  // 24h axis (bars shoot off the top) until the refetch lands.
+  // Scale follows the fetched data's granularity, not `period` — else a period switch
+  // flips the axis before the new data lands (year totals on a 24h axis).
   const granularity = daily?.granularity ?? 'day';
   const isYear = granularity === 'month';
   const categories = useMemo(() => daily?.categories ?? [], [daily]);
@@ -202,16 +199,14 @@ export default function Overview() {
       }) ?? []
     );
   }, [daily, categories, isYear]);
-  // Allocation-section label from the real bucket count: 7 for a week, the month's
-  // actual length (e.g. July → "Next 31 days"), 12 for a year. Falls back to the
-  // static label until data loads.
+  // Label from the real bucket count (week → 7, July → 31, year → 12); static
+  // fallback until data loads.
   const allocationLabel =
     barRows.length > 0 ? `Next ${barRows.length} ${isYear ? 'months' : 'days'}` : ALLOCATION_LABEL[period];
   // y-axis ceiling: 24h for day views, a full 31-day month (744h) for the year.
   const yMax = isYear ? DAY_HOURS * 31 : DAY_HOURS;
-  // Key of the bucket containing today, used to emphasize today's bar. For the
-  // year view (monthly buckets) that's the 1st of the current month.
-  // Today in the user's timezone (matches the server's local-day bucket keys).
+  // Today in the user's tz (matches the server's local-day bucket keys); the year
+  // view's bucket key is the 1st of the current month.
   const todayLocal = new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
     year: 'numeric',
@@ -220,10 +215,8 @@ export default function Overview() {
   }).format(new Date()); // YYYY-MM-DD
   const todayKey = granularity === 'month' ? `${todayLocal.slice(0, 7)}-01` : todayLocal;
 
-  // A running/paused timer shows as a live "pending" block that accumulates on
-  // today's bar and calendar. Only meaningful on the current period (offset 0).
-  // Raw (unrounded) so the figures step at the display unit's precision (the formatter
-  // rounds). Pre-rounding to 0.001 h would force coarse 0.06-minute jumps.
+  // A running/paused timer as a live "pending" block on today's bar/calendar (current
+  // period only). Left unrounded so it steps at the display unit's precision.
   const pendingHours = activeTimer ? elapsedMs(activeTimer) / 3_600_000 : 0;
   const pending =
     offset === 0 && activeTimer && pendingHours > 0
@@ -246,9 +239,8 @@ export default function Overview() {
     return [...recurringInChart, ...variableInChart];
   }, [categories, recurringCats]);
 
-  // Every category the user has touched or created, with a distinct color (overrides
-  // win). Keys of `colors` are the registry — they include categories created in the
-  // manage-categories modal that aren't used yet.
+  // Every category the user has touched or created (overrides win). `colors` keys are
+  // the registry — including unused ones created in the manage-categories modal.
   const allCategories = useMemo(
     () =>
       [
@@ -264,11 +256,9 @@ export default function Overview() {
   const colorMap = useMemo(() => buildColorMap(allCategories, colors), [allCategories, colors]);
   const colorOf = (c: string) => colorMap[c] ?? colorForCategory(c, colors);
 
-  // Hold the charts/entries until the color overrides and the full category set are
-  // loaded, so the first paint uses the final colors (no split-second recolor). Also
-  // wait for the hide-recurring preference, so the donut/bars mount already at the
-  // correct freeFocus value instead of flashing false → true and replaying the hide
-  // tween on every navigation into the page.
+  // Hold charts/entries until colors + the category set load (first paint uses final
+  // colors, no recolor flash) and the hide-recurring pref resolves (so the donut/bars
+  // mount at the right freeFocus instead of replaying the hide tween each navigation).
   const ready = colorsReady && budget !== null && daily !== null && entries !== null && hideRecurringLoaded;
 
   const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));

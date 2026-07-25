@@ -12,8 +12,7 @@ import {
 } from '@baseline/db';
 import { eq, and, count, isNotNull, sql } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../lib/user';
-
-const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+import { HEX } from '../../../lib/hex';
 
 // GET /v1/categories — user's categories, each with its color (from category_colors,
 // keyed by name) and a usage `count` of referencing goals/tasks/allocations/time-entries.

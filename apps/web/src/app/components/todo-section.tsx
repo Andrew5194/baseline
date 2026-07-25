@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiFetch } from '../../lib/api';
 import { CompletionHeatmap, type HeatmapCell } from './completion-heatmap';
 import { RecurringTodos } from './recurring-todos';
@@ -406,51 +406,55 @@ export function TodoSection({ countdown = false }: { countdown?: boolean } = {})
 
   // Categories offered in the label picker: presets + categories on goals + any the
   // user has created/used (from the canonical /v1/categories list).
-  const categories = [
-    ...new Set([...PRESET_CATEGORIES, ...goalsList.map((g) => g.category).filter((c): c is string => !!c), ...knownCats]),
-  ];
+  const categories = useMemo(
+    () => [...new Set([...PRESET_CATEGORIES, ...goalsList.map((g) => g.category).filter((c): c is string => !!c), ...knownCats])],
+    [goalsList, knownCats],
+  );
   // Resolve a category to its registry color (override → preset → stable palette),
   // matching the donut. Goals keep their own color (carried on each goal option).
-  const categoryColorMap = buildColorMap(categories, catColors);
+  const categoryColorMap = useMemo(() => buildColorMap(categories, catColors), [categories, catColors]);
   const categoryColorOf = (c: string) => categoryColorMap[c] ?? colorForCategory(c, catColors);
 
   // The tasks scheduled for `day`: recurring tasks active that weekday + one-offs.
-  const wd = weekdayOf(day);
-  const dayItems: DayItem[] = [
-    ...recurring
-      .filter((r) => (r.days_mask & (1 << wd)) !== 0 && r.since <= day)
-      .map((r) => {
-        const comp = completions.find((c) => c.recurring_todo_id === r.id && c.date === day);
-        return {
-          id: r.id,
-          title: r.title,
-          done: !!comp,
-          completedAt: comp?.completed_at ?? null,
-          recurring: true,
-          goalId: r.goal_id,
-          goalTitle: r.goal_title,
-          goalColor: r.goal_id ? goalColor(r.goal_color, r.goal_id) : null,
-          goalCategory: r.goal_category,
-          category: r.category,
-        };
-      }),
-    ...(todos ?? [])
-      .filter((t) => t.date === day)
-      .map((t) => ({
-        id: t.id,
-        title: t.title,
-        done: t.done,
-        completedAt: t.completed_at,
-        recurring: false,
-        goalId: t.goal_id,
-        goalTitle: t.goal_title,
-        goalColor: t.goal_id ? goalColor(t.goal_color, t.goal_id) : null,
-        goalCategory: t.goal_category,
-        category: t.category,
-        date: t.date,
-        sessions: t.sessions,
-      })),
-  ].sort((a, b) => Number(a.done) - Number(b.done));
+  // Memoized so typing in the add/edit inputs (which re-renders) doesn't rebuild it.
+  const dayItems: DayItem[] = useMemo(() => {
+    const wd = weekdayOf(day);
+    return [
+      ...recurring
+        .filter((r) => (r.days_mask & (1 << wd)) !== 0 && r.since <= day)
+        .map((r) => {
+          const comp = completions.find((c) => c.recurring_todo_id === r.id && c.date === day);
+          return {
+            id: r.id,
+            title: r.title,
+            done: !!comp,
+            completedAt: comp?.completed_at ?? null,
+            recurring: true,
+            goalId: r.goal_id,
+            goalTitle: r.goal_title,
+            goalColor: r.goal_id ? goalColor(r.goal_color, r.goal_id) : null,
+            goalCategory: r.goal_category,
+            category: r.category,
+          };
+        }),
+      ...(todos ?? [])
+        .filter((t) => t.date === day)
+        .map((t) => ({
+          id: t.id,
+          title: t.title,
+          done: t.done,
+          completedAt: t.completed_at,
+          recurring: false,
+          goalId: t.goal_id,
+          goalTitle: t.goal_title,
+          goalColor: t.goal_id ? goalColor(t.goal_color, t.goal_id) : null,
+          goalCategory: t.goal_category,
+          category: t.category,
+          date: t.date,
+          sessions: t.sessions,
+        })),
+    ].sort((a, b) => Number(a.done) - Number(b.done));
+  }, [recurring, completions, todos, day]);
 
   // Show the heatmap once the month has loaded, even with no tasks, so a fresh account
   // still sees the empty grid (the API always returns a full month).
