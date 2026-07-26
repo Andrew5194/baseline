@@ -293,36 +293,27 @@ export function TodoSection({
     setEditDraft(item.title);
   }
 
-  // Pointer-based drag reorder for one-off tasks — grab a row and drag it (no handle).
-  // Uses pointer events (reliable, unlike HTML5 DnD); mouse only, since on touch this
-  // would fight page scrolling. Recurring tasks stay pinned and aren't drop targets.
-  const drag = useRef<{ id: string; y0: number; moved: boolean } | null>(null);
-  const suppressClick = useRef(false);
-  function onRowPointerDown(e: React.PointerEvent, id: string, recurring: boolean) {
-    suppressClick.current = false; // clear any stale suppression from a prior drag
-    if (recurring || e.pointerType !== 'mouse' || e.button !== 0) return;
-    drag.current = { id, y0: e.clientY, moved: false };
+  // Drag-reorder one-off tasks — same HTML5 mechanism as the goal cards: the row is
+  // draggable, the wrapping <li> is the drop target, and dragover reorders as you cross
+  // a row's midpoint. Recurring tasks stay pinned and aren't drop targets.
+  const taskDragId = useRef<string | null>(null);
+  function onTaskDragStart(e: React.DragEvent, id: string) {
+    taskDragId.current = id;
+    e.dataTransfer.effectAllowed = 'move';
+    // Use the row as the drag image (like the goal cards' setDragImage).
+    const row = (e.currentTarget as HTMLElement).closest('li');
+    if (row) e.dataTransfer.setDragImage(row, 20, 20);
   }
-  function onRowPointerMove(e: React.PointerEvent) {
-    const d = drag.current;
-    if (!d) return;
-    if (!d.moved) {
-      if (Math.abs(e.clientY - d.y0) < 6) return; // click vs. drag threshold
-      d.moved = true;
-      try {
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-      } catch {}
-    }
+  function onTaskDragOver(e: React.DragEvent, targetId: string, targetRecurring: boolean) {
+    const fromId = taskDragId.current;
+    if (targetRecurring || !fromId || fromId === targetId) return;
     e.preventDefault();
-    const row = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('[data-task-id]') as HTMLElement | null;
-    const overId = row?.getAttribute('data-task-id');
-    if (!row || !overId || overId === d.id || row.getAttribute('data-recurring') === 'true') return;
-    const rect = row.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     const past = e.clientY - rect.top > rect.height / 2;
     setTodos((ts) => {
       if (!ts) return ts;
-      const from = ts.findIndex((x) => x.id === d.id);
-      const to = ts.findIndex((x) => x.id === overId);
+      const from = ts.findIndex((x) => x.id === fromId);
+      const to = ts.findIndex((x) => x.id === targetId);
       if (from < 0 || to < 0) return ts;
       if ((from < to && !past) || (from > to && past)) return ts;
       const next = [...ts];
@@ -331,18 +322,8 @@ export function TodoSection({
       return next;
     });
   }
-  function onRowPointerUp(e: React.PointerEvent) {
-    const d = drag.current;
-    drag.current = null;
-    if (d?.moved) {
-      try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {}
-      suppressClick.current = true; // don't let the drag end as a click (expand/toggle)
-      persistTaskOrder();
-    }
-  }
   async function persistTaskOrder() {
+    taskDragId.current = null;
     // Persist the day's one-off task order (recurring are pinned, not reorderable).
     const ids = dayItems.filter((i) => !i.recurring).map((i) => i.id);
     if (ids.length) {
@@ -635,24 +616,22 @@ export function TodoSection({
             {dayItems.map((t) => (
               <li
                 key={t.id}
-                data-task-id={t.id}
-                data-recurring={t.recurring}
-                className="group select-none cursor-pointer"
-                onPointerDown={(e) => onRowPointerDown(e, t.id, t.recurring)}
-                onPointerMove={onRowPointerMove}
-                onPointerUp={onRowPointerUp}
-                onClickCapture={(e) => {
-                  // Swallow the click that fires at the end of a drag (would toggle expand).
-                  if (suppressClick.current) {
-                    suppressClick.current = false;
-                    e.stopPropagation();
-                    e.preventDefault();
-                  }
-                }}
+                className="group"
+                onDragOver={(e) => onTaskDragOver(e, t.id, t.recurring)}
+                onDrop={(e) => e.preventDefault()}
               >
-                <div className="flex items-center gap-3 px-4 py-2.5">
+                <div
+                  className={`flex items-center gap-3 px-4 py-2.5 select-none ${editingId === t.id ? '' : 'cursor-pointer'}`}
+                  onClick={editingId === t.id ? undefined : () => setTimerTask(timerTask === t.id ? null : t.id)}
+                  draggable={!t.recurring && editingId !== t.id}
+                  onDragStart={t.recurring ? undefined : (e) => onTaskDragStart(e, t.id)}
+                  onDragEnd={persistTaskOrder}
+                >
                   <button
-                    onClick={() => toggle(t)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggle(t);
+                    }}
                     aria-label={t.done ? 'Mark as not done' : 'Mark as done'}
                     className={`w-4 h-4 rounded-[5px] border flex items-center justify-center flex-shrink-0 transition-colors ${
                       t.done
@@ -666,6 +645,7 @@ export function TodoSection({
                     <input
                       autoFocus
                       value={editDraft}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => setEditDraft(e.target.value)}
                       onBlur={() => saveEdit(t)}
                       onKeyDown={(e) => {
@@ -675,31 +655,31 @@ export function TodoSection({
                       className="flex-1 text-sm rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1 -my-1 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
                     />
                   ) : (
-                    <button
-                      onClick={() => setTimerTask(timerTask === t.id ? null : t.id)}
-                      aria-expanded={timerTask === t.id}
+                    <span
                       title={t.done ? completedTooltip(t.completedAt, tz) ?? 'Completed' : undefined}
-                      className={`flex-1 text-sm text-left truncate ${
+                      className={`flex-1 text-sm truncate ${
                         t.done ? 'text-neutral-400 dark:text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-200'
                       }`}
                     >
                       {t.title}
-                    </button>
+                    </span>
                   )}
-                  <TaskGoalTag
-                    goals={goalsList}
-                    categories={categories}
-                    categoryColorOf={categoryColorOf}
-                    value={t.goalId ?? null}
-                    goalTitle={t.goalTitle ?? null}
-                    goalColor={t.goalColor ?? null}
-                    category={t.category ?? null}
-                    onChange={(sel) => tagItem(t, sel)}
-                  />
+                  <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+                    <TaskGoalTag
+                      goals={goalsList}
+                      categories={categories}
+                      categoryColorOf={categoryColorOf}
+                      value={t.goalId ?? null}
+                      goalTitle={t.goalTitle ?? null}
+                      goalColor={t.goalColor ?? null}
+                      category={t.category ?? null}
+                      onChange={(sel) => tagItem(t, sel)}
+                    />
+                  </span>
                   {t.recurring && (
                     <span className="text-neutral-300 dark:text-neutral-600 text-xs flex-shrink-0" title="Recurring task">↻</span>
                   )}
-                  <div className="flex-shrink-0">
+                  <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
                     <ActionsMenu
                       label="Task actions"
                       onOpen={() => prefetchTaskEntries(t.id)}
