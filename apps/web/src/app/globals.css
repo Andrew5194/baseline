@@ -210,14 +210,25 @@ html {
   background: rgb(16 185 129 / 0.15);
 }
 
-/* iOS Safari zooms into any focused input whose font-size is < 16px. Bump form
-   controls to 16px on small (touch) viewports so tapping a field doesn't zoom;
-   desktop keeps the app's 14px inputs. Text-entry controls only — buttons,
-   checkboxes, and radios are excluded. Unlayered so it beats Tailwind's text-sm. */
+/* iOS Safari auto-zooms into a focused field whose font-size is < 16px. We want
+   inputs to STAY visually 14px on mobile, so we hack around it: set the real
+   font-size to 16px (so iOS won't zoom), then scale the control back to 87.5%
+   (14 ÷ 16) so it still LOOKS 14px. Full-width fields are enlarged to 114.2857%
+   (1 ÷ 0.875) and pulled back with a negative margin so they still span their
+   container after the scale. Scoped to mobile; desktop keeps native 14px inputs.
+   HACK — unlayered so it beats Tailwind's text-sm; verify forms on-device. */
 @media (max-width: 640px) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="range"]),
   textarea,
   select {
     font-size: 16px;
+    transform: scale(0.875);
+    transform-origin: left center;
+  }
+  input.w-full,
+  textarea.w-full,
+  select.w-full {
+    width: 114.2857%;
+    margin-right: -14.2857%;
   }
 }
