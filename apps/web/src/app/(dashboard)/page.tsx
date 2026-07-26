@@ -497,7 +497,7 @@ export default function Overview() {
           </div>
         ) : entries.data.length === 0 ? (
           <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4 text-center">
-            No entries recorded.
+            No entries yet.
           </p>
         ) : (
           <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
