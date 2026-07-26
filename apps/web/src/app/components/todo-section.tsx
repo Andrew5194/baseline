@@ -299,6 +299,7 @@ export function TodoSection({
   const drag = useRef<{ id: string; y0: number; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
   function onRowPointerDown(e: React.PointerEvent, id: string, recurring: boolean) {
+    suppressClick.current = false; // clear any stale suppression from a prior drag
     if (recurring || e.pointerType !== 'mouse' || e.button !== 0) return;
     drag.current = { id, y0: e.clientY, moved: false };
   }
@@ -636,7 +637,7 @@ export function TodoSection({
                 key={t.id}
                 data-task-id={t.id}
                 data-recurring={t.recurring}
-                className={`group select-none ${t.recurring ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+                className="group select-none cursor-pointer"
                 onPointerDown={(e) => onRowPointerDown(e, t.id, t.recurring)}
                 onPointerMove={onRowPointerMove}
                 onPointerUp={onRowPointerUp}
