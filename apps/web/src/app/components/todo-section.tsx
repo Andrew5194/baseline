@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { apiFetch } from '../../lib/api';
 import { CompletionHeatmap, type HeatmapCell } from './completion-heatmap';
 import { RecurringTodos } from './recurring-todos';
@@ -292,6 +292,48 @@ export function TodoSection({
     setEditingId(item.id);
     setEditDraft(item.title);
   }
+
+  // Drag-reorder one-off tasks — same HTML5 mechanism as the goal cards: the row is
+  // draggable, the wrapping <li> is the drop target, and dragover reorders as you cross
+  // a row's midpoint. Recurring tasks stay pinned and aren't drop targets.
+  const taskDragId = useRef<string | null>(null);
+  function onTaskDragStart(e: React.DragEvent, id: string) {
+    taskDragId.current = id;
+    e.dataTransfer.effectAllowed = 'move';
+    // Use the row as the drag image (like the goal cards' setDragImage).
+    const row = (e.currentTarget as HTMLElement).closest('li');
+    if (row) e.dataTransfer.setDragImage(row, 20, 20);
+  }
+  function onTaskDragOver(e: React.DragEvent, targetId: string, targetRecurring: boolean) {
+    const fromId = taskDragId.current;
+    if (!fromId) return;
+    // Accept the drop everywhere a task is being dragged (like the goal cards) so the
+    // browser doesn't play the "snap back to origin" reject animation.
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (targetRecurring || fromId === targetId) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const past = e.clientY - rect.top > rect.height / 2;
+    setTodos((ts) => {
+      if (!ts) return ts;
+      const from = ts.findIndex((x) => x.id === fromId);
+      const to = ts.findIndex((x) => x.id === targetId);
+      if (from < 0 || to < 0) return ts;
+      if ((from < to && !past) || (from > to && past)) return ts;
+      const next = [...ts];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+  async function persistTaskOrder() {
+    taskDragId.current = null;
+    // Persist the day's one-off task order (recurring are pinned, not reorderable).
+    const ids = dayItems.filter((i) => !i.recurring).map((i) => i.id);
+    if (ids.length) {
+      await apiFetch('/v1/todos/reorder', { method: 'POST', body: JSON.stringify({ ids }) }).catch(console.error);
+    }
+  }
   async function saveEdit(item: DayItem) {
     setEditingId(null);
     const t = editDraft.trim();
@@ -576,10 +618,24 @@ export function TodoSection({
         ) : (
           <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {dayItems.map((t) => (
-              <li key={t.id} className="group">
-                <div className="flex items-center gap-3 px-4 py-2.5">
+              <li
+                key={t.id}
+                className="group"
+                onDragOver={(e) => onTaskDragOver(e, t.id, t.recurring)}
+                onDrop={(e) => e.preventDefault()}
+              >
+                <div
+                  className={`flex items-center gap-3 px-4 py-2.5 select-none ${editingId === t.id ? '' : 'cursor-pointer'}`}
+                  onClick={editingId === t.id ? undefined : () => setTimerTask(timerTask === t.id ? null : t.id)}
+                  draggable={!t.recurring && editingId !== t.id}
+                  onDragStart={t.recurring ? undefined : (e) => onTaskDragStart(e, t.id)}
+                  onDragEnd={persistTaskOrder}
+                >
                   <button
-                    onClick={() => toggle(t)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggle(t);
+                    }}
                     aria-label={t.done ? 'Mark as not done' : 'Mark as done'}
                     className={`w-4 h-4 rounded-[5px] border flex items-center justify-center flex-shrink-0 transition-colors ${
                       t.done
@@ -593,6 +649,7 @@ export function TodoSection({
                     <input
                       autoFocus
                       value={editDraft}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => setEditDraft(e.target.value)}
                       onBlur={() => saveEdit(t)}
                       onKeyDown={(e) => {
@@ -602,30 +659,31 @@ export function TodoSection({
                       className="flex-1 text-sm rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1 -my-1 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
                     />
                   ) : (
-                    <button
-                      onClick={() => startEdit(t)}
+                    <span
                       title={t.done ? completedTooltip(t.completedAt, tz) ?? 'Completed' : undefined}
-                      className={`flex-1 text-sm text-left truncate ${
+                      className={`flex-1 text-sm truncate ${
                         t.done ? 'text-neutral-400 dark:text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-200'
                       }`}
                     >
                       {t.title}
-                    </button>
+                    </span>
                   )}
-                  <TaskGoalTag
-                    goals={goalsList}
-                    categories={categories}
-                    categoryColorOf={categoryColorOf}
-                    value={t.goalId ?? null}
-                    goalTitle={t.goalTitle ?? null}
-                    goalColor={t.goalColor ?? null}
-                    category={t.category ?? null}
-                    onChange={(sel) => tagItem(t, sel)}
-                  />
+                  <span onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+                    <TaskGoalTag
+                      goals={goalsList}
+                      categories={categories}
+                      categoryColorOf={categoryColorOf}
+                      value={t.goalId ?? null}
+                      goalTitle={t.goalTitle ?? null}
+                      goalColor={t.goalColor ?? null}
+                      category={t.category ?? null}
+                      onChange={(sel) => tagItem(t, sel)}
+                    />
+                  </span>
                   {t.recurring && (
                     <span className="text-neutral-300 dark:text-neutral-600 text-xs flex-shrink-0" title="Recurring task">↻</span>
                   )}
-                  <div className="flex-shrink-0">
+                  <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
                     <ActionsMenu
                       label="Task actions"
                       onOpen={() => prefetchTaskEntries(t.id)}
@@ -643,6 +701,15 @@ export function TodoSection({
                             if (!activeTimer) startTimer(t.goalCategory ?? t.category ?? 'Uncategorized', t.title, t.id);
                             setTimerTask(t.id);
                           },
+                        },
+                        {
+                          label: 'Rename',
+                          icon: (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          ),
+                          onClick: () => startEdit(t),
                         },
                         {
                           label: timerTask === t.id ? 'Hide time logs' : 'Show time logs',

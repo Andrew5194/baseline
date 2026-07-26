@@ -1,0 +1,1 @@
+ALTER TABLE "todos" ADD COLUMN IF NOT EXISTS "position" integer DEFAULT 0 NOT NULL;
