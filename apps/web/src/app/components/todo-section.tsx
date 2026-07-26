@@ -293,26 +293,35 @@ export function TodoSection({
     setEditDraft(item.title);
   }
 
-  // Drag-reorder for one-off tasks (recurring stay pinned at the top). Reorders the
-  // flat `todos` array optimistically as you drag, then persists the day's order.
-  const taskDragId = useRef<string | null>(null);
-  function onTaskDragStart(e: React.DragEvent, id: string) {
-    taskDragId.current = id;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
+  // Pointer-based drag reorder for one-off tasks — grab a row and drag it (no handle).
+  // Uses pointer events (reliable, unlike HTML5 DnD); mouse only, since on touch this
+  // would fight page scrolling. Recurring tasks stay pinned and aren't drop targets.
+  const drag = useRef<{ id: string; y0: number; moved: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  function onRowPointerDown(e: React.PointerEvent, id: string, recurring: boolean) {
+    if (recurring || e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag.current = { id, y0: e.clientY, moved: false };
   }
-  function onTaskDragOver(e: React.DragEvent, targetId: string, targetRecurring: boolean) {
-    const fromId = taskDragId.current;
-    if (targetRecurring || !fromId || fromId === targetId) return;
+  function onRowPointerMove(e: React.PointerEvent) {
+    const d = drag.current;
+    if (!d) return;
+    if (!d.moved) {
+      if (Math.abs(e.clientY - d.y0) < 6) return; // click vs. drag threshold
+      d.moved = true;
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch {}
+    }
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    // Only swap once the pointer crosses the target's midpoint — avoids thrashing.
-    const rect = e.currentTarget.getBoundingClientRect();
+    const row = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('[data-task-id]') as HTMLElement | null;
+    const overId = row?.getAttribute('data-task-id');
+    if (!row || !overId || overId === d.id || row.getAttribute('data-recurring') === 'true') return;
+    const rect = row.getBoundingClientRect();
     const past = e.clientY - rect.top > rect.height / 2;
     setTodos((ts) => {
       if (!ts) return ts;
-      const from = ts.findIndex((x) => x.id === fromId);
-      const to = ts.findIndex((x) => x.id === targetId);
+      const from = ts.findIndex((x) => x.id === d.id);
+      const to = ts.findIndex((x) => x.id === overId);
       if (from < 0 || to < 0) return ts;
       if ((from < to && !past) || (from > to && past)) return ts;
       const next = [...ts];
@@ -321,8 +330,18 @@ export function TodoSection({
       return next;
     });
   }
+  function onRowPointerUp(e: React.PointerEvent) {
+    const d = drag.current;
+    drag.current = null;
+    if (d?.moved) {
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {}
+      suppressClick.current = true; // don't let the drag end as a click (expand/toggle)
+      persistTaskOrder();
+    }
+  }
   async function persistTaskOrder() {
-    taskDragId.current = null;
     // Persist the day's one-off task order (recurring are pinned, not reorderable).
     const ids = dayItems.filter((i) => !i.recurring).map((i) => i.id);
     if (ids.length) {
@@ -615,32 +634,21 @@ export function TodoSection({
             {dayItems.map((t) => (
               <li
                 key={t.id}
-                className="group relative"
-                onDragOver={(e) => onTaskDragOver(e, t.id, t.recurring)}
-                onDrop={(e) => e.preventDefault()}
+                data-task-id={t.id}
+                data-recurring={t.recurring}
+                className={`group select-none ${t.recurring ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+                onPointerDown={(e) => onRowPointerDown(e, t.id, t.recurring)}
+                onPointerMove={onRowPointerMove}
+                onPointerUp={onRowPointerUp}
+                onClickCapture={(e) => {
+                  // Swallow the click that fires at the end of a drag (would toggle expand).
+                  if (suppressClick.current) {
+                    suppressClick.current = false;
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }
+                }}
               >
-                {/* Drag handle (one-off tasks only) — appears on hover; the whole row
-                    is the drop target. Native drag is mouse-only (see PR notes). */}
-                {!t.recurring && editingId !== t.id && (
-                  <span
-                    draggable
-                    onDragStart={(e) => {
-                      const row = (e.currentTarget as HTMLElement).closest('li');
-                      if (row) e.dataTransfer.setDragImage(row, 12, 12);
-                      onTaskDragStart(e, t.id);
-                    }}
-                    onDragEnd={persistTaskOrder}
-                    title="Drag to reorder"
-                    aria-label="Drag to reorder"
-                    className="absolute left-0.5 top-1/2 hidden -translate-y-1/2 cursor-grab text-neutral-300 hover:text-neutral-500 active:cursor-grabbing group-hover:block dark:text-neutral-600 dark:hover:text-neutral-400"
-                  >
-                    <svg className="h-4 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <circle cx="9" cy="5" r="1.6" /><circle cx="15" cy="5" r="1.6" />
-                      <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
-                      <circle cx="9" cy="19" r="1.6" /><circle cx="15" cy="19" r="1.6" />
-                    </svg>
-                  </span>
-                )}
                 <div className="flex items-center gap-3 px-4 py-2.5">
                   <button
                     onClick={() => toggle(t)}
