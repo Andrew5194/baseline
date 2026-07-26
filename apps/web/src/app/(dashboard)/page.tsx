@@ -496,8 +496,8 @@ export default function Overview() {
             ))}
           </div>
         ) : entries.data.length === 0 ? (
-          <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4">
-            No entries yet. Click <span className="font-medium">Add entry</span> to log time.
+          <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4 text-center">
+            No entries yet.
           </p>
         ) : (
           <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
