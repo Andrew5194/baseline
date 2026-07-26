@@ -306,8 +306,12 @@ export function TodoSection({
   }
   function onTaskDragOver(e: React.DragEvent, targetId: string, targetRecurring: boolean) {
     const fromId = taskDragId.current;
-    if (targetRecurring || !fromId || fromId === targetId) return;
+    if (!fromId) return;
+    // Accept the drop everywhere a task is being dragged (like the goal cards) so the
+    // browser doesn't play the "snap back to origin" reject animation.
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (targetRecurring || fromId === targetId) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const past = e.clientY - rect.top > rect.height / 2;
     setTodos((ts) => {
