@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { apiFetch } from '../../lib/api';
 import { CompletionHeatmap, type HeatmapCell } from './completion-heatmap';
 import { RecurringTodos } from './recurring-todos';
@@ -292,6 +292,43 @@ export function TodoSection({
     setEditingId(item.id);
     setEditDraft(item.title);
   }
+
+  // Drag-reorder for one-off tasks (recurring stay pinned at the top). Reorders the
+  // flat `todos` array optimistically as you drag, then persists the day's order.
+  const taskDragId = useRef<string | null>(null);
+  function onTaskDragStart(e: React.DragEvent, id: string) {
+    taskDragId.current = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  }
+  function onTaskDragOver(e: React.DragEvent, targetId: string, targetRecurring: boolean) {
+    const fromId = taskDragId.current;
+    if (targetRecurring || !fromId || fromId === targetId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    // Only swap once the pointer crosses the target's midpoint — avoids thrashing.
+    const rect = e.currentTarget.getBoundingClientRect();
+    const past = e.clientY - rect.top > rect.height / 2;
+    setTodos((ts) => {
+      if (!ts) return ts;
+      const from = ts.findIndex((x) => x.id === fromId);
+      const to = ts.findIndex((x) => x.id === targetId);
+      if (from < 0 || to < 0) return ts;
+      if ((from < to && !past) || (from > to && past)) return ts;
+      const next = [...ts];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+  async function persistTaskOrder() {
+    taskDragId.current = null;
+    // Persist the day's one-off task order (recurring are pinned, not reorderable).
+    const ids = dayItems.filter((i) => !i.recurring).map((i) => i.id);
+    if (ids.length) {
+      await apiFetch('/v1/todos/reorder', { method: 'POST', body: JSON.stringify({ ids }) }).catch(console.error);
+    }
+  }
   async function saveEdit(item: DayItem) {
     setEditingId(null);
     const t = editDraft.trim();
@@ -576,7 +613,15 @@ export function TodoSection({
         ) : (
           <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {dayItems.map((t) => (
-              <li key={t.id} className="group">
+              <li
+                key={t.id}
+                className="group"
+                draggable={!t.recurring && editingId !== t.id}
+                onDragStart={t.recurring ? undefined : (e) => onTaskDragStart(e, t.id)}
+                onDragOver={(e) => onTaskDragOver(e, t.id, t.recurring)}
+                onDrop={(e) => e.preventDefault()}
+                onDragEnd={persistTaskOrder}
+              >
                 <div className="flex items-center gap-3 px-4 py-2.5">
                   <button
                     onClick={() => toggle(t)}
@@ -603,13 +648,23 @@ export function TodoSection({
                     />
                   ) : (
                     <button
-                      onClick={() => startEdit(t)}
+                      onClick={() => setTimerTask(timerTask === t.id ? null : t.id)}
+                      aria-expanded={timerTask === t.id}
                       title={t.done ? completedTooltip(t.completedAt, tz) ?? 'Completed' : undefined}
-                      className={`flex-1 text-sm text-left truncate ${
+                      className={`flex flex-1 items-center gap-1.5 text-sm text-left min-w-0 ${
                         t.done ? 'text-neutral-400 dark:text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-200'
                       }`}
                     >
-                      {t.title}
+                      <svg
+                        className={`w-3.5 h-3.5 flex-shrink-0 text-neutral-300 dark:text-neutral-600 transition-transform ${timerTask === t.id ? 'rotate-90' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span className="truncate">{t.title}</span>
                     </button>
                   )}
                   <TaskGoalTag
@@ -643,6 +698,15 @@ export function TodoSection({
                             if (!activeTimer) startTimer(t.goalCategory ?? t.category ?? 'Uncategorized', t.title, t.id);
                             setTimerTask(t.id);
                           },
+                        },
+                        {
+                          label: 'Rename',
+                          icon: (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          ),
+                          onClick: () => startEdit(t),
                         },
                         {
                           label: timerTask === t.id ? 'Hide time logs' : 'Show time logs',

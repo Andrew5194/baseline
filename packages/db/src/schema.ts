@@ -244,6 +244,9 @@ export const todos = pgTable(
     // effective category is its goal's category if tagged, else this. FK to categories.
     categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
     done: boolean('done').notNull().default(false),
+    // Manual sort order within a day's list (set by drag-reorder). Ties (default 0)
+    // fall back to newest-first, preserving the prior behavior for un-reordered days.
+    position: integer('position').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
   },

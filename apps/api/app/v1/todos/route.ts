@@ -70,7 +70,9 @@ export async function GET(request: NextRequest) {
     .leftJoin(goalCat, eq(goals.categoryId, goalCat.id))
     .leftJoin(todoCat, eq(todos.categoryId, todoCat.id))
     .where(eq(todos.userId, userId))
-    .orderBy(asc(todos.done), desc(todos.createdAt));
+    // Manual drag order first (position), then newest-first for ties (un-reordered
+    // days keep position 0, so this preserves the prior behavior there).
+    .orderBy(asc(todos.done), asc(todos.position), desc(todos.createdAt));
 
   const recurringRows = await db
     .select({
