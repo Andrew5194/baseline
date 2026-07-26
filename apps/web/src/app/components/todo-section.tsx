@@ -615,13 +615,32 @@ export function TodoSection({
             {dayItems.map((t) => (
               <li
                 key={t.id}
-                className="group"
-                draggable={!t.recurring && editingId !== t.id}
-                onDragStart={t.recurring ? undefined : (e) => onTaskDragStart(e, t.id)}
+                className="group relative"
                 onDragOver={(e) => onTaskDragOver(e, t.id, t.recurring)}
                 onDrop={(e) => e.preventDefault()}
-                onDragEnd={persistTaskOrder}
               >
+                {/* Drag handle (one-off tasks only) — appears on hover; the whole row
+                    is the drop target. Native drag is mouse-only (see PR notes). */}
+                {!t.recurring && editingId !== t.id && (
+                  <span
+                    draggable
+                    onDragStart={(e) => {
+                      const row = (e.currentTarget as HTMLElement).closest('li');
+                      if (row) e.dataTransfer.setDragImage(row, 12, 12);
+                      onTaskDragStart(e, t.id);
+                    }}
+                    onDragEnd={persistTaskOrder}
+                    title="Drag to reorder"
+                    aria-label="Drag to reorder"
+                    className="absolute left-0.5 top-1/2 hidden -translate-y-1/2 cursor-grab text-neutral-300 hover:text-neutral-500 active:cursor-grabbing group-hover:block dark:text-neutral-600 dark:hover:text-neutral-400"
+                  >
+                    <svg className="h-4 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <circle cx="9" cy="5" r="1.6" /><circle cx="15" cy="5" r="1.6" />
+                      <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+                      <circle cx="9" cy="19" r="1.6" /><circle cx="15" cy="19" r="1.6" />
+                    </svg>
+                  </span>
+                )}
                 <div className="flex items-center gap-3 px-4 py-2.5">
                   <button
                     onClick={() => toggle(t)}
@@ -651,20 +670,11 @@ export function TodoSection({
                       onClick={() => setTimerTask(timerTask === t.id ? null : t.id)}
                       aria-expanded={timerTask === t.id}
                       title={t.done ? completedTooltip(t.completedAt, tz) ?? 'Completed' : undefined}
-                      className={`flex flex-1 items-center gap-1.5 text-sm text-left min-w-0 ${
+                      className={`flex-1 text-sm text-left truncate ${
                         t.done ? 'text-neutral-400 dark:text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-200'
                       }`}
                     >
-                      <svg
-                        className={`w-3.5 h-3.5 flex-shrink-0 text-neutral-300 dark:text-neutral-600 transition-transform ${timerTask === t.id ? 'rotate-90' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                      <span className="truncate">{t.title}</span>
+                      {t.title}
                     </button>
                   )}
                   <TaskGoalTag
