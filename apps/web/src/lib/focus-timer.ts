@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { type TimeUnit, stepHours } from './time-units';
 
 // A single running focus/Pomodoro session, persisted to localStorage so it survives
 // navigation and reloads (and stays in sync across tabs).
@@ -102,4 +103,32 @@ export function useFocusTimer(): FocusTimerState | null {
   }, [state?.startedAt]);
 
   return state;
+}
+
+// Re-render a live duration exactly when it crosses the next 0.01-`unit` display
+// boundary, so the shown value climbs by a smooth, even 0.01 (0.6s apart at the minute
+// level) instead of the coarse, uneven jumps a fixed 1s tick rounds into. Each timeout
+// is sized to the exact time left to the next boundary (recomputed from the live clock,
+// so it never drifts), then re-arms. Idle while paused.
+export function useLiveDurationTick(timer: FocusTimerState | null, unit: TimeUnit): void {
+  const [, setTick] = useState(0);
+  const running = timer?.startedAt != null;
+  useEffect(() => {
+    if (!running || !timer) return;
+    const stepMs = stepHours(unit) * 3_600_000;
+    let id = 0;
+    const schedule = () => {
+      const el = elapsedMs(timer);
+      const nextBoundary = (Math.floor(el / stepMs) + 1) * stepMs;
+      // Floor at 16ms so a boundary we're already sitting on can't busy-loop.
+      id = window.setTimeout(() => {
+        setTick((t) => t + 1);
+        schedule();
+      }, Math.max(16, nextBoundary - el));
+    };
+    schedule();
+    return () => window.clearTimeout(id);
+    // Re-arm on unit change or when the running segment (re)starts after a pause.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, unit, timer?.startedAt]);
 }
