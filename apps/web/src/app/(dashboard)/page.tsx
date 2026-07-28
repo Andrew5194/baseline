@@ -8,8 +8,8 @@ import { DailyAllocationBars } from '../components/daily-allocation-bars';
 import { CalendarAllocation } from '../components/calendar-allocation';
 import { AddTimeEntryForm } from '../components/add-time-entry-form';
 import { FocusTimerBar } from '../components/focus-timer-bar';
-import { useFocusTimer, elapsedMs } from '../../lib/focus-timer';
-import { fmtDuration } from '../../lib/time-units';
+import { useFocusTimer, useLiveDurationTick, elapsedMs } from '../../lib/focus-timer';
+import { fmtDuration, quantizeHours } from '../../lib/time-units';
 import { useTimeUnit } from '../../lib/use-time-unit';
 import { RecurringAllocations } from '../components/recurring-allocations';
 import { ManageCategoriesModal } from '../components/manage-categories-modal';
@@ -89,8 +89,11 @@ export default function Overview() {
   const [unit, setUnit] = useTimeUnit();
   // 'new' = add modal; an Entry = edit modal; null = closed.
   const [editing, setEditing] = useState<Entry | 'new' | null>(null);
-  // The live focus timer — drives the "growing" pending block (re-renders each second).
+  // The live focus timer — drives the "growing" pending block. useFocusTimer re-renders
+  // once a second; useLiveDurationTick adds re-renders aligned to the display unit's
+  // 0.01 boundaries so the pending value climbs by an even step (see quantizeHours below).
   const activeTimer = useFocusTimer();
+  useLiveDurationTick(activeTimer, unit);
 
   // Always fetch the full picture (incl. recurring). Hiding routines is applied
   // client-side so the donut/bars can animate recurring → free smoothly.
@@ -225,8 +228,10 @@ export default function Overview() {
   const todayKey = granularity === 'month' ? `${todayLocal.slice(0, 7)}-01` : todayLocal;
 
   // A running/paused timer as a live "pending" block on today's bar/calendar (current
-  // period only). Left unrounded so it steps at the display unit's precision.
-  const pendingHours = activeTimer ? elapsedMs(activeTimer) / 3_600_000 : 0;
+  // period only). Quantized to the display unit's 0.01 grid so the number it feeds
+  // (donut hero, bar label, legend) climbs one even step at a time rather than jumping
+  // unevenly when a 1s sample is rounded to hundredths.
+  const pendingHours = activeTimer ? quantizeHours(elapsedMs(activeTimer) / 3_600_000, unit) : 0;
   const pending =
     offset === 0 && activeTimer && pendingHours > 0
       ? { date: todayLocal, category: activeTimer.category, hours: pendingHours, running: activeTimer.startedAt !== null }
