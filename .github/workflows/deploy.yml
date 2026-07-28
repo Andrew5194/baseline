@@ -67,6 +67,27 @@ jobs:
           echo "api=docker.io/$NS/baseline-api@$api_dig" >> "$GITHUB_OUTPUT"
           echo "web=docker.io/$NS/baseline-web@$web_dig" >> "$GITHUB_OUTPUT"
 
+      # Warm mirror.gcr.io before deploying. Cloud Run pulls docker.io images through
+      # this pull-through cache, which only fetches a digest from Docker Hub on the
+      # first request for it — so a freshly-pushed image can lose the race with the
+      # deploy and surface as "image not found". A GET here forces that first fetch
+      # (retrying until the mirror serves 200) so Cloud Run's pull hits a warm cache.
+      - name: Warm image mirror
+        run: |
+          accept='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json'
+          warm() {
+            # docker.io/NS/IMG@sha256:… -> mirror.gcr.io/v2/NS/IMG/manifests/sha256:…
+            local path="${1#docker.io/}"; path="${path/@//manifests/}"
+            for i in $(seq 1 30); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' -H "Accept: $accept" "https://mirror.gcr.io/v2/${path}")
+              [ "$code" = 200 ] && { echo "warm ($1)"; return 0; }
+              echo "mirror cold [$code], retry $i…"; sleep 5
+            done
+            echo "::error::mirror.gcr.io never served $1"; return 1
+          }
+          warm "${{ steps.img.outputs.api }}"
+          warm "${{ steps.img.outputs.web }}"
+
       # --project registers the project id as a used secret so it's masked in the
       # log everywhere it appears (including gcloud's own "…in project [x]" output).
       - name: Deploy api
