@@ -243,7 +243,7 @@ export default function Goals() {
                 key={v}
                 onClick={() => setGoalView(v)}
                 aria-pressed={goalView === v}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
                   goalView === v
                     ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-white'
                     : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'
