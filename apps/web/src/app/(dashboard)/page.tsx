@@ -532,14 +532,14 @@ export default function Overview() {
                     </svg>
                   </Link>
                 )}
-                <span className="text-sm font-medium text-neutral-900 dark:text-white tabular-nums">{fmtDuration(e.hours, unit)}</span>
+                <span className="w-16 flex-shrink-0 text-right text-sm font-medium text-neutral-900 dark:text-white tabular-nums">{fmtDuration(e.hours, unit)}</span>
                 <button
                   onClick={(ev) => {
                     ev.stopPropagation();
                     deleteEntry(e.id);
                   }}
                   aria-label="Delete entry"
-                  className="text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-lg leading-none px-1"
+                  className="w-4 flex-shrink-0 text-center text-neutral-300 dark:text-neutral-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-lg leading-none"
                 >
                   ×
                 </button>
