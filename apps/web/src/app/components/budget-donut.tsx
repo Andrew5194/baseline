@@ -359,7 +359,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
           <span className="flex-1 min-w-0">Allocation</span>
           <span className="w-12 text-right flex-shrink-0">Entries</span>
           <span className="w-20 text-right flex-shrink-0">Time Logged</span>
-          <span className="w-12 text-right flex-shrink-0">% Total</span>
+          <span className="w-12 text-right flex-shrink-0">% Time</span>
         </div>
         <div className="space-y-2">
           {shownCategories.map((c) => (

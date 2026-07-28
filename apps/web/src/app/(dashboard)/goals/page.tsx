@@ -302,7 +302,7 @@ export default function Goals() {
                         onClick={() => setActiveShown((n) => n + ACTIVE_PAGE)}
                         className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
                       >
-                        Load more ({active.length - activeShown})
+                        Load more
                       </button>
                     )}
                     {activeShown > ACTIVE_PAGE && (
