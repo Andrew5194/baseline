@@ -294,13 +294,25 @@ export default function Goals() {
                   />
                 </div>
               ))}
-                {active.length > activeShown && (
-                  <button
-                    onClick={() => setActiveShown((n) => n + ACTIVE_PAGE)}
-                    className="w-full py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                  >
-                    Load more ({active.length - activeShown})
-                  </button>
+                {(active.length > activeShown || activeShown > ACTIVE_PAGE) && (
+                  <div className="flex items-center justify-center gap-4 pt-1">
+                    {active.length > activeShown && (
+                      <button
+                        onClick={() => setActiveShown((n) => n + ACTIVE_PAGE)}
+                        className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                      >
+                        Load more ({active.length - activeShown})
+                      </button>
+                    )}
+                    {activeShown > ACTIVE_PAGE && (
+                      <button
+                        onClick={() => setActiveShown(ACTIVE_PAGE)}
+                        className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                      >
+                        Show less
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )

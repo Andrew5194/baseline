@@ -118,6 +118,10 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
   const freeColor = freeFocus ? FREE_FOCUS_COLOR : FREE_COLOR;
   const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
   const recurringSet = new Set(recurringCategories ?? []);
+  // Rows actually rendered: in focus mode, recurring routines are hidden. Drive the
+  // empty state AND the Free row's divider off THIS (not the raw list), so a fully
+  // filtered-out table doesn't leave the header + Free borders as two empty lines.
+  const shownCategories = effCategories.filter((c) => !(freeFocus && recurringSet.has(c.category)));
   const [draft, setDraft] = useState<Record<string, string>>({});
   const colorVal = (c: string) => draft[c] ?? baseColor(c);
   const [active, setActive] = useState<string | null>(null);
@@ -358,12 +362,10 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
           <span className="w-12 text-right flex-shrink-0">% Total</span>
         </div>
         <div className="space-y-2">
-          {effCategories.length === 0 ? (
+          {shownCategories.length === 0 ? (
             <p className="text-sm text-neutral-400 dark:text-neutral-500">No tracked hours yet.</p>
           ) : (
-            effCategories
-              .filter((c) => !(freeFocus && recurringSet.has(c.category)))
-              .map((c) => (
+            shownCategories.map((c) => (
               <div
                 key={c.category}
                 className={`flex items-baseline gap-2.5 text-sm rounded-md -mx-1 px-1 py-0.5 transition-colors ${
@@ -410,7 +412,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
           )}
           <div
             className={`flex items-baseline gap-2.5 text-sm pt-2 ${
-              effCategories.length > 0 ? 'border-t border-neutral-100 dark:border-neutral-800' : ''
+              shownCategories.length > 0 ? 'border-t border-neutral-100 dark:border-neutral-800' : ''
             }`}
           >
             <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: freeSwatch }} />
