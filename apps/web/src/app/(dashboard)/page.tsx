@@ -519,19 +519,23 @@ export default function Overview() {
                     {timeRange(e.occurred_at, e.hours, tz)}
                   </span>
                 )}
-                {e.task_id && (
-                  <Link
-                    href={`/goals?task=${e.task_id}`}
-                    onClick={(ev) => ev.stopPropagation()}
-                    aria-label="Go to task"
-                    title="Open this task in Goals"
-                    className="flex-shrink-0 text-neutral-300 dark:text-neutral-600 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 5h5m0 0v5m0-5L9.5 14.5M18 13v5a1 1 0 01-1 1H6a1 1 0 01-1-1V7a1 1 0 011-1h5" />
-                    </svg>
-                  </Link>
-                )}
+                {/* Always reserve the icon slot so the duration column stays aligned
+                    whether or not an entry has a linked task. */}
+                <span className="w-4 flex-shrink-0">
+                  {e.task_id && (
+                    <Link
+                      href={`/goals?task=${e.task_id}`}
+                      onClick={(ev) => ev.stopPropagation()}
+                      aria-label="Go to task"
+                      title="Open this task in Goals"
+                      className="text-neutral-300 dark:text-neutral-600 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 5h5m0 0v5m0-5L9.5 14.5M18 13v5a1 1 0 01-1 1H6a1 1 0 01-1-1V7a1 1 0 011-1h5" />
+                      </svg>
+                    </Link>
+                  )}
+                </span>
                 <span className="w-16 flex-shrink-0 text-right text-sm font-medium text-neutral-900 dark:text-white tabular-nums">{fmtDuration(e.hours, unit)}</span>
                 <button
                   onClick={(ev) => {
