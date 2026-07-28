@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { apiFetch } from '../../../lib/api';
 import { usePreference } from '../../../lib/use-preference';
 import { Modal } from '../../components/modal';
@@ -22,6 +22,12 @@ export default function Goals() {
   const [completedLoaded, setCompletedLoaded] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
   const [adding, setAdding] = useState(false);
+  // Active goals paginate client-side (they're all loaded): show a batch, "Load more"
+  // reveals the next. Completed goals cap their scroll box to ~3 cards (measured).
+  const ACTIVE_PAGE = 5;
+  const [activeShown, setActiveShown] = useState(ACTIVE_PAGE);
+  const completedScrollRef = useRef<HTMLDivElement>(null);
+  const [completedMaxH, setCompletedMaxH] = useState<number | undefined>(undefined);
   // The Tasks section (TodoSection) fetches its own data; it reports readiness here so
   // the whole page can reveal — goal cards + Tasks/Notes — in one coordinated cascade,
   // like Overview/Metrics, instead of two separate waves.
@@ -48,6 +54,27 @@ export default function Goals() {
   useEffect(() => {
     completedLoadedRef.current = completedLoaded;
   }, [completedLoaded]);
+
+  // Cap the completed list's scroll box to exactly 3 cards (then it scrolls). Measured
+  // from the real cards via offsetTop/offsetHeight (transform-safe, unlike getBoundingRect,
+  // so the `rise` entrance doesn't skew it). Re-measures on open, count change, and resize.
+  useLayoutEffect(() => {
+    if (!showCompleted) return;
+    const measure = () => {
+      const el = completedScrollRef.current;
+      if (!el) return;
+      const cards = el.querySelectorAll<HTMLElement>('[data-completed-card]');
+      if (cards.length <= 3) {
+        setCompletedMaxH(undefined); // fits — no scroll
+        return;
+      }
+      const third = cards[2];
+      setCompletedMaxH(third.offsetTop + third.offsetHeight + 8); // + bottom breathing room
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [showCompleted, completed.length]);
 
   const toggleCountdown = () => setCountdown(!countdown);
   const toggleCompleted = () => setShowCompleted(!showCompleted);
@@ -244,7 +271,7 @@ export default function Goals() {
             </div>
           ) : (
             <div className="space-y-2">
-              {active.map((g, i) => (
+              {active.slice(0, activeShown).map((g, i) => (
                 <div
                   key={g.id}
                   className="rise"
@@ -273,6 +300,14 @@ export default function Goals() {
                   />
                 </div>
               ))}
+              {active.length > activeShown && (
+                <button
+                  onClick={() => setActiveShown((n) => n + ACTIVE_PAGE)}
+                  className="w-full py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                >
+                  Load more ({active.length - activeShown})
+                </button>
+              )}
             </div>
           )}
 
@@ -302,9 +337,13 @@ export default function Goals() {
               {showCompleted && (
                 // Bounded + internally scrollable so 50+ completed goals never push the
                 // page down — collapsed it's still a single line; expanded it caps here.
-                <div className="mt-2 max-h-96 space-y-2 overflow-y-auto overscroll-contain -mx-2 px-2 py-2">
+                <div
+                  ref={completedScrollRef}
+                  style={{ maxHeight: completedMaxH }}
+                  className="relative mt-2 space-y-2 overflow-y-auto overscroll-contain -mx-2 px-2 py-2"
+                >
                   {completedSorted.map((g, i) => (
-                    <div key={g.id} className="rise" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                    <div key={g.id} data-completed-card className="rise" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
                       <GoalCard
                         goal={g}
                         onChange={load}

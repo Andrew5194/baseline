@@ -408,7 +408,11 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
               </div>
             ))
           )}
-          <div className="flex items-baseline gap-2.5 text-sm pt-2 border-t border-neutral-100 dark:border-neutral-800">
+          <div
+            className={`flex items-baseline gap-2.5 text-sm pt-2 ${
+              effCategories.length > 0 ? 'border-t border-neutral-100 dark:border-neutral-800' : ''
+            }`}
+          >
             <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: freeSwatch }} />
             <span className="flex-1 min-w-0 truncate text-neutral-400 dark:text-neutral-500">{freeFocus ? 'Focus time' : 'Free'}</span>
             <span className="w-12 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">—</span>

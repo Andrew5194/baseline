@@ -133,8 +133,11 @@ export function DailyAllocationBars({ data, categories, colorOf, todayISO, yMax 
                 </linearGradient>
               );
             })}
-            {/* Free-time gradient — a faint translucent emerald glow when focusing on free time */}
-            <linearGradient id="bar-grad-free" x1="0" y1="0" x2="0" y2="1">
+            {/* Free-time gradient — a faint translucent emerald glow when focusing on free
+                time. userSpaceOnUse (spanning the full chart height) so every day's free
+                segment samples the SAME vertical gradient — otherwise a day with entries has
+                a shorter free rect and its gradient looks compressed vs. the full bars. */}
+            <linearGradient id="bar-grad-free" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={innerH}>
               <stop offset="0%" stopColor="rgba(16,185,129,0.3)" />
               <stop offset="55%" stopColor="rgba(16,185,129,0.16)" />
               <stop offset="100%" stopColor="rgba(16,185,129,0.07)" />
