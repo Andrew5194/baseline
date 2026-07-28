@@ -118,6 +118,10 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
   const freeColor = freeFocus ? FREE_FOCUS_COLOR : FREE_COLOR;
   const freeSwatch = freeFocus ? FREE_FOCUS_SWATCH : FREE_SWATCH;
   const recurringSet = new Set(recurringCategories ?? []);
+  // Rows actually rendered: in focus mode, recurring routines are hidden. Drive the
+  // empty state AND the Free row's divider off THIS (not the raw list), so a fully
+  // filtered-out table doesn't leave the header + Free borders as two empty lines.
+  const shownCategories = effCategories.filter((c) => !(freeFocus && recurringSet.has(c.category)));
   const [draft, setDraft] = useState<Record<string, string>>({});
   const colorVal = (c: string) => draft[c] ?? baseColor(c);
   const [active, setActive] = useState<string | null>(null);
@@ -352,18 +356,13 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
         {/* Column headers for the per-category table. */}
         <div className="flex items-baseline gap-2.5 pb-1.5 mb-1.5 border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
           <span className="w-2.5 flex-shrink-0" />
-          <span className="flex-1 min-w-0">Category</span>
+          <span className="flex-1 min-w-0">Allocation</span>
           <span className="w-12 text-right flex-shrink-0">Entries</span>
           <span className="w-20 text-right flex-shrink-0">Time Logged</span>
-          <span className="w-12 text-right flex-shrink-0">% Total</span>
+          <span className="w-12 text-right flex-shrink-0">% Time</span>
         </div>
         <div className="space-y-2">
-          {effCategories.length === 0 ? (
-            <p className="text-sm text-neutral-400 dark:text-neutral-500">No tracked hours yet.</p>
-          ) : (
-            effCategories
-              .filter((c) => !(freeFocus && recurringSet.has(c.category)))
-              .map((c) => (
+          {shownCategories.map((c) => (
               <div
                 key={c.category}
                 className={`flex items-baseline gap-2.5 text-sm rounded-md -mx-1 px-1 py-0.5 transition-colors ${
@@ -406,9 +405,12 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
                 <span className="w-20 text-right text-neutral-900 dark:text-white font-medium tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(c.hours, unit)}</span>
                 <span className="w-12 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{fmt1(slicePct(c.hours))}%</span>
               </div>
-            ))
-          )}
-          <div className="flex items-baseline gap-2.5 text-sm pt-2 border-t border-neutral-100 dark:border-neutral-800">
+            ))}
+          <div
+            className={`flex items-baseline gap-2.5 text-sm pt-2 ${
+              shownCategories.length > 0 ? 'border-t border-neutral-100 dark:border-neutral-800' : ''
+            }`}
+          >
             <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0 self-center" style={{ backgroundColor: freeSwatch }} />
             <span className="flex-1 min-w-0 truncate text-neutral-400 dark:text-neutral-500">{freeFocus ? 'Focus time' : 'Free'}</span>
             <span className="w-12 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">—</span>

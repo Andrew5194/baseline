@@ -22,6 +22,14 @@ export default function Goals() {
   const [completedLoaded, setCompletedLoaded] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
   const [adding, setAdding] = useState(false);
+  // Active goals paginate client-side (they're all loaded): show a batch, "Load more"
+  // reveals the next.
+  const ACTIVE_PAGE = 3;
+  const [activeShown, setActiveShown] = useState(ACTIVE_PAGE);
+  const [completedShown, setCompletedShown] = useState(ACTIVE_PAGE);
+  // Active vs. completed is a segmented control (like the History source filter). Local
+  // state — defaults to Active each visit.
+  const [goalView, setGoalView] = useState<'active' | 'completed'>('active');
   // The Tasks section (TodoSection) fetches its own data; it reports readiness here so
   // the whole page can reveal — goal cards + Tasks/Notes — in one coordinated cascade,
   // like Overview/Metrics, instead of two separate waves.
@@ -29,9 +37,6 @@ export default function Goals() {
   // Count-down mode — reframes due dates and task counts as "time/tasks left". Synced
   // server-side (users.preferences via /v1/me) so it follows the user across devices.
   const [countdown, setCountdown] = usePreference('goalsCountdown');
-  // Completed goals collapse into a disclosure at the bottom; remember open/closed
-  // per-user (synced across devices).
-  const [showCompleted, setShowCompleted] = usePreference('goalsShowCompleted');
   const dragIndex = useRef<number | null>(null);
   const orderRef = useRef<Goal[]>([]);
   const activeRef = useRef<Goal[] | null>(null);
@@ -50,7 +55,6 @@ export default function Goals() {
   }, [completedLoaded]);
 
   const toggleCountdown = () => setCountdown(!countdown);
-  const toggleCompleted = () => setShowCompleted(!showCompleted);
 
   // Active goals + the completed count. Never touches the loaded `completed` pages,
   // so an expanded section doesn't collapse when this refetches (e.g. on a task-tag
@@ -94,11 +98,10 @@ export default function Goals() {
     return () => window.removeEventListener('baseline:goals-changed', onChange);
   }, [load]);
 
-  // Lazy-load the completed list the first time the section is shown (either via the
-  // toggle or restored open from localStorage).
+  // Lazy-load the completed list the first time the Completed tab is opened.
   useEffect(() => {
-    if (showCompleted && !completedLoaded) loadCompleted(true);
-  }, [showCompleted, completedLoaded, loadCompleted]);
+    if (goalView === 'completed' && !completedLoaded) loadCompleted(true);
+  }, [goalView, completedLoaded, loadCompleted]);
 
   function onDragOver(e: React.DragEvent, i: number) {
     e.preventDefault();
@@ -227,24 +230,43 @@ export default function Goals() {
 
       {active === null || !todosReady ? (
         <div className="space-y-3">
+          <div className="h-9 w-52 rounded-lg bg-neutral-200 dark:bg-neutral-800 shimmer" />
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
           ))}
         </div>
       ) : (
         <>
-          {/* One message for any "no active goals" state — a brand-new user and
-              someone between goals see the same thing (no dynamic onboarding copy). */}
-          {active.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">No active goals.</p>
-              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-                Add a new goal to get started.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {active.map((g, i) => (
+          {/* Active / Completed — segmented control, like the History source filter. */}
+          <div className="mb-4 inline-flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
+            {(['active', 'completed'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setGoalView(v)}
+                aria-pressed={goalView === v}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  goalView === v
+                    ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-white'
+                    : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'
+                }`}
+              >
+                {v === 'active' ? 'Active' : 'Completed'}
+                <span className="tabular-nums text-neutral-400 dark:text-neutral-500">
+                  {v === 'active' ? active.length : completedTotal}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {goalView === 'active' ? (
+            active.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">No active goals.</p>
+                <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">Add a new goal to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {active.slice(0, activeShown).map((g, i) => (
                 <div
                   key={g.id}
                   className="rise"
@@ -273,71 +295,79 @@ export default function Goals() {
                   />
                 </div>
               ))}
+                {(active.length > activeShown || activeShown > ACTIVE_PAGE) && (
+                  <div className="flex items-center justify-center gap-4 pt-1">
+                    {active.length > activeShown && (
+                      <button
+                        onClick={() => setActiveShown((n) => n + ACTIVE_PAGE)}
+                        className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                      >
+                        Load more
+                      </button>
+                    )}
+                    {activeShown > ACTIVE_PAGE && (
+                      <button
+                        onClick={() => setActiveShown(ACTIVE_PAGE)}
+                        className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                      >
+                        Show less
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          ) : !completedLoaded ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer" />
+              ))}
             </div>
-          )}
-
-          {completedTotal > 0 && (
-            <div className="mt-5">
-              <button
-                onClick={toggleCompleted}
-                aria-expanded={showCompleted}
-                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-              >
-                <svg
-                  className={`w-3.5 h-3.5 transition-transform ${showCompleted ? 'rotate-90' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
+          ) : completedSorted.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">No completed goals yet.</p>
+              <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">Finished goals show up here.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {completedSorted.slice(0, completedShown).map((g, i) => (
+                <div key={g.id} className="rise" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                  <GoalCard
+                    goal={g}
+                    onChange={load}
+                    onOptimisticPatch={patchGoal}
+                    onOptimisticRemove={removeGoal}
+                    countdown={countdown}
                   />
-                </svg>
-                Completed ({completedTotal})
-              </button>
-              {showCompleted && (
-                // Bounded + internally scrollable so 50+ completed goals never push the
-                // page down — collapsed it's still a single line; expanded it caps here.
-                <div className="mt-2 max-h-96 space-y-2 overflow-y-auto overscroll-contain -mx-2 px-2 py-2">
-                  {completedSorted.map((g, i) => (
-                    <div key={g.id} className="rise" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
-                      <GoalCard
-                        goal={g}
-                        onChange={load}
-                        onOptimisticPatch={patchGoal}
-                        onOptimisticRemove={removeGoal}
-                        countdown={countdown}
-                      />
-                    </div>
-                  ))}
-                  {loadingCompleted && completedSorted.length === 0 && (
-                    <div className="space-y-2">
-                      {[0].map((i) => (
-                        <div
-                          key={i}
-                          className="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-xl shimmer"
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {completedHasMore && (
+                </div>
+              ))}
+              {(completedShown < completedSorted.length || completedHasMore || completedShown > ACTIVE_PAGE) && (
+                <div className="flex items-center justify-center gap-4 pt-1">
+                  {(completedShown < completedSorted.length || completedHasMore) && (
                     <button
-                      onClick={() => loadCompleted(false)}
+                      onClick={() => {
+                        setCompletedShown((n) => n + ACTIVE_PAGE);
+                        // Fetch the next server page as we near the end of what's loaded.
+                        if (completedHasMore && completedShown + ACTIVE_PAGE >= completedSorted.length) loadCompleted(false);
+                      }}
                       disabled={loadingCompleted}
-                      className="w-full py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white disabled:opacity-50 transition-colors"
+                      className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white disabled:opacity-50 transition-colors"
                     >
                       {loadingCompleted ? 'Loading…' : 'Load more'}
+                    </button>
+                  )}
+                  {completedShown > ACTIVE_PAGE && (
+                    <button
+                      onClick={() => setCompletedShown(ACTIVE_PAGE)}
+                      className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                    >
+                      Show less
                     </button>
                   )}
                 </div>
               )}
             </div>
           )}
-
         </>
       )}
 

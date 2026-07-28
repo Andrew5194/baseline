@@ -15,6 +15,7 @@ export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string })
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   const taRef = useRef<HTMLTextAreaElement>(null);
   // Mirror the latest content/saved so the debounce timer and day-switch cleanup
@@ -124,7 +125,11 @@ export function DayJournal({ day, dayLabel }: { day: string; dayLabel: string })
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onInput={autosize}
-            placeholder="How did today go? Jot down your thoughts and feelings…"
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            // Hide the prompt while focused so the caret sits in a clean field; it
+            // reappears on blur if nothing was written.
+            placeholder={focused ? '' : 'How did today go? Jot down your thoughts and feelings.'}
             className="block w-full min-h-[120px] px-4 py-3 text-sm bg-transparent text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none resize-none leading-relaxed overflow-hidden"
           />
         )}
