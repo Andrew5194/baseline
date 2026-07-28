@@ -24,7 +24,7 @@ export default function Goals() {
   const [adding, setAdding] = useState(false);
   // Active goals paginate client-side (they're all loaded): show a batch, "Load more"
   // reveals the next.
-  const ACTIVE_PAGE = 5;
+  const ACTIVE_PAGE = 3;
   const [activeShown, setActiveShown] = useState(ACTIVE_PAGE);
   // Active vs. completed is a segmented control (like the History source filter). Local
   // state — defaults to Active each visit.
