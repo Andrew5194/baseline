@@ -356,16 +356,13 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
         {/* Column headers for the per-category table. */}
         <div className="flex items-baseline gap-2.5 pb-1.5 mb-1.5 border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
           <span className="w-2.5 flex-shrink-0" />
-          <span className="flex-1 min-w-0">Category</span>
+          <span className="flex-1 min-w-0">Allocation</span>
           <span className="w-12 text-right flex-shrink-0">Entries</span>
           <span className="w-20 text-right flex-shrink-0">Time Logged</span>
           <span className="w-12 text-right flex-shrink-0">% Total</span>
         </div>
         <div className="space-y-2">
-          {shownCategories.length === 0 ? (
-            <p className="text-sm text-neutral-400 dark:text-neutral-500">No tracked hours yet.</p>
-          ) : (
-            shownCategories.map((c) => (
+          {shownCategories.map((c) => (
               <div
                 key={c.category}
                 className={`flex items-baseline gap-2.5 text-sm rounded-md -mx-1 px-1 py-0.5 transition-colors ${
@@ -408,8 +405,7 @@ export function BudgetDonut({ categories, trackedHours, budget, colorOf, onRecol
                 <span className="w-20 text-right text-neutral-900 dark:text-white font-medium tabular-nums flex-shrink-0 whitespace-nowrap">{fmtDuration(c.hours, unit)}</span>
                 <span className="w-12 text-right text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums flex-shrink-0">{fmt1(slicePct(c.hours))}%</span>
               </div>
-            ))
-          )}
+            ))}
           <div
             className={`flex items-baseline gap-2.5 text-sm pt-2 ${
               shownCategories.length > 0 ? 'border-t border-neutral-100 dark:border-neutral-800' : ''

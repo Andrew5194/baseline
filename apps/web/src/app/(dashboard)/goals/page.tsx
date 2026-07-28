@@ -26,6 +26,7 @@ export default function Goals() {
   // reveals the next.
   const ACTIVE_PAGE = 3;
   const [activeShown, setActiveShown] = useState(ACTIVE_PAGE);
+  const [completedShown, setCompletedShown] = useState(ACTIVE_PAGE);
   // Active vs. completed is a segmented control (like the History source filter). Local
   // state — defaults to Active each visit.
   const [goalView, setGoalView] = useState<'active' | 'completed'>('active');
@@ -329,7 +330,7 @@ export default function Goals() {
             </div>
           ) : (
             <div className="space-y-2">
-              {completedSorted.map((g, i) => (
+              {completedSorted.slice(0, completedShown).map((g, i) => (
                 <div key={g.id} className="rise" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
                   <GoalCard
                     goal={g}
@@ -340,14 +341,30 @@ export default function Goals() {
                   />
                 </div>
               ))}
-              {completedHasMore && (
-                <button
-                  onClick={() => loadCompleted(false)}
-                  disabled={loadingCompleted}
-                  className="w-full py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white disabled:opacity-50 transition-colors"
-                >
-                  {loadingCompleted ? 'Loading…' : 'Load more'}
-                </button>
+              {(completedShown < completedSorted.length || completedHasMore || completedShown > ACTIVE_PAGE) && (
+                <div className="flex items-center justify-center gap-4 pt-1">
+                  {(completedShown < completedSorted.length || completedHasMore) && (
+                    <button
+                      onClick={() => {
+                        setCompletedShown((n) => n + ACTIVE_PAGE);
+                        // Fetch the next server page as we near the end of what's loaded.
+                        if (completedHasMore && completedShown + ACTIVE_PAGE >= completedSorted.length) loadCompleted(false);
+                      }}
+                      disabled={loadingCompleted}
+                      className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white disabled:opacity-50 transition-colors"
+                    >
+                      {loadingCompleted ? 'Loading…' : 'Load more'}
+                    </button>
+                  )}
+                  {completedShown > ACTIVE_PAGE && (
+                    <button
+                      onClick={() => setCompletedShown(ACTIVE_PAGE)}
+                      className="py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                    >
+                      Show less
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
