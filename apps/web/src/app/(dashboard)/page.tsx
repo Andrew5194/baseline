@@ -6,6 +6,7 @@ import { PeriodSelector, PeriodNav, periodRangeLabel, type Period } from '../com
 import { BudgetDonut, type BudgetCategory } from '../components/budget-donut';
 import { DailyAllocationBars } from '../components/daily-allocation-bars';
 import { CalendarAllocation } from '../components/calendar-allocation';
+import { TaskAgenda, type AgendaTasks } from '../components/task-agenda';
 import { AddTimeEntryForm } from '../components/add-time-entry-form';
 import { FocusTimerBar } from '../components/focus-timer-bar';
 import { useFocusTimer, useLiveDurationTick, elapsedMs } from '../../lib/focus-timer';
@@ -85,7 +86,11 @@ export default function Overview() {
   const [detailEntries, setDetailEntries] = useState<Entry[] | null>(null);
   // Synced server-side (users.preferences via /v1/me) so it follows the user across devices.
   const [hideRecurring, setHideRecurring, hideRecurringLoaded] = usePreference('hideRecurring');
-  const [allocView, setAllocView] = usePreference<'bars' | 'calendar'>('allocView', 'bars');
+  const [allocView, setAllocView] = usePreference<'bars' | 'calendar' | 'tasks'>('allocView', 'bars');
+  // Tasks scheduled across the period — lazy-loaded the first time the Tasks view opens.
+  // GET /v1/todos returns every task/recurring def/completion, so the agenda is computed
+  // client-side for whatever window the chart is showing.
+  const [todoData, setTodoData] = useState<AgendaTasks | null>(null);
   const [unit, setUnit] = useTimeUnit();
   // 'new' = add modal; an Entry = edit modal; null = closed.
   const [editing, setEditing] = useState<Entry | 'new' | null>(null);
@@ -134,6 +139,17 @@ export default function Overview() {
     loadBudget();
     loadPeriod();
   }, [loadBudget, loadPeriod]);
+
+  // Lazy-load the task agenda the first time the Tasks view is opened (and refresh it
+  // when tasks change elsewhere while it's showing).
+  useEffect(() => {
+    if (allocView !== 'tasks') return;
+    const load = () =>
+      apiFetch<AgendaTasks>('/v1/todos').then(setTodoData).catch(console.error);
+    if (!todoData) load();
+    window.addEventListener('baseline:todos-changed', load);
+    return () => window.removeEventListener('baseline:todos-changed', load);
+  }, [allocView, todoData]);
 
   const refreshAll = () => {
     loadBudget();
@@ -451,13 +467,15 @@ export default function Overview() {
             {allocationLabel}
           </p>
           <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800">
-            {(['bars', 'calendar'] as const).map((v) => (
+            {([
+              ['bars', 'Bar view'],
+              ['calendar', 'Calendar view'],
+              ['tasks', 'Tasks view'],
+            ] as const).map(([v, label]) => (
               <button
                 key={v}
-                // Toggle to the other view on any click — so clicking the active icon
-                // again flips back to the other side. Persisted per-user across devices.
-                onClick={() => setAllocView(allocView === 'bars' ? 'calendar' : 'bars')}
-                aria-label={v === 'bars' ? 'Bar view' : 'Calendar view'}
+                onClick={() => setAllocView(v)}
+                aria-label={label}
                 aria-pressed={allocView === v}
                 className={`p-1.5 rounded-md transition-colors ${
                   allocView === v
@@ -469,9 +487,13 @@ export default function Overview() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 20V10M12 20V4M19 20v-6" />
                   </svg>
-                ) : (
+                ) : v === 'calendar' ? (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 3v3m10-3v3M4 8h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
                   </svg>
                 )}
               </button>
@@ -481,6 +503,12 @@ export default function Overview() {
         {ready && daily ? (
           allocView === 'calendar' ? (
             <CalendarAllocation data={barRows} categories={stackCategories} colorOf={colorOf} granularity={granularity} recurringCategories={recurringCats} freeFocus={hideRecurring} todayISO={todayKey} entries={entries?.data ?? []} tz={tz} pending={pending} unit={unit} />
+          ) : allocView === 'tasks' ? (
+            todoData ? (
+              <TaskAgenda buckets={barRows.map((r) => r.date as string)} granularity={granularity} tasks={todoData} todayISO={todayKey} colorOf={colorOf} />
+            ) : (
+              <div className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-lg shimmer" />
+            )
           ) : (
             <DailyAllocationBars data={barRows} categories={stackCategories} colorOf={colorOf} todayISO={todayKey} yMax={yMax} recurringCategories={recurringCats} freeFocus={hideRecurring} pending={pending} activeCategory={activeCategory} onSelectCategory={setDetailCategory} unit={unit} />
           )
