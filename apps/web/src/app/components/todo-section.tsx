@@ -284,6 +284,12 @@ export function TodoSection({
     const t = title.trim();
     if (!t) return;
     setTitle('');
+    // On touch, submitting from the on-screen keyboard leaves the input focused so the
+    // keyboard stays up — and iOS then swallows the next tap (e.g. the nav hamburger) to
+    // dismiss it. Blur here so the keyboard drops now. Desktop keeps focus for rapid entry.
+    if (window.matchMedia?.('(pointer: coarse)').matches) {
+      (e.currentTarget as HTMLFormElement).querySelector('input')?.blur();
+    }
     await apiFetch('/v1/todos', { method: 'POST', body: JSON.stringify({ title: t, date: day }) }).catch(console.error);
     load();
   }

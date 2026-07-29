@@ -17,11 +17,12 @@ export function SourceDropdown({ value, onChange, sources }: SourceDropdownProps
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
+    // pointerdown (not mousedown) so an outside tap dismisses on touch too.
+    const onDoc = (e: Event) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    document.addEventListener('pointerdown', onDoc);
+    return () => document.removeEventListener('pointerdown', onDoc);
   }, [open]);
 
   const options = sources.map((s) => ({ id: s, label: SOURCE_META[s]?.label ?? s, icon: SOURCE_META[s]?.icon ?? null as React.ReactNode }));

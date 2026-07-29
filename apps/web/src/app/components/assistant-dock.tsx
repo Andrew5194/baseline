@@ -27,11 +27,12 @@ export function AssistantDock() {
   // pointer-events-none when open, so it can't re-trigger.
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
+    // pointerdown (not mousedown) so an outside tap dismisses on touch too.
+    const onDoc = (e: Event) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    document.addEventListener('pointerdown', onDoc);
+    return () => document.removeEventListener('pointerdown', onDoc);
   }, [open]);
 
   async function createGoal(payload: Record<string, unknown>) {
