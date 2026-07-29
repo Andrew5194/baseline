@@ -47,11 +47,15 @@ export function TaskGoalTag({ goals, categories, value, goalTitle, goalColor, ca
       setOpen(false);
     };
     const onResize = () => setOpen(false);
-    document.addEventListener('mousedown', onDoc);
+    // pointerdown (not mousedown) so an outside TAP dismisses on touch too — otherwise
+    // on mobile the menu stays open over the notes field and traps it (iOS fires mouse
+    // events unreliably on non-button targets like a textarea). The same tap then falls
+    // through to focus whatever was tapped.
+    document.addEventListener('pointerdown', onDoc);
     window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', onResize);
     return () => {
-      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('pointerdown', onDoc);
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onResize);
     };

@@ -37,11 +37,13 @@ export function ActionsMenu({
       setOpen(false);
     };
     const onClose = () => setOpen(false);
-    document.addEventListener('mousedown', onDoc);
+    // pointerdown (not mousedown) so an outside TAP dismisses on touch too — iOS fires
+    // mouse events unreliably on non-button targets, which left the menu stuck open.
+    document.addEventListener('pointerdown', onDoc);
     window.addEventListener('scroll', onClose, true);
     window.addEventListener('resize', onClose);
     return () => {
-      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('pointerdown', onDoc);
       window.removeEventListener('scroll', onClose, true);
       window.removeEventListener('resize', onClose);
     };

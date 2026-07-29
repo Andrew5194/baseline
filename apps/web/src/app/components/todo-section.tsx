@@ -284,6 +284,12 @@ export function TodoSection({
     const t = title.trim();
     if (!t) return;
     setTitle('');
+    // On touch, submitting from the on-screen keyboard leaves the input focused so the
+    // keyboard stays up — and iOS then swallows the next tap (e.g. the nav hamburger) to
+    // dismiss it. Blur here so the keyboard drops now. Desktop keeps focus for rapid entry.
+    if (window.matchMedia?.('(pointer: coarse)').matches) {
+      (e.currentTarget as HTMLFormElement).querySelector('input')?.blur();
+    }
     await apiFetch('/v1/todos', { method: 'POST', body: JSON.stringify({ title: t, date: day }) }).catch(console.error);
     load();
   }
@@ -599,9 +605,20 @@ export function TodoSection({
             placeholder="Add a task…"
             className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none"
           />
+          {/* Enter (or the on-screen keyboard's return) is the primary way to add; the ↵
+              glyph fades in once there's text as a discoverable, tappable affordance —
+              mainly for touch, where the return key isn't obviously "add". */}
           {title.trim() && (
-            <button type="submit" className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500">
-              Add
+            <button
+              type="submit"
+              aria-label="Add task"
+              title="Add task"
+              className="grid place-items-center self-center w-6 h-6 flex-shrink-0 rounded-md text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <polyline points="9 10 4 15 9 20" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+                <path d="M20 4v7a4 4 0 0 1-4 4H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+              </svg>
             </button>
           )}
         </form>

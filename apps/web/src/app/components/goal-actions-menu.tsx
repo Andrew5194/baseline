@@ -30,11 +30,12 @@ export function GoalActionsMenu({
       setOpen(false);
     };
     const onClose = () => setOpen(false);
-    document.addEventListener('mousedown', onDoc);
+    // pointerdown (not mousedown) so an outside tap dismisses on touch too.
+    document.addEventListener('pointerdown', onDoc);
     window.addEventListener('scroll', onClose, true);
     window.addEventListener('resize', onClose);
     return () => {
-      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('pointerdown', onDoc);
       window.removeEventListener('scroll', onClose, true);
       window.removeEventListener('resize', onClose);
     };
