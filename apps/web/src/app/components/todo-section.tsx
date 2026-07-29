@@ -605,9 +605,20 @@ export function TodoSection({
             placeholder="Add a task…"
             className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none"
           />
+          {/* Enter (or the on-screen keyboard's return) is the primary way to add; the ↵
+              glyph fades in once there's text as a discoverable, tappable affordance —
+              mainly for touch, where the return key isn't obviously "add". */}
           {title.trim() && (
-            <button type="submit" className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500">
-              Add
+            <button
+              type="submit"
+              aria-label="Add task"
+              title="Add task"
+              className="grid place-items-center w-6 h-6 flex-shrink-0 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <polyline points="9 10 4 15 9 20" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+                <path d="M20 4v7a4 4 0 0 1-4 4H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+              </svg>
             </button>
           )}
         </form>
