@@ -615,7 +615,7 @@ export function TodoSection({
               title="Add task"
               className="grid place-items-center self-center w-6 h-6 flex-shrink-0 rounded-md text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             >
-              <svg className="w-4 h-4 translate-y-[5px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="w-4 h-4 translate-y-[8px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <polyline points="9 10 4 15 9 20" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
                 <path d="M20 4v7a4 4 0 0 1-4 4H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
               </svg>
