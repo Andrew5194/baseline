@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { API_URL } from '../../lib/api';
 import { Logo } from '../components/logo';
@@ -10,6 +10,25 @@ export default function SignUp() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // null = still checking; true/false = whether public sign-up is open. Until it
+  // resolves we hold the form back so a closed instance never flashes the fields.
+  const [open, setOpen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_URL}/v1/auth/signup/status`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setOpen(d?.open !== false);
+      })
+      // On a status hiccup, assume open — the API is still the authoritative gate.
+      .catch(() => {
+        if (!cancelled) setOpen(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,6 +42,13 @@ export default function SignUp() {
         body: JSON.stringify({ email, password }),
         credentials: 'include',
       });
+
+      if (res.status === 403) {
+        // Flag flipped closed between the status check and submit — swap to the
+        // invite-only view so it matches the server's decision.
+        setOpen(false);
+        return;
+      }
 
       if (res.ok) {
         // Fetch CSRF token then auto sign in
@@ -58,12 +84,28 @@ export default function SignUp() {
           <div className="flex justify-center mb-4">
             <Logo className="w-10 h-10" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {open === false ? 'Baseline is invite-only' : 'Create your account'}
+          </h1>
           <p className="text-sm text-neutral-500">
-            Start measuring your rate of progress
+            {open === false
+              ? 'We’re not open to the public just yet. Already have an account? Sign in below.'
+              : 'Start measuring your rate of progress'}
           </p>
         </div>
 
+        {/* While the status check is in flight, hold an empty space the size of the form
+            so the layout doesn't jump when it resolves. */}
+        {open === null ? (
+          <div className="h-[188px]" aria-hidden />
+        ) : open === false ? (
+          <Link
+            href="/sign-in"
+            className="block w-full text-center px-4 py-2.5 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
+          >
+            Go to sign in
+          </Link>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="email" className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
@@ -108,13 +150,16 @@ export default function SignUp() {
             {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
+        )}
 
-        <p className="text-center text-xs text-neutral-500">
-          Already have an account?{' '}
-          <Link href="/sign-in" className="text-emerald-600 hover:text-emerald-500 font-medium">
-            Sign in
-          </Link>
-        </p>
+        {open !== false && (
+          <p className="text-center text-xs text-neutral-500">
+            Already have an account?{' '}
+            <Link href="/sign-in" className="text-emerald-600 hover:text-emerald-500 font-medium">
+              Sign in
+            </Link>
+          </p>
+        )}
       </div>
     </main>
   );

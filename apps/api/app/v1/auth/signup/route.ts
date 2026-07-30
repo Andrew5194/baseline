@@ -3,8 +3,18 @@ import { db, users, seedDefaultCategories } from '@baseline/db';
 import { eq } from 'drizzle-orm';
 import { hash } from '@node-rs/bcrypt';
 import { allow, clientIp } from '../../../../lib/rate-limit';
+import { isSignupEnabled } from '../../../../lib/flags';
 
 export async function POST(request: NextRequest) {
+  // Public sign-up can be closed via the `public-signup` feature flag (invite-only mode).
+  // Authoritative gate — the client also hides the form, but this is what actually blocks it.
+  if (!isSignupEnabled()) {
+    return NextResponse.json(
+      { error: 'Sign-ups are currently invite-only.', code: 'SIGNUP_CLOSED' },
+      { status: 403 },
+    );
+  }
+
   if (!(await allow('signup', clientIp(request.headers)))) {
     return NextResponse.json(
       { error: 'Too many sign-up attempts. Please try again later.', code: 'RATE_LIMITED' },
