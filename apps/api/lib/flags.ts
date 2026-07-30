@@ -22,7 +22,10 @@ const SIGNUP_DEFAULT = process.env.SIGNUP_ENABLED_DEFAULT !== 'false';
 let client: Unleash | null = null;
 
 // Start the Unleash client (non-blocking). A no-op when Unleash isn't configured or
-// already started, so it's safe to call from startup and idempotent.
+// already started, so it's safe to call from startup and idempotent. Also called
+// lazily on first flag check — instrumentation.ts and route handlers are separate
+// bundles in Next.js, so the module state set at startup isn't shared with the
+// serving path; lazy init guarantees the request's bundle has its own client.
 export function initFlags(): void {
   if (client || !UNLEASH_URL || !UNLEASH_API_TOKEN) return;
   client = initialize({
@@ -41,6 +44,7 @@ export function initFlags(): void {
 //   • Unleash configured      → the `public-signup` flag; fail CLOSED until the client has
 //     synced, so an outage or cold start can never accidentally open sign-ups.
 export function isSignupEnabled(): boolean {
+  initFlags(); // ensure THIS bundle's client is started (see note on initFlags)
   if (!client) return SIGNUP_DEFAULT;
   return isEnabled(PUBLIC_SIGNUP, {}, false);
 }
