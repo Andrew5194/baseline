@@ -26,6 +26,15 @@ export async function register() {
       }
     }
 
+    // Start the Unleash feature-flag client (non-blocking; a no-op unless UNLEASH_* is
+    // configured). Dynamic import keeps the node-only SDK out of the edge bundle.
+    try {
+      const { initFlags } = await import('./lib/flags');
+      initFlags();
+    } catch (e) {
+      console.error('feature-flag init failed (continuing):', e);
+    }
+
     // Sync + rate-limit cleanup.
     //
     // When an external scheduler drives these jobs out-of-process (a separate worker

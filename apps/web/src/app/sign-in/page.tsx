@@ -11,6 +11,23 @@ export default function SignIn() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
+  // Whether public sign-up is open — hides the "Sign up" link when it's invite-only.
+  const [signupOpen, setSignupOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_URL}/v1/auth/signup/status`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setSignupOpen(d?.open !== false);
+      })
+      .catch(() => {
+        /* leave the link hidden if we can't tell */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Prefetch the CSRF token (and set its cookie) on load so submit doesn't wait on a
   // /csrf round-trip. getCsrfToken() below falls back to an on-demand fetch if this
@@ -136,12 +153,14 @@ export default function SignIn() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-neutral-500">
-          Don&apos;t have an account?{' '}
-          <Link href="/sign-up" className="text-emerald-600 hover:text-emerald-500 font-medium">
-            Sign up
-          </Link>
-        </p>
+        {signupOpen && (
+          <p className="text-center text-xs text-neutral-500">
+            Don&apos;t have an account?{' '}
+            <Link href="/sign-up" className="text-emerald-600 hover:text-emerald-500 font-medium">
+              Sign up
+            </Link>
+          </p>
+        )}
       </div>
     </main>
   );
