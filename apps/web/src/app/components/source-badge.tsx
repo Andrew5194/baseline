@@ -20,6 +20,17 @@ export function GoogleCalendarIcon({ className = 'w-4 h-4' }: { className?: stri
   );
 }
 
+// The official Google Play Books mark (2023). Source viewBox is taller than it is
+// wide, so the box is padded horizontally to keep it centred at square sizes.
+export function GooglePlayBooksIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="-30.718 0 540.068 540.068" aria-hidden="true">
+      <path fill="#1C51A4" d="M449.059,218.231L245.519,99.538l-0.061,193.23c0.031,1.504-0.368,2.977-1.166,4.204 c-0.798,1.258-1.565,1.995-2.915,2.547c-1.35,0.552-2.792,0.706-4.204,0.399c-1.412-0.307-2.7-1.043-3.713-2.117l-69.166-70.609 l-69.381,70.179c-1.013,0.982-2.301,1.657-3.652,1.903c-1.381,0.246-2.792,0.092-4.081-0.491c-1.289-0.583-1.626-0.522-2.394-1.749 c-0.767-1.197-1.197-2.608-1.197-4.081L85.031,6.007l-2.915-1.289C43.973-11.638,0,16.409,0,59.891v420.306 c0,46.029,49.312,74.782,88.775,51.767l360.285-210.138C488.491,298.782,488.491,241.246,449.059,218.231z" />
+      <path fill="#80D7FB" d="M88.805,8.124c-2.179-1.289-4.419-2.363-6.659-3.345l0.123,288.663c0,1.442,0.43,2.854,1.197,4.081 c0.767,1.197,1.872,2.148,3.161,2.731c1.289,0.583,2.7,0.736,4.081,0.491c1.381-0.246,2.639-0.921,3.652-1.903l69.749-69.688 l69.811,69.749c1.013,1.074,2.301,1.81,3.713,2.117c1.412,0.307,2.884,0.153,4.204-0.399c1.319-0.552,2.455-1.565,3.253-2.792 c0.798-1.258,1.197-2.731,1.166-4.204V99.998L88.805,8.124z" />
+    </svg>
+  );
+}
+
 // Registry of metric sources (label + icon), shared by the source badge and the
 // source filter. Add an entry here when a new integration starts producing metrics.
 export const SOURCE_META: Record<string, { label: string; icon: ReactNode }> = {
@@ -38,6 +49,10 @@ export const SOURCE_META: Record<string, { label: string; icon: ReactNode }> = {
   google_calendar: {
     label: 'Google Calendar',
     icon: <GoogleCalendarIcon className="w-3.5 h-3.5" />,
+  },
+  google_books: {
+    label: 'Google Play Books',
+    icon: <GooglePlayBooksIcon className="w-3.5 h-3.5" />,
   },
 };
 

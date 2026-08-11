@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type ReactNode } from 'react';
 import { apiFetch, API_URL } from '../../../lib/api';
-import { GoogleCalendarIcon } from '../../components/source-badge';
+import { GoogleCalendarIcon, GooglePlayBooksIcon } from '../../components/source-badge';
 
 interface Integration {
   id: string;
@@ -34,6 +34,13 @@ const CONNECTABLE: Array<{ provider: string; authorize: string; name: string; bl
     name: 'Google Calendar',
     blurb: 'Meeting load, focus time, and schedule patterns',
     icon: <GoogleCalendarIcon className="w-5 h-5" />,
+  },
+  {
+    provider: 'google_books',
+    authorize: 'google-books',
+    name: 'Google Play Books',
+    blurb: 'Reading progress, from the bookmarks you leave',
+    icon: <GooglePlayBooksIcon className="w-5 h-5" />,
   },
 ];
 

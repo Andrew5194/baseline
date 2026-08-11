@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!body.provider || !['github', 'gcal'].includes(body.provider)) {
+  if (!body.provider || !['github', 'gcal', 'google_books'].includes(body.provider)) {
     return NextResponse.json(
       { error: 'Invalid provider', code: 'INVALID_PROVIDER' },
       { status: 400 },
