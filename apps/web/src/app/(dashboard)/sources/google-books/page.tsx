@@ -28,17 +28,19 @@ interface VolumesResponse {
   last_synced_at: string | null;
 }
 
-// Only printed pages divide into a page count. Reflowable positions have no printed
-// equivalent, so there is no honest percentage to show for them.
+// `PA` pages carry a printed number; `PT` pages do not, though both index into the
+// volume. Word them differently so the label never claims a printed page the book
+// does not have, while still giving the position.
 function positionLabel(v: Volume): string {
   const p = v.progress;
   if (!p) return 'No bookmark yet';
-  if (p.page_kind === 'body' && p.page_number !== null) {
-    return v.page_count ? `Page ${p.page_number} of ${v.page_count}` : `Page ${p.page_number}`;
-  }
   if (p.page_kind === 'front_matter') return 'In the front matter';
-  if (p.page_number !== null) return `Position ${p.page_number}`;
-  return p.page_label;
+  if (p.page_number === null) return p.page_label;
+
+  const noun = p.page_kind === 'body' ? 'Page' : 'Position';
+  return v.page_count
+    ? `${noun} ${p.page_number} of ${v.page_count}`
+    : `${noun} ${p.page_number}`;
 }
 
 export default function GoogleBooksConfig() {
@@ -182,8 +184,6 @@ export default function GoogleBooksConfig() {
                     )}
                   </div>
 
-                  {/* A bar only where a percentage is real. Reflowable positions get the
-                      label above and nothing here, rather than a misleading bar. */}
                   {v.progress?.percent !== null && v.progress?.percent !== undefined ? (
                     <div className="h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
                       <div
@@ -191,10 +191,6 @@ export default function GoogleBooksConfig() {
                         style={{ width: `${Math.max(1.5, v.progress.percent)}%` }}
                       />
                     </div>
-                  ) : v.progress ? (
-                    <p className="text-[11px] text-neutral-400">
-                      This book is reflowable, so there is no page count to measure against.
-                    </p>
                   ) : null}
 
                   {v.progress && (

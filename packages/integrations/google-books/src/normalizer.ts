@@ -48,13 +48,16 @@ export function parsePageId(pageId: string): ParsedPage {
 /**
  * How far through the book this position is, or null when that cannot be known.
  *
- * Only body pages are measurable. Front matter is 0 by definition. Reflowable and
- * unknown positions return null so the UI shows a position instead of a number
- * that looks authoritative and isn't.
+ * `PA` and `PT` are both page indices into the volume — the only difference is
+ * whether the page carries a printed number — so both divide into pageCount.
+ * Front matter precedes page one, so it reads as 0 rather than its own index.
+ * Clamped at 100 so an index on an unexpected scale saturates rather than
+ * producing something absurd.
  */
 export function progressPercent(page: ParsedPage, pageCount: number | null): number | null {
   if (page.kind === 'front_matter') return 0;
-  if (page.kind !== 'body' || page.number === null) return null;
+  if (page.kind !== 'body' && page.kind !== 'reflowable') return null;
+  if (page.number === null) return null;
   if (!pageCount || pageCount <= 0) return null;
   return Math.min(100, Math.round((page.number / pageCount) * 1000) / 10);
 }

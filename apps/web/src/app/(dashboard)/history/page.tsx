@@ -61,10 +61,13 @@ function bookProgressSummary(p: Record<string, unknown>): string {
   // bookmark is still there.
   const removed = p.deleted === true ? ' · bookmark removed' : '';
 
-  if (kind === 'body' && n !== null) {
+  // PA and PT both index into the volume; only PA is a printed page number, so the
+  // noun differs but both get a percentage.
+  if ((kind === 'body' || kind === 'reflowable') && n !== null) {
+    const noun = kind === 'body' ? 'page' : 'position';
     const of = total ? ` of ${total}` : '';
     const share = pct !== null ? ` · ${pct}%` : '';
-    return `${title} — page ${n}${of}${share}${removed}`;
+    return `${title} — ${noun} ${n}${of}${share}${removed}`;
   }
   // Keep the number: without it consecutive front-matter bookmarks render
   // identically and the trail looks like duplicates.
