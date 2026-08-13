@@ -61,11 +61,16 @@ export async function syncIntegration(integrationId: string): Promise<number> {
   const startTime = Date.now();
   let totalEvents = 0;
 
+  // Absent settings means every repo, so an already-connected source keeps
+  // collecting what it did before this setting existed.
+  const trackedRepos = (integration.settings as { tracked_repos?: string[] } | null)
+    ?.tracked_repos;
+
   try {
     const [commits, prs, reviews] = await Promise.all([
-      fetchUserCommits(integration.accessToken, username, since),
-      fetchUserPullRequests(integration.accessToken, username, since),
-      fetchUserReviews(integration.accessToken, username, since),
+      fetchUserCommits(integration.accessToken, username, since, trackedRepos),
+      fetchUserPullRequests(integration.accessToken, username, since, trackedRepos),
+      fetchUserReviews(integration.accessToken, username, since, trackedRepos),
     ]);
 
     const allRows = [
@@ -125,7 +130,7 @@ export async function syncIntegration(integrationId: string): Promise<number> {
 // Return a valid Google access token, refreshing (and persisting) it first if the
 // stored one is missing or within 60s of expiry. Shared by every Google source —
 // the refresh exchange is the same regardless of which scopes the grant carries.
-async function ensureGoogleAccessToken(integration: Integration): Promise<string> {
+export async function ensureGoogleAccessToken(integration: Integration): Promise<string> {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
@@ -221,10 +226,17 @@ async function syncGoogleBooks(integration: Integration): Promise<number> {
     const token = await ensureGoogleAccessToken(integration);
     const library = await fetchLibrary(token);
 
+    // Absent settings means every book, so connecting without visiting the config
+    // page keeps collecting everything.
+    const trackedIds = (integration.settings as { tracked_volume_ids?: string[] } | null)
+      ?.tracked_volume_ids;
+    const tracked = trackedIds ? library.filter((v) => trackedIds.includes(v.id)) : library;
+
     // The annotations endpoint rejects any call without a volumeId, so there is no
     // library-wide incremental sync — one request per volume is the only option.
+    // Narrowing to tracked books is what keeps that bounded on a large library.
     const rows = [];
-    for (const volume of library) {
+    for (const volume of tracked) {
       const bookmarks = await fetchBookmarks(token, volume.id, since);
       rows.push(...normalizeBookmarks(bookmarks, volume, integration.userId));
     }
@@ -243,7 +255,8 @@ async function syncGoogleBooks(integration: Integration): Promise<number> {
         msg: 'sync_complete',
         integration_id: integration.id,
         provider: 'google_books',
-        volumes: library.length,
+        volumes: tracked.length,
+        volumes_in_library: library.length,
         events: rows.length,
         duration_ms: Date.now() - startTime,
       }),

@@ -9,6 +9,8 @@ export {
   fetchUserCommits,
   fetchUserPullRequests,
   fetchUserReviews,
+  fetchRepositories,
+  type GitHubRepo,
 } from './client';
 
 export {
