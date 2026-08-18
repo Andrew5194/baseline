@@ -58,6 +58,7 @@ const METRICS: Array<{
   { key: 'pages_advanced', metric: 'pages_advanced', label: 'Pages Advanced', unit: 'pages', source: 'google_books' },
   { key: 'books_read', metric: 'books_read', label: 'Books Read', unit: 'books', source: 'google_books' },
   { key: 'reading_days', metric: 'reading_days', label: 'Reading Days', unit: 'days', source: 'google_books', sub: 'elapsed', days: true },
+  { key: 'reading_streak', metric: 'reading_streak', label: 'Best Streak', unit: 'days', source: 'google_books', suffix: 'd' },
   { key: 'tasks_completed', metric: 'tasks_completed', label: 'Tasks Completed', unit: 'tasks', source: 'baseline' },
   { key: 'goals_completed', metric: 'goals_completed', label: 'Goals Completed', unit: 'goals', source: 'baseline' },
   { key: 'hours_tracked', metric: 'hours_tracked', label: 'Hours Tracked', unit: 'hrs', source: 'baseline', suffix: 'h' },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dayKeyInTz, computeDelta } from '@baseline/metrics';
+import { dayKeyInTz, computeDelta, longestDayStreak } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
 import { periodBounds, isPeriod, offsetNow, parseOffset } from '../../../../../lib/period';
 import { loadProgressSteps, loadBookmarkEvents, type ProgressStep } from '../../../../../lib/book-progress';
@@ -36,7 +36,9 @@ export async function GET(request: NextRequest) {
   const currMarks = marksIn(b.start, currEnd);
   const prevMarks = marksIn(b.prevStart, prevEnd);
 
-  const readingDays = (m: typeof marks) => new Set(m.map((v) => dayKeyInTz(v.at, tz))).size;
+  const dayKeys = (m: typeof marks) => m.map((v) => dayKeyInTz(v.at, tz));
+  const readingDays = (m: typeof marks) => new Set(dayKeys(m)).size;
+  const bestStreak = (m: typeof marks) => longestDayStreak(dayKeys(m));
   const booksRead = (m: typeof marks) => new Set(m.map((v) => v.volumeId)).size;
   const mk = (cv: number, pv: number, unit: string) => ({ value: cv, delta: computeDelta(cv, pv), unit, prev: pv });
 
@@ -46,6 +48,7 @@ export async function GET(request: NextRequest) {
       pages_advanced: mk(pages(currSteps), pages(prevSteps), 'pages'),
       books_read: mk(booksRead(currMarks), booksRead(prevMarks), 'books'),
       reading_days: mk(readingDays(currMarks), readingDays(prevMarks), 'days'),
+      reading_streak: mk(bestStreak(currMarks), bestStreak(prevMarks), 'days'),
     },
   });
 }

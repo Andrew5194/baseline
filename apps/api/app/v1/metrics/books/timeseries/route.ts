@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dayKeyInTz } from '@baseline/metrics';
+import { dayKeyInTz, longestDayStreak } from '@baseline/metrics';
 import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
 import { periodBounds, periodBuckets, isPeriod, offsetNow, parseOffset } from '../../../../../lib/period';
 import { loadProgressSteps, loadBookmarkEvents } from '../../../../../lib/book-progress';
 
-const METRICS = ['pages_advanced', 'books_read', 'reading_days'];
+const METRICS = ['pages_advanced', 'books_read', 'reading_days', 'reading_streak'];
 
 // GET /v1/metrics/books/timeseries?metric=&period= — the metric per natural bucket
 // across the period, for the bar chart.
@@ -44,6 +44,10 @@ export async function GET(request: NextRequest) {
         return new Set(m.map((v) => v.volumeId)).size;
       case 'reading_days':
         return new Set(m.map((v) => dayKeyInTz(v.at, tz))).size;
+      // Per bucket, so a daily bar is 0 or 1 — the streak is only meaningful at
+      // month/year granularity, same as the GitHub tile.
+      case 'reading_streak':
+        return longestDayStreak(m.map((v) => dayKeyInTz(v.at, tz)));
       default:
         return 0;
     }
