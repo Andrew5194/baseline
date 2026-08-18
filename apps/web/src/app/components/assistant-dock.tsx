@@ -43,16 +43,15 @@ export function AssistantDock() {
 
   return (
     <>
-      {/* Launcher — top-right button; hides while the dock is open */}
+      {/* Launcher — the same circular mark at every size; hides while the dock is open */}
       <button
         onClick={() => setOpen(true)}
         aria-label="Open Baseline AI"
-        className={`fixed right-4 bottom-5 md:right-6 md:top-5 md:bottom-auto z-40 inline-flex items-center gap-1.5 p-2.5 rounded-full md:px-3 md:py-1.5 md:rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm font-medium text-neutral-700 dark:text-neutral-200 shadow-md md:shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all duration-200 ${
+        className={`fixed right-4 bottom-5 md:right-6 md:top-5 md:bottom-auto z-40 inline-flex items-center justify-center p-2.5 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-md hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all duration-200 ${
           open ? 'opacity-0 pointer-events-none translate-y-1' : 'opacity-100'
         }`}
       >
         <BaselineAIMark className="w-6 h-6" />
-        <span className="hidden md:inline">Ask AI</span>
       </button>
 
       {/* Drawer */}

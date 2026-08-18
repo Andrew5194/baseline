@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { API_URL } from '../../lib/api';
+import { AssistantMarkdown } from './assistant-markdown';
 
 // Baseline AI mark: pixel-art wizard logo. Outline uses currentColor (theme-adaptive);
 // the fill + flame keep fixed colours.
@@ -130,7 +131,6 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
           <p className="text-sm font-semibold text-neutral-900 dark:text-white leading-tight">Baseline AI</p>
           <p className="text-[10px] text-neutral-400 dark:text-neutral-500 leading-tight">Goal setting &amp; insights</p>
         </div>
-        <span className="text-[9px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Preview</span>
         {onClose && (
           <button
             onClick={onClose}
@@ -156,7 +156,11 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-sm'
                 }`}
               >
-                {m.text}
+                {m.role === 'assistant' ? (
+                  <AssistantMarkdown text={m.text} />
+                ) : (
+                  <span className="whitespace-pre-wrap">{m.text}</span>
+                )}
               </div>
               {m.suggestions && (
                 <div className="mt-2 space-y-2">
