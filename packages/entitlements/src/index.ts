@@ -33,16 +33,49 @@ export function featuresForPlan(state: PlanState | null, now: Date = new Date())
   return new Set(PRO_FEATURES);
 }
 
-/** Everything this user is currently entitled to. Empty for free and unknown users. */
-export async function entitlements(userId: string): Promise<Set<Feature>> {
+/**
+ * Where a user's plan is read from.
+ *
+ * Hosted, the plan is a row in a database we control, so the row is the truth. A
+ * self-hosted deployment owns its own database and could simply set plan='pro', so
+ * there the truth has to be something it cannot mint — a signed licence.
+ *
+ * Only the lookup is swappable. featuresForPlan stays the single policy, so what a
+ * plan unlocks cannot drift between deployments.
+ *
+ * A licence-backed source belongs in the proprietary build, not here: this package
+ * is AGPL, and a check shipped under a licence granting the right to modify it is a
+ * check the customer may lawfully remove. Core may read a licence to display it;
+ * only the Pro service may rely on one.
+ */
+export type PlanSource = (userId: string) => Promise<PlanState | null>;
+
+/** The default: the plan is whatever our own database says it is. */
+export const hostedPlanSource: PlanSource = async (userId) => {
   const [row] = await db
     .select({ plan: users.plan, planExpiresAt: users.planExpiresAt })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
+  return row ?? null;
+};
+
+let planSource: PlanSource = hostedPlanSource;
+
+/**
+ * Install a different source of truth. Call once at startup, before serving: the
+ * source is read per request, so swapping it mid-flight would change the answer
+ * for requests already in progress.
+ */
+export function setPlanSource(source: PlanSource): void {
+  planSource = source;
+}
+
+/** Everything this user is currently entitled to. Empty for free and unknown users. */
+export async function entitlements(userId: string): Promise<Set<Feature>> {
   // A missing user resolves to no features rather than throwing: paid surfaces fail
   // closed, and nothing in the free tier consults this.
-  return featuresForPlan(row ?? null);
+  return featuresForPlan(await planSource(userId));
 }
 
 export async function hasFeature(userId: string, feature: Feature): Promise<boolean> {
