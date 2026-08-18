@@ -20,7 +20,9 @@ export function proServiceUrl(): string | null {
  * a leaked secret on its own does not buy unlimited inference.
  */
 function signAssertion(userId: string, features: Feature[], secret: string, ttlSeconds = 60): string {
-  const payload = { userId, features, exp: Math.floor(Date.now() / 1000) + ttlSeconds };
+  // aud pins the direction: both sides share the secret, so without it a token
+  // captured on the way out could be replayed back at core.
+  const payload = { userId, features, aud: 'pro', exp: Math.floor(Date.now() / 1000) + ttlSeconds };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const mac = createHmac('sha256', secret).update(body).digest('base64url');
   return `${body}.${mac}`;

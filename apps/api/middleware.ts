@@ -17,12 +17,45 @@ const SESSION_COOKIES = ['authjs.session-token', '__Secure-authjs.session-token'
 // internal cron endpoint (guarded by CRON_SECRET + Cloud Run IAM, not a cookie).
 const PUBLIC_V1_PREFIXES = ['/v1/healthz', '/v1/auth', '/v1/integrations/github', '/v1/internal'];
 
+function fromB64url(s: string): Uint8Array<ArrayBuffer> {
+  const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+  const out = new Uint8Array(new ArrayBuffer(bin.length));
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/**
+ * A Pro-service assertion, verified with Web Crypto because middleware runs on the
+ * Edge runtime and node:crypto is unavailable there. The route verifies it again
+ * before trusting it — this is only the gate that turns a bad token into a clean
+ * 401 instead of a 500 thrown deep inside a handler.
+ */
+async function validServiceAssertion(token: string, secret: string): Promise<boolean> {
+  const [body, mac] = token.split('.');
+  if (!body || !mac) return false;
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
+    const ok = await crypto.subtle.verify('HMAC', key, fromB64url(mac), new TextEncoder().encode(body));
+    if (!ok) return false;
+    const payload = JSON.parse(new TextDecoder().decode(fromB64url(body)));
+    return payload.aud === 'core' && typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 function requiresAuth(pathname: string): boolean {
   if (!pathname.startsWith('/v1')) return false;
   return !PUBLIC_V1_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const origin = request.headers.get('origin') || '';
   const isAllowed = allowedOrigins.includes(origin);
 
@@ -43,7 +76,16 @@ export function middleware(request: NextRequest) {
   // 500 that getCurrentUserId() would otherwise throw. Presence-only check, so a
   // valid session is never rejected (the route still validates the token).
   if (requiresAuth(request.nextUrl.pathname)) {
-    const hasSession = SESSION_COOKIES.some((c) => request.cookies.has(c));
+    let hasSession = SESSION_COOKIES.some((c) => request.cookies.has(c));
+
+    // The Pro service acts for a user with a signed assertion instead of a cookie.
+    // GET only: this path reads the user's own data and must never be able to write.
+    const auth = request.headers.get('authorization');
+    const secret = process.env.PRO_SERVICE_SECRET;
+    if (!hasSession && request.method === 'GET' && auth?.startsWith('Bearer ') && secret) {
+      hasSession = await validServiceAssertion(auth.slice(7).trim(), secret);
+    }
+
     if (!hasSession) {
       const res = NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
       if (isAllowed) {

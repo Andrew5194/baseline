@@ -1,11 +1,24 @@
+import { headers } from 'next/headers';
 import { auth } from './auth';
 import { db, users } from '@baseline/db';
 import { eq } from 'drizzle-orm';
+import { bearer, verifyServiceAssertion } from './service-auth';
 
 export async function getCurrentUserId(): Promise<string> {
   const session = await auth();
   if (session?.user?.id) {
     return session.user.id;
+  }
+
+  // The Pro service reading a user's own data back out of core on their behalf.
+  // Restricted to GET in middleware, so this can only ever read.
+  const secret = process.env.PRO_SERVICE_SECRET;
+  if (secret) {
+    const token = bearer((await headers()).get('authorization'));
+    if (token) {
+      // A bad token here is a hard failure, not a fallthrough to dev auto-login.
+      return verifyServiceAssertion(token, secret, 'core').userId;
+    }
   }
 
   if (
