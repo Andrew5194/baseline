@@ -25,7 +25,12 @@ export function SourceDropdown({ value, onChange, sources }: SourceDropdownProps
     return () => document.removeEventListener('pointerdown', onDoc);
   }, [open]);
 
-  const options = sources.map((s) => ({ id: s, label: SOURCE_META[s]?.label ?? s, icon: SOURCE_META[s]?.icon ?? null as React.ReactNode }));
+  // 'all' is a filter, not a source, so it has no SOURCE_META entry of its own.
+  const options = sources.map((s) => ({
+    id: s,
+    label: s === 'all' ? 'All sources' : (SOURCE_META[s]?.label ?? s),
+    icon: s === 'all' ? null : (SOURCE_META[s]?.icon ?? (null as React.ReactNode)),
+  }));
   const current = options.find((o) => o.id === value) ?? options[0];
 
   return (

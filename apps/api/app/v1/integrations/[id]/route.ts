@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, integrations } from '@baseline/db';
 import { eq, and } from 'drizzle-orm';
 import { getCurrentUserId } from '../../../../lib/user';
-import { revokeIntegrations } from '../../../../lib/revoke-integrations';
+import { revokeIntegrations, isGoogleProvider } from '../../../../lib/revoke-integrations';
 
 export async function DELETE(
   _request: NextRequest,
@@ -25,7 +25,20 @@ export async function DELETE(
     );
   }
 
-  await revokeIntegrations([existing]);
+  // Disconnecting one Google source must not revoke the shared grant while another
+  // is still connected — that would silently break the one the user kept. Their own
+  // tokens are cleared below either way.
+  let shouldRevoke = true;
+  if (isGoogleProvider(existing.provider)) {
+    const connected = await db
+      .select({ provider: integrations.provider })
+      .from(integrations)
+      .where(and(eq(integrations.userId, userId), eq(integrations.status, 'connected')));
+    shouldRevoke = !connected.some(
+      (o) => isGoogleProvider(o.provider) && o.provider !== existing.provider,
+    );
+  }
+  if (shouldRevoke) await revokeIntegrations([existing]);
 
   const [row] = await db
     .update(integrations)

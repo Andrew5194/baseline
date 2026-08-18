@@ -55,6 +55,10 @@ export async function proxyToApi(request: Request): Promise<Response> {
   headers.delete('host');
   headers.delete('connection');
   headers.delete('content-length'); // fetch recomputes from the body
+  // Only this proxy may assert the public origin. Otherwise a client-supplied value
+  // reaches resolvePublicOrigin() untouched on any path we don't overwrite it for,
+  // and the OAuth callback redirects to whatever that resolves to.
+  headers.delete('x-public-origin');
 
   // Preserve the browser-facing origin so the API (behind AUTH_TRUST_HOST) builds
   // correct absolute URLs for Auth.js and OAuth redirects.
@@ -63,10 +67,11 @@ export async function proxyToApi(request: Request): Promise<Response> {
   if (host) {
     headers.set('x-forwarded-host', host);
     headers.set('x-forwarded-proto', scheme);
-    if (
-      url.pathname.startsWith('/v1/integrations/github/') ||
-      url.pathname.startsWith('/v1/integrations/google/')
-    ) {
+    // Every integration's OAuth dance needs the browser-facing origin to build a
+    // redirect_uri that matches what is registered. Matched by prefix rather than
+    // per-provider: an unlisted provider silently falls back to the dev default and
+    // fails with redirect_uri_mismatch off localhost, which is easy to miss.
+    if (url.pathname.startsWith('/v1/integrations/')) {
       headers.set('x-public-origin', `${scheme}://${host}`);
     }
   }

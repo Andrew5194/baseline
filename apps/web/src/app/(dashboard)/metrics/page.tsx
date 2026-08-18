@@ -55,6 +55,10 @@ const METRICS: Array<{
   { key: 'events', metric: 'events', label: 'Events', unit: 'events', source: 'google_calendar' },
   { key: 'avg_length', metric: 'avg_length', label: 'Avg Length', unit: 'min', source: 'google_calendar', suffix: 'm' },
   { key: 'busy_days', metric: 'busy_days', label: 'Busy Days', unit: 'days', source: 'google_calendar', sub: 'elapsed', days: true },
+  { key: 'pages_advanced', metric: 'pages_advanced', label: 'Pages Advanced', unit: 'pages', source: 'google_books' },
+  { key: 'books_read', metric: 'books_read', label: 'Books Read', unit: 'books', source: 'google_books' },
+  { key: 'reading_days', metric: 'reading_days', label: 'Reading Days', unit: 'days', source: 'google_books', sub: 'elapsed', days: true },
+  { key: 'reading_streak', metric: 'reading_streak', label: 'Best Streak', unit: 'days', source: 'google_books', suffix: 'd' },
   { key: 'tasks_completed', metric: 'tasks_completed', label: 'Tasks Completed', unit: 'tasks', source: 'baseline' },
   { key: 'goals_completed', metric: 'goals_completed', label: 'Goals Completed', unit: 'goals', source: 'baseline' },
   { key: 'hours_tracked', metric: 'hours_tracked', label: 'Hours Tracked', unit: 'hrs', source: 'baseline', suffix: 'h' },
@@ -66,7 +70,11 @@ const METRICS: Array<{
 const SOURCES = [...new Set(['baseline', ...METRICS.map((m) => m.source)])];
 
 // Where each source's overview/timeseries live.
-const SOURCE_BASE: Record<string, string> = { google_calendar: '/v1/metrics/calendar', baseline: '/v1/metrics/baseline' };
+const SOURCE_BASE: Record<string, string> = {
+  google_calendar: '/v1/metrics/calendar',
+  google_books: '/v1/metrics/books',
+  baseline: '/v1/metrics/baseline',
+};
 const overviewUrl = (source: string, period: string, offset: number) =>
   `${SOURCE_BASE[source] ?? '/v1/metrics'}/overview?period=${period}&offset=${offset}`;
 const timeseriesBatchUrl = (source: string, metrics: string[], period: string, offset: number) =>
@@ -140,10 +148,16 @@ export default function Metrics() {
     // Group tiles by source so each source's series load in a single batched request.
     const bySource = new Map<string, typeof METRICS>();
     for (const d of METRICS) bySource.set(d.source, [...(bySource.get(d.source) ?? []), d]);
+    // Overviews are fetched per source off the same grouping as the series below —
+    // a hardcoded list here silently leaves a new integration's tiles empty while
+    // its charts still load, which reads as missing data rather than missing wiring.
+    const sources = [...bySource.keys()];
     Promise.all([
-      apiFetch<OverviewResponse>(overviewUrl('github', period, offset)).catch(() => empty),
-      apiFetch<OverviewResponse>(overviewUrl('google_calendar', period, offset)).catch(() => empty),
-      apiFetch<OverviewResponse>(overviewUrl('baseline', period, offset)).catch(() => empty),
+      Promise.all(
+        sources.map((src) =>
+          apiFetch<OverviewResponse>(overviewUrl(src, period, offset)).catch(() => empty),
+        ),
+      ),
       Promise.all(
         [...bySource.entries()].map(([src, list]) =>
           apiFetch<TimeseriesBatchResponse>(timeseriesBatchUrl(src, list.map((d) => d.metric), period, offset))
@@ -152,8 +166,15 @@ export default function Metrics() {
         ),
       ),
     ])
-      .then(([gh, cal, base, seriesGroups]) => {
-        setOverview({ period: gh.period ?? period, since: base.since, metrics: { ...gh.metrics, ...cal.metrics, ...base.metrics } });
+      .then(([overviews, seriesGroups]) => {
+        const bySrc = new Map(sources.map((src, i) => [src, overviews[i]]));
+        const metrics = Object.assign({}, ...overviews.map((o) => o.metrics));
+        setOverview({
+          period: bySrc.get('github')?.period ?? period,
+          // `since` is the account-creation day behind the Baseline averages.
+          since: bySrc.get('baseline')?.since,
+          metrics,
+        });
         setSeriesMap(Object.fromEntries(seriesGroups.flat()));
       })
       .catch(console.error)
@@ -171,15 +192,13 @@ export default function Metrics() {
 
   const visibleMetrics = source === 'all' ? METRICS : METRICS.filter((d) => d.source === source);
 
-  // The consistency card tracks the active-days-style metric for the current view:
-  // busy days for calendar, active days otherwise (incl. the combined "all" view).
-  const consistencyDef =
-    source === 'google_calendar'
-      ? METRICS.find((d) => d.key === 'busy_days')
-      : source === 'baseline'
-        ? METRICS.find((d) => d.key === 'tracked_days')
-        : METRICS.find((d) => d.key === 'active_days');
-  const showConsistency = !!consistencyDef && visibleMetrics.some((d) => d.key === consistencyDef.key);
+  // The consistency card tracks whichever metric in view is the active-days one —
+  // that is what `days` marks. Derived rather than listed per source, so a new
+  // integration gets the card by setting the flag instead of editing a chain here.
+  // For the combined "all" view this picks the first such metric, which is GitHub's
+  // active days, matching how it has always behaved.
+  const consistencyDef = visibleMetrics.find((d) => d.days);
+  const showConsistency = !!consistencyDef;
 
   function changeSource(s: string) {
     setSource(s);

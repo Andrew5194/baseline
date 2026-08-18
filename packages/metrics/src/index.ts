@@ -5,6 +5,7 @@ export { throughputTasksV1 } from './throughput';
 
 // Activity metrics
 export { commitCountV1, activeDaysV1, streakDaysV1 } from './commit-activity';
+export { longestDayStreak } from './streak';
 
 // Pattern metrics
 export { dayOfWeekDistributionV1, hourOfDayDistributionV1, peakDayV1 } from './patterns';

@@ -14,6 +14,11 @@ import {
   fetchCalendarEvents,
   normalizeCalendarEvents,
 } from '@baseline/integrations-google-calendar';
+import {
+  fetchLibrary,
+  fetchBookmarks,
+  normalizeBookmarks,
+} from '@baseline/integrations-google-books';
 
 type Integration = InferSelectModel<typeof integrations>;
 
@@ -29,6 +34,10 @@ export async function syncIntegration(integrationId: string): Promise<number> {
 
   if (integration.provider === 'google_calendar') {
     return syncGoogleCalendar(integration);
+  }
+
+  if (integration.provider === 'google_books') {
+    return syncGoogleBooks(integration);
   }
 
   if (!integration.accessToken) {
@@ -52,11 +61,16 @@ export async function syncIntegration(integrationId: string): Promise<number> {
   const startTime = Date.now();
   let totalEvents = 0;
 
+  // Absent settings means every repo, so an already-connected source keeps
+  // collecting what it did before this setting existed.
+  const trackedRepos = (integration.settings as { tracked_repos?: string[] } | null)
+    ?.tracked_repos;
+
   try {
     const [commits, prs, reviews] = await Promise.all([
-      fetchUserCommits(integration.accessToken, username, since),
-      fetchUserPullRequests(integration.accessToken, username, since),
-      fetchUserReviews(integration.accessToken, username, since),
+      fetchUserCommits(integration.accessToken, username, since, trackedRepos),
+      fetchUserPullRequests(integration.accessToken, username, since, trackedRepos),
+      fetchUserReviews(integration.accessToken, username, since, trackedRepos),
     ]);
 
     const allRows = [
@@ -114,8 +128,9 @@ export async function syncIntegration(integrationId: string): Promise<number> {
 }
 
 // Return a valid Google access token, refreshing (and persisting) it first if the
-// stored one is missing or within 60s of expiry.
-async function ensureGoogleAccessToken(integration: Integration): Promise<string> {
+// stored one is missing or within 60s of expiry. Shared by every Google source —
+// the refresh exchange is the same regardless of which scopes the grant carries.
+export async function ensureGoogleAccessToken(integration: Integration): Promise<string> {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
@@ -189,6 +204,86 @@ async function syncGoogleCalendar(integration: Integration): Promise<number> {
         msg: 'sync_failed',
         integration_id: integration.id,
         provider: 'google_calendar',
+        error: message,
+        duration_ms: Date.now() - startTime,
+      }),
+    );
+    throw err;
+  }
+}
+
+async function syncGoogleBooks(integration: Integration): Promise<number> {
+  // Bookmarks are sparse, so a wide backfill is cheap and picks up anything placed
+  // before the integration was connected.
+  const FULL_BACKFILL_MS = 365 * 24 * 60 * 60 * 1000;
+  const OVERLAP_MS = 3 * 24 * 60 * 60 * 1000;
+  const since = integration.lastSyncedAt
+    ? new Date(integration.lastSyncedAt.getTime() - OVERLAP_MS)
+    : new Date(Date.now() - FULL_BACKFILL_MS);
+  const startTime = Date.now();
+
+  try {
+    const token = await ensureGoogleAccessToken(integration);
+    const library = await fetchLibrary(token);
+
+    // Absent settings means every book, so connecting without visiting the config
+    // page keeps collecting everything.
+    const trackedIds = (integration.settings as { tracked_volume_ids?: string[] } | null)
+      ?.tracked_volume_ids;
+    const tracked = trackedIds ? library.filter((v) => trackedIds.includes(v.id)) : library;
+
+    // The annotations endpoint rejects any call without a volumeId, so there is no
+    // library-wide incremental sync — one request per volume is the only option.
+    // Narrowing to tracked books is what keeps that bounded on a large library.
+    const rows = [];
+    for (const volume of tracked) {
+      const bookmarks = await fetchBookmarks(token, volume.id, since);
+      rows.push(...normalizeBookmarks(bookmarks, volume, integration.userId));
+    }
+
+    // Unlike a commit or a calendar entry, a bookmark is mutable: deleting one keeps
+    // its annotation id and only flips `deleted`, and its page can move too. With
+    // onConflictDoNothing the row would keep whatever we first saw, so a deletion
+    // could never propagate. Upsert the payload instead. occurredAt is left alone —
+    // it is the bookmark's creation time and does not change.
+    for (let i = 0; i < rows.length; i += 100) {
+      await db
+        .insert(events)
+        .values(rows.slice(i, i + 100))
+        .onConflictDoUpdate({
+          target: [events.userId, events.source, events.sourceId, events.eventType],
+          set: { payload: sql`excluded.payload`, ingestedAt: new Date() },
+        });
+    }
+
+    await db
+      .update(integrations)
+      .set({ lastSyncedAt: new Date(), status: 'connected' })
+      .where(eq(integrations.id, integration.id));
+
+    console.log(
+      JSON.stringify({
+        msg: 'sync_complete',
+        integration_id: integration.id,
+        provider: 'google_books',
+        volumes: tracked.length,
+        volumes_in_library: library.length,
+        events: rows.length,
+        duration_ms: Date.now() - startTime,
+      }),
+    );
+
+    return rows.length;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    if (message === 'GOOGLE_TOKEN_INVALID') {
+      await db.update(integrations).set({ status: 'error' }).where(eq(integrations.id, integration.id));
+    }
+    console.error(
+      JSON.stringify({
+        msg: 'sync_failed',
+        integration_id: integration.id,
+        provider: 'google_books',
         error: message,
         duration_ms: Date.now() - startTime,
       }),

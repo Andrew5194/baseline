@@ -3,6 +3,7 @@ export {
   prPayload,
   reviewPayload,
   manualTimeEntryPayload,
+  bookProgressPayload,
   EVENT_TYPES,
   type CommitPayload,
   type PrPayload,

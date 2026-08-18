@@ -5,6 +5,7 @@ import { apiFetch } from '../../../lib/api';
 import { useTimezone } from '../../../lib/use-timezone';
 import { fmtDuration } from '../../../lib/time-units';
 import { useTimeUnit } from '../../../lib/use-time-unit';
+import { SourceDropdown } from '../../components/source-dropdown';
 
 interface EventItem {
   id: string;
@@ -19,12 +20,10 @@ interface EventsResponse {
   next_cursor: string | null;
 }
 
-type SourceFilter = 'all' | 'manual' | 'github';
-const FILTERS: { key: SourceFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'manual', label: 'Time entries' },
-  { key: 'github', label: 'GitHub' },
-];
+// Ids only — names and icons come from SOURCE_META, so a source is labelled the same
+// here as it is on the metrics page.
+const SOURCE_FILTERS = ['all', 'manual', 'github', 'google_calendar', 'google_books'] as const;
+type SourceFilter = (typeof SOURCE_FILTERS)[number];
 
 function eventMeta(type: string): { label: string; icon: string; color: string } {
   switch (type) {
@@ -36,9 +35,44 @@ function eventMeta(type: string): { label: string; icon: string; color: string }
       return { label: 'PR merged', icon: '⊕', color: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' };
     case 'github.pr.reviewed':
       return { label: 'Review', icon: '⊙', color: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400' };
+    case 'google_calendar.event':
+      return { label: 'Calendar', icon: '▤', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' };
+    case 'google_books.progress':
+      return { label: 'Reading', icon: '▥', color: 'bg-sky-500/10 text-sky-600 dark:text-sky-400' };
     default:
       return { label: type.split('.').pop() || type, icon: '◻', color: 'bg-neutral-500/10 text-neutral-500' };
   }
+}
+
+// Reading position reads differently depending on how the book is anchored: printed
+// pages divide into a page count, reflowable positions do not, and front matter sits
+// before page 1. Showing a percentage for the latter two would invent one.
+function bookProgressSummary(p: Record<string, unknown>): string {
+  const title = (p.title as string) || 'Book';
+  const kind = p.page_kind as string | undefined;
+  const n = p.page_number as number | null;
+  const total = p.page_count as number | null;
+  const pct = p.percent as number | null;
+  // A removed bookmark still marks a real position you read to — it usually means
+  // you moved the bookmark on. Say so rather than hiding the row or implying the
+  // bookmark is still there.
+  const removed = p.deleted === true ? ' · bookmark removed' : '';
+
+  // PA and PT both index into the volume; only PA is a printed page number, so the
+  // noun differs but both get a percentage.
+  if ((kind === 'body' || kind === 'reflowable') && n !== null) {
+    const noun = kind === 'body' ? 'page' : 'position';
+    const of = total ? ` of ${total}` : '';
+    const share = pct !== null ? ` · ${pct}%` : '';
+    return `${title} — ${noun} ${n}${of}${share}${removed}`;
+  }
+  // Keep the number: without it consecutive front-matter bookmarks render
+  // identically and the trail looks like duplicates.
+  if (kind === 'front_matter') {
+    return `${title} — front matter${n !== null ? ` page ${n}` : ''}${removed}`;
+  }
+  if (n !== null) return `${title} — position ${n}${removed}`;
+  return `${title}${removed}`;
 }
 
 function summary(ev: EventItem): string {
@@ -52,6 +86,10 @@ function summary(ev: EventItem): string {
       return (p.title as string) || '';
     case 'github.pr.reviewed':
       return `Review on #${p.pr_number}`;
+    case 'google_calendar.event':
+      return (p.summary as string) || '';
+    case 'google_books.progress':
+      return bookProgressSummary(p);
     default:
       return '';
   }
@@ -153,20 +191,12 @@ export default function History() {
           <h1 className="text-2xl font-semibold tracking-tight">History</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Everything that&apos;s happened, most recent first</p>
         </div>
-        <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 self-start sm:self-auto">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setSource(f.key)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                source === f.key
-                  ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="self-start sm:self-auto">
+          <SourceDropdown
+            value={source}
+            onChange={(v) => setSource(v as SourceFilter)}
+            sources={[...SOURCE_FILTERS]}
+          />
         </div>
       </div>
 

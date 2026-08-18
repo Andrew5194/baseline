@@ -52,6 +52,24 @@ export const gcalEventPayload = z.object({
   end: z.string().optional(),
 });
 
+// A bookmark in Play Books. `percent` is null when the position cannot be mapped to
+// a printed page (reflowable text), rather than guessed.
+export const bookProgressPayload = z.object({
+  category: z.string(),
+  volume_id: z.string(),
+  title: z.string(),
+  authors: z.array(z.string()).optional(),
+  page_label: z.string(),
+  page_kind: z.enum(['body', 'front_matter', 'reflowable', 'unknown']),
+  page_number: z.number().nullable(),
+  page_count: z.number().nullable(),
+  percent: z.number().nullable(),
+  layer: z.string().optional(),
+  is_sample: z.boolean().optional(),
+  acquire_method: z.string().optional(),
+  deleted: z.boolean().optional(),
+});
+
 export type CommitPayload = z.infer<typeof commitPayload>;
 export type PrPayload = z.infer<typeof prPayload>;
 export type ReviewPayload = z.infer<typeof reviewPayload>;
@@ -64,4 +82,5 @@ export const EVENT_TYPES = {
   PR_REVIEWED: 'github.pr.reviewed',
   MANUAL_TIME_ENTRY_CREATED: 'manual.time_entry.created',
   GCAL_EVENT: 'google_calendar.event',
+  BOOK_PROGRESS: 'google_books.progress',
 } as const;

@@ -95,6 +95,10 @@ export const integrations = pgTable(
     externalAccountId: text('external_account_id'),
     connectedAt: timestamp('connected_at', { withTimezone: true }).defaultNow().notNull(),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+    // Per-provider configuration, e.g. which Play Books volumes to track. Absent
+    // means "not configured yet" — providers decide their own default so adding a
+    // setting never silently changes what an already-connected source collects.
+    settings: jsonb('settings'),
   },
   (table) => [
     uniqueIndex('integrations_user_provider_idx').on(table.userId, table.provider),
