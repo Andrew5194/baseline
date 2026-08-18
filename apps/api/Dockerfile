@@ -9,6 +9,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages/db/package.json ./packages/db/package.json
 COPY packages/events/package.json ./packages/events/package.json
+COPY packages/entitlements/package.json ./packages/entitlements/package.json
 COPY packages/metrics/package.json ./packages/metrics/package.json
 COPY packages/integrations/github/package.json ./packages/integrations/github/package.json
 COPY packages/integrations/google-calendar/package.json ./packages/integrations/google-calendar/package.json
@@ -23,6 +24,7 @@ COPY --from=deps /app/ ./
 COPY apps/api ./apps/api
 COPY packages/db ./packages/db
 COPY packages/events ./packages/events
+COPY packages/entitlements ./packages/entitlements
 COPY packages/metrics ./packages/metrics
 COPY packages/integrations/github ./packages/integrations/github
 COPY packages/integrations/google-calendar ./packages/integrations/google-calendar

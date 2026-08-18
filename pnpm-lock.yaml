@@ -29,6 +29,9 @@ importers:
       '@baseline/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@baseline/entitlements':
+        specifier: workspace:*
+        version: link:../../packages/entitlements
       '@baseline/events':
         specifier: workspace:*
         version: link:../../packages/events
@@ -183,6 +186,22 @@ importers:
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/entitlements:
+    dependencies:
+      '@baseline/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(postgres@3.4.9)
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
       typescript:
         specifier: ^5
         version: 5.9.3

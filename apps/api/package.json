@@ -12,6 +12,7 @@
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",
     "@baseline/db": "workspace:*",
+    "@baseline/entitlements": "workspace:*",
     "@baseline/events": "workspace:*",
     "@baseline/integrations-github": "workspace:*",
     "@baseline/integrations-google-books": "workspace:*",

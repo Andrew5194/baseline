@@ -31,6 +31,15 @@ export const users = pgTable('users', {
   // Arbitrary per-user UI preferences synced across devices (e.g. goals countdown
   // mode, hide-recurring on the overview) — merged shallowly via PATCH /v1/me.
   preferences: jsonb('preferences').notNull().default({}),
+  // Billing plan. 'free' | 'pro'. Lives on the user for now; billing is per-account
+  // and workspaces do not exist yet.
+  plan: text('plan').notNull().default('free'),
+  // How the plan was granted — 'stripe', 'grant', … — so a comped account does not
+  // need a fabricated billing record to look legitimate.
+  planSource: text('plan_source'),
+  // When the plan lapses. Evaluated on every entitlement check, so a subscription
+  // degrades on its own instead of waiting for a webhook that may never arrive.
+  planExpiresAt: timestamp('plan_expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
