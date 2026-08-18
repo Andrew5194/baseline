@@ -38,10 +38,12 @@ export const SOURCE_META: Record<string, { label: string; icon: ReactNode }> = {
     label: 'Baseline',
     icon: <Logo className="w-3.5 h-3.5" />,
   },
-  // Time entries you logged yourself — a real value in events.source, so it needs an
-  // entry to be nameable in filters.
+  // Events Baseline creates itself, currently time entries. Deliberately shares the
+  // 'Baseline' name with the entry above: `baseline` is the metrics source id and
+  // `manual` is the events.source value, two spellings for the same origin. They
+  // never appear in one list — metrics filters on the former, history on the latter.
   manual: {
-    label: 'Time entries',
+    label: 'Baseline',
     icon: <Logo className="w-3.5 h-3.5" />,
   },
   github: {
