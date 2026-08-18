@@ -1,6 +1,16 @@
 import { revokeGoogleToken } from '@baseline/integrations-google-calendar';
 import { revokeGitHubGrant } from '@baseline/integrations-github';
 
+// Every Google source is one OAuth client, and consent is extended rather than
+// duplicated (include_granted_scopes), so they share a single grant. Revoking any of
+// them revokes all of them — callers disconnecting one source must check none of the
+// others is still connected before asking for a revoke.
+const GOOGLE_PROVIDERS = new Set(['google_calendar', 'google_books']);
+
+export function isGoogleProvider(provider: string): boolean {
+  return GOOGLE_PROVIDERS.has(provider);
+}
+
 interface IntegrationTokens {
   provider: string;
   accessToken: string | null;
@@ -14,7 +24,7 @@ export async function revokeIntegrations(rows: IntegrationTokens[]): Promise<voi
   await Promise.allSettled(
     rows.map(async (r) => {
       try {
-        if (r.provider === 'google_calendar') {
+        if (GOOGLE_PROVIDERS.has(r.provider)) {
           const token = r.refreshToken || r.accessToken; // refresh token revokes the whole grant
           if (token) await revokeGoogleToken(token);
         } else if (r.provider === 'github') {
