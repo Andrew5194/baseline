@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../lib/api';
-import { AssistantPanel, BaselineAIMark } from './assistant-panel';
+import { AssistantPanel, MaxAIMark } from './assistant-panel';
 
 const WIDTH = 380; // px
 const STORAGE_KEY = 'baseline.assistant.open';
@@ -46,12 +46,12 @@ export function AssistantDock() {
       {/* Launcher — the same circular mark at every size; hides while the dock is open */}
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open Baseline AI"
+        aria-label="Open Max AI"
         className={`fixed right-4 bottom-5 md:right-6 md:top-5 md:bottom-auto z-40 inline-flex items-center justify-center p-2.5 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-md hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all duration-200 ${
           open ? 'opacity-0 pointer-events-none translate-y-1' : 'opacity-100'
         }`}
       >
-        <BaselineAIMark className="w-6 h-6" />
+        <MaxAIMark className="w-6 h-6" />
       </button>
 
       {/* Drawer */}

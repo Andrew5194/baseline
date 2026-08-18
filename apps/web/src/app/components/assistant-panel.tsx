@@ -4,9 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { API_URL } from '../../lib/api';
 import { AssistantMarkdown } from './assistant-markdown';
 
-// Baseline AI mark: pixel-art wizard logo. Outline uses currentColor (theme-adaptive);
+// Max AI mark: pixel-art wizard logo. Outline uses currentColor (theme-adaptive);
 // the fill + flame keep fixed colours.
-export function BaselineAIMark({ className = 'w-7 h-7' }: { className?: string }) {
+export function MaxAIMark({ className = 'w-7 h-7' }: { className?: string }) {
   return (
     <svg
       className={`${className} text-neutral-900 dark:text-white`}
@@ -46,7 +46,7 @@ const SEED: Msg[] = [
   {
     id: 1,
     role: 'assistant',
-    text: "Welcome traveler, I'm Max, your Baseline AI. I can conjure up goals, surface your trends, and keep your streaks alive. Tell me what you want to focus on, or pick a starter below.",
+    text: "Welcome traveler, I'm Max. I can conjure up goals, surface your trends, and keep your streaks alive. Tell me what you want to focus on, or pick a starter below.",
   },
 ];
 
@@ -168,10 +168,9 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
     <div className="flex flex-col h-full bg-white dark:bg-neutral-900 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex-shrink-0">
-        <BaselineAIMark className="w-8 h-8 flex-shrink-0" />
+        <MaxAIMark className="w-6 h-6 flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-neutral-900 dark:text-white leading-tight">Baseline AI</p>
-          <p className="text-[10px] text-neutral-400 dark:text-neutral-500 leading-tight">Goal setting &amp; insights</p>
+          <p className="text-sm font-semibold text-neutral-900 dark:text-white leading-tight">Max AI</p>
         </div>
         {onClose && (
           <button
