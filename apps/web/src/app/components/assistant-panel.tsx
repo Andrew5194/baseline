@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { API_URL } from '../../lib/api';
 
 // Baseline AI mark: pixel-art wizard logo. Outline uses currentColor (theme-adaptive);
 // the fill + flame keep fixed colours.
@@ -27,9 +28,8 @@ export function BaselineAIMark({ className = 'w-7 h-7' }: { className?: string }
   );
 }
 
-// NOTE: UI preview of the planned assistant. Replies are scripted (no model yet), but
-// the suggestion "Create" buttons really do create the goal via the API, so suggest→act
-// is genuine. Real version would be Claude with tool access to the user's metrics + goals.
+// Replies come from the Pro service via /v1/assistant/chat — the API decides
+// entitlement, this only renders the outcome. A 402 flips the panel to the upsell.
 
 interface Suggestion {
   label: string; // the goal text (also the payload title)
@@ -51,40 +51,8 @@ const SEED: Msg[] = [
 
 const STARTERS = ['Help me code more consistently', 'Suggest a weekly goal', 'Am I reviewing enough?'];
 
-// Scripted stand-in for the model — loosely keyed to the message.
-function demoReply(input: string, id: number): Msg {
-  const t = input.toLowerCase();
-  if (t.includes('cod') || t.includes('ship') || t.includes('build') || t.includes('feature')) {
-    return {
-      id,
-      role: 'assistant',
-      text: 'Nice — breaking a big push into clear, finishable goals helps. Want to add one of these?',
-      suggestions: [{ label: 'Ship the next feature' }, { label: 'Clear my PR backlog' }],
-    };
-  }
-  if (t.includes('review') || t.includes('pr')) {
-    return {
-      id,
-      role: 'assistant',
-      text: 'Reviewing keeps things moving for everyone. A concrete goal:',
-      suggestions: [{ label: 'Review my teammates’ open PRs' }],
-    };
-  }
-  if (t.includes('learn') || t.includes('read') || t.includes('study')) {
-    return {
-      id,
-      role: 'assistant',
-      text: 'Learning goals work best when they’re finishable. For example:',
-      suggestions: [{ label: 'Finish the course I started' }, { label: 'Read one technical book' }],
-    };
-  }
-  return {
-    id,
-    role: 'assistant',
-    text: "Once connected, I'll suggest goals from your recent activity and help you track them. For now, a starting point:",
-    suggestions: [{ label: 'Finish what I started this week' }],
-  };
-}
+const UPGRADE_TEXT =
+  "Max is part of Baseline Pro. Upgrade and I can read your metrics, suggest goals from what you've actually been doing, and keep your streaks alive.";
 
 interface AssistantPanelProps {
   onCreateGoal: (payload: Record<string, unknown>) => Promise<void>;
@@ -98,22 +66,53 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
   const [created, setCreated] = useState<Record<string, boolean>>({});
   const idRef = useRef(100);
   const endRef = useRef<HTMLDivElement>(null);
+  const [upgrade, setUpgrade] = useState(false);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, typing]);
 
-  function send(text: string) {
+  async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || typing) return;
-    setMessages((m) => [...m, { id: idRef.current++, role: 'user', text: trimmed }]);
+    const history = [...messages, { id: idRef.current++, role: 'user' as const, text: trimmed }];
+    setMessages(history);
     setInput('');
     setTyping(true);
     const replyId = idRef.current++;
-    window.setTimeout(() => {
-      setMessages((m) => [...m, demoReply(trimmed, replyId)]);
+
+    try {
+      const res = await fetch(`${API_URL}/v1/assistant/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ messages: history.map((m) => ({ role: m.role, text: m.text })) }),
+      });
+
+      if (res.status === 402) {
+        // Entitlement is decided server-side; this is presentation only.
+        setUpgrade(true);
+        setMessages((m) => [
+          ...m,
+          { id: replyId, role: 'assistant', text: UPGRADE_TEXT },
+        ]);
+        return;
+      }
+      if (!res.ok) throw new Error(String(res.status));
+
+      const data: { reply?: string } = await res.json();
+      setMessages((m) => [
+        ...m,
+        { id: replyId, role: 'assistant', text: data.reply || "I didn't catch that — try again?" },
+      ]);
+    } catch {
+      setMessages((m) => [
+        ...m,
+        { id: replyId, role: 'assistant', text: 'I could not reach the assistant just now. Try again in a moment.' },
+      ]);
+    } finally {
       setTyping(false);
-    }, 650);
+    }
   }
 
   async function create(s: Suggestion) {
@@ -205,8 +204,16 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
         <div ref={endRef} />
       </div>
 
+      {upgrade && (
+        <div className="mx-4 mb-2 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 flex-shrink-0">
+          <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
+            Max is part of <span className="font-semibold">Baseline Pro</span>.
+          </p>
+        </div>
+      )}
+
       {/* Starter chips (only before the first user message) */}
-      {messages.every((m) => m.role !== 'user') && (
+      {!upgrade && messages.every((m) => m.role !== 'user') && (
         <div className="px-4 pb-2 flex flex-wrap gap-1.5 flex-shrink-0">
           {STARTERS.map((s) => (
             <button
@@ -231,12 +238,13 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Baseline anything…"
+          disabled={upgrade}
+          placeholder={upgrade ? 'Upgrade to Pro to chat with Max' : 'Ask Baseline anything…'}
           className="flex-1 text-sm px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
         />
         <button
           type="submit"
-          disabled={!input.trim() || typing}
+          disabled={!input.trim() || typing || upgrade}
           className="w-9 h-9 flex items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors flex-shrink-0"
           aria-label="Send"
         >
