@@ -179,15 +179,13 @@ export default function Metrics() {
 
   const visibleMetrics = source === 'all' ? METRICS : METRICS.filter((d) => d.source === source);
 
-  // The consistency card tracks the active-days-style metric for the current view:
-  // busy days for calendar, active days otherwise (incl. the combined "all" view).
-  const consistencyDef =
-    source === 'google_calendar'
-      ? METRICS.find((d) => d.key === 'busy_days')
-      : source === 'baseline'
-        ? METRICS.find((d) => d.key === 'tracked_days')
-        : METRICS.find((d) => d.key === 'active_days');
-  const showConsistency = !!consistencyDef && visibleMetrics.some((d) => d.key === consistencyDef.key);
+  // The consistency card tracks whichever metric in view is the active-days one —
+  // that is what `days` marks. Derived rather than listed per source, so a new
+  // integration gets the card by setting the flag instead of editing a chain here.
+  // For the combined "all" view this picks the first such metric, which is GitHub's
+  // active days, matching how it has always behaved.
+  const consistencyDef = visibleMetrics.find((d) => d.days);
+  const showConsistency = !!consistencyDef;
 
   function changeSource(s: string) {
     setSource(s);
