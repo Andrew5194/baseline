@@ -241,8 +241,19 @@ async function syncGoogleBooks(integration: Integration): Promise<number> {
       rows.push(...normalizeBookmarks(bookmarks, volume, integration.userId));
     }
 
+    // Unlike a commit or a calendar entry, a bookmark is mutable: deleting one keeps
+    // its annotation id and only flips `deleted`, and its page can move too. With
+    // onConflictDoNothing the row would keep whatever we first saw, so a deletion
+    // could never propagate. Upsert the payload instead. occurredAt is left alone —
+    // it is the bookmark's creation time and does not change.
     for (let i = 0; i < rows.length; i += 100) {
-      await db.insert(events).values(rows.slice(i, i + 100)).onConflictDoNothing();
+      await db
+        .insert(events)
+        .values(rows.slice(i, i + 100))
+        .onConflictDoUpdate({
+          target: [events.userId, events.source, events.sourceId, events.eventType],
+          set: { payload: sql`excluded.payload`, ingestedAt: new Date() },
+        });
     }
 
     await db

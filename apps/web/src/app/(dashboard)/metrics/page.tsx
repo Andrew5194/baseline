@@ -55,6 +55,10 @@ const METRICS: Array<{
   { key: 'events', metric: 'events', label: 'Events', unit: 'events', source: 'google_calendar' },
   { key: 'avg_length', metric: 'avg_length', label: 'Avg Length', unit: 'min', source: 'google_calendar', suffix: 'm' },
   { key: 'busy_days', metric: 'busy_days', label: 'Busy Days', unit: 'days', source: 'google_calendar', sub: 'elapsed', days: true },
+  { key: 'pages_advanced', metric: 'pages_advanced', label: 'Pages Advanced', unit: 'pages', source: 'google_books' },
+  { key: 'progress_gained', metric: 'progress_gained', label: 'Progress Gained', unit: '%', source: 'google_books', suffix: '%' },
+  { key: 'books_read', metric: 'books_read', label: 'Books Read', unit: 'books', source: 'google_books' },
+  { key: 'reading_days', metric: 'reading_days', label: 'Reading Days', unit: 'days', source: 'google_books', sub: 'elapsed', days: true },
   { key: 'tasks_completed', metric: 'tasks_completed', label: 'Tasks Completed', unit: 'tasks', source: 'baseline' },
   { key: 'goals_completed', metric: 'goals_completed', label: 'Goals Completed', unit: 'goals', source: 'baseline' },
   { key: 'hours_tracked', metric: 'hours_tracked', label: 'Hours Tracked', unit: 'hrs', source: 'baseline', suffix: 'h' },
@@ -66,7 +70,11 @@ const METRICS: Array<{
 const SOURCES = [...new Set(['baseline', ...METRICS.map((m) => m.source)])];
 
 // Where each source's overview/timeseries live.
-const SOURCE_BASE: Record<string, string> = { google_calendar: '/v1/metrics/calendar', baseline: '/v1/metrics/baseline' };
+const SOURCE_BASE: Record<string, string> = {
+  google_calendar: '/v1/metrics/calendar',
+  google_books: '/v1/metrics/books',
+  baseline: '/v1/metrics/baseline',
+};
 const overviewUrl = (source: string, period: string, offset: number) =>
   `${SOURCE_BASE[source] ?? '/v1/metrics'}/overview?period=${period}&offset=${offset}`;
 const timeseriesBatchUrl = (source: string, metrics: string[], period: string, offset: number) =>
