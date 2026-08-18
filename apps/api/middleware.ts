@@ -79,8 +79,9 @@ export async function middleware(request: NextRequest) {
     let hasSession = SESSION_COOKIES.some((c) => request.cookies.has(c));
 
     // The Pro service acts for a user with a signed assertion instead of a cookie.
-    // Reads only: either a GET, or the MCP endpoint, whose transport is POST but
-    // whose tools are all read handlers. No other write path accepts an assertion.
+    // Admitted on GETs and on the MCP endpoint, whose transport is POST. What an
+    // assertion may actually do there is decided by its scope, checked per tool;
+    // no other write path accepts one at all.
     const isMcp = request.nextUrl.pathname === '/v1/mcp';
     const readOnly = request.method === 'GET' || (isMcp && request.method === 'POST');
     const auth = request.headers.get('authorization');

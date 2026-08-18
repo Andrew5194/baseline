@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '../../../lib/user';
+import { bearer, verifyServiceAssertion } from '../../../lib/service-auth';
 import {
   handleMessage,
   isNotification,
@@ -23,9 +24,28 @@ function protocolHeaders(extra?: Record<string, string>): Record<string, string>
   return { 'MCP-Protocol-Version': LATEST_PROTOCOL_VERSION, ...extra };
 }
 
+/**
+ * Whether this caller may run tools that change data.
+ *
+ * A session belongs to the user themselves, so it carries full rights. A service
+ * assertion carries only what it claims: a token minted to read cannot be turned
+ * around and used to write, even though the same secret signs both.
+ */
+function canWrite(request: NextRequest): boolean {
+  const token = bearer(request.headers.get('authorization'));
+  if (!token) return true; // session cookie — the user acting as themselves
+  const secret = process.env.PRO_SERVICE_SECRET;
+  if (!secret) return false;
+  try {
+    return verifyServiceAssertion(token, secret, 'core').scope?.includes('write') ?? false;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   // Throws for an unauthenticated caller, which middleware has already turned away.
-  const userId = await getCurrentUserId();
+  await getCurrentUserId();
 
   let payload: unknown;
   try {
@@ -50,7 +70,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Tools call the /v1 handlers in-process; the origin only builds their URLs.
-  const response = await handleMessage(payload, request.nextUrl.origin);
+  const response = await handleMessage(payload, request.nextUrl.origin, canWrite(request));
 
   // A notification is acknowledged with no body.
   if (response === null || isNotification(payload)) {

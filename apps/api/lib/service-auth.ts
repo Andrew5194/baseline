@@ -13,6 +13,8 @@ export interface ServiceAssertion {
   features: string[];
   /** Who the token is for: "pro" or "core". */
   aud: string;
+  /** Capabilities claimed. Absent or without "write" means reads only. */
+  scope?: string[];
   /** Unix seconds. */
   exp: number;
 }

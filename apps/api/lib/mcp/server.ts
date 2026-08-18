@@ -58,7 +58,12 @@ export function isValidRequest(msg: unknown): msg is JsonRpcRequest {
  * Handle one message. `origin` is the base URL the tool calls are issued against;
  * it never leaves the process, since the handlers are invoked in-process.
  */
-export async function handleMessage(msg: JsonRpcRequest, origin: string): Promise<JsonRpcResponse | null> {
+export async function handleMessage(
+  msg: JsonRpcRequest,
+  origin: string,
+  /** Whether this caller may invoke tools that change data. */
+  canWrite: boolean,
+): Promise<JsonRpcResponse | null> {
   const id = msg.id ?? null;
 
   switch (msg.method) {
@@ -88,11 +93,21 @@ export async function handleMessage(msg: JsonRpcRequest, origin: string): Promis
       return ok(id, {});
 
     case 'tools/list':
+      // Write tools are listed for every caller, annotated, rather than hidden from
+      // read-only ones: a client that cannot use one should say so, not behave as
+      // though the capability does not exist.
       return ok(id, {
         tools: TOOLS.map((t) => ({
           name: t.name,
           description: t.description,
           inputSchema: t.inputSchema,
+          annotations: {
+            readOnlyHint: !t.write,
+            // Nothing here deletes or overwrites; writes only ever add a row.
+            destructiveHint: false,
+            idempotentHint: !t.write,
+            openWorldHint: false,
+          },
         })),
       });
 
@@ -102,6 +117,18 @@ export async function handleMessage(msg: JsonRpcRequest, origin: string): Promis
 
       const tool = TOOLS_BY_NAME.get(name);
       if (!tool) return fail(id, INVALID_PARAMS, `Unknown tool: ${name}`);
+
+      if (tool.write && !canWrite) {
+        return ok(id, {
+          content: [
+            {
+              type: 'text',
+              text: `${name} changes data, and this connection is read-only. Ask the user to make the change themselves.`,
+            },
+          ],
+          isError: true,
+        });
+      }
 
       const args = (msg.params?.arguments ?? {}) as Record<string, unknown>;
       try {

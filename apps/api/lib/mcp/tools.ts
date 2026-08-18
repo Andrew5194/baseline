@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GET as metricsOverview } from '../../app/v1/metrics/overview/route';
-import { GET as goals } from '../../app/v1/goals/route';
+import { GET as goals, POST as createGoalRoute } from '../../app/v1/goals/route';
 import { GET as events } from '../../app/v1/events/route';
+import { POST as createTodoRoute } from '../../app/v1/todos/route';
 
 /**
  * Baseline's data, as MCP tools.
@@ -12,13 +13,16 @@ import { GET as events } from '../../app/v1/events/route';
  * resolves exactly as it would for a direct call — whoever the request is for,
  * that is whose data comes back.
  *
- * Read-only by construction: only GET handlers are wired up.
+ * Tools that write say so via `write`, which is surfaced to clients as MCP's
+ * readOnlyHint annotation and enforced against the caller's scope before dispatch.
  */
 
 export interface McpTool {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** True when the tool changes data. Drives readOnlyHint and the scope check. */
+  write?: boolean;
   run: (args: Record<string, unknown>, origin: string) => Promise<NextResponse>;
 }
 
@@ -30,6 +34,20 @@ function synth(origin: string, path: string, params: Record<string, string | und
   const url = new URL(path, origin);
   for (const [k, v] of Object.entries(params)) if (v !== undefined) url.searchParams.set(k, v);
   return new NextRequest(url, { method: 'GET' });
+}
+
+/** The same, for the handlers that take a JSON body. */
+function synthPost(origin: string, path: string, body: Record<string, unknown>): NextRequest {
+  return new NextRequest(new URL(path, origin), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Undefined for anything that is not a non-empty string, so blanks never reach a handler. */
+function str(v: unknown): string | undefined {
+  return typeof v === 'string' && v.trim() ? v.trim() : undefined;
 }
 
 export const TOOLS: McpTool[] = [
@@ -87,5 +105,63 @@ export const TOOLS: McpTool[] = [
     },
   },
 ];
+
+TOOLS.push(
+  {
+    name: 'create_goal',
+    description:
+      'Create a goal for the user. Goals are outcomes to work towards, not individual tasks — ' +
+      'use create_task for the smaller pieces. Check get_goals first so an existing goal is not ' +
+      'duplicated. Only create a goal the user has asked for or agreed to.',
+    write: true,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'The goal, phrased as something finishable. Required.' },
+        category: { type: 'string', description: 'Category name; created if it does not exist.' },
+        due_at: { type: 'string', description: 'Due date as YYYY-MM-DD.' },
+        color: { type: 'string', description: 'Hex colour such as #10b981.' },
+      },
+      required: ['title'],
+      additionalProperties: false,
+    },
+    run: (args, origin) =>
+      createGoalRoute(
+        synthPost(origin, '/v1/goals', {
+          title: str(args.title),
+          category: str(args.category),
+          due_at: str(args.due_at),
+          color: str(args.color),
+        }),
+      ),
+  },
+  {
+    name: 'create_task',
+    description:
+      'Create a task on the user\'s list, optionally tied to a goal and dated. Tasks are the ' +
+      'concrete things done on a given day. Only create a task the user has asked for or agreed to.',
+    write: true,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'What to do. Required.' },
+        date: { type: 'string', description: 'Day it belongs to, YYYY-MM-DD. Defaults to today.' },
+        goal_id: { type: 'string', description: 'Id of a goal from get_goals, to tag this task to it.' },
+        category: { type: 'string', description: 'Category name; ignored when goal_id is given.' },
+      },
+      required: ['title'],
+      additionalProperties: false,
+    },
+    run: (args, origin) =>
+      createTodoRoute(
+        synthPost(origin, '/v1/todos', {
+          title: str(args.title),
+          date: str(args.date),
+          goal_id: str(args.goal_id),
+          category: str(args.category),
+        }),
+      ),
+  },
+);
 
 export const TOOLS_BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
