@@ -5,6 +5,7 @@ import { apiFetch } from '../../../lib/api';
 import { useTimezone } from '../../../lib/use-timezone';
 import { fmtDuration } from '../../../lib/time-units';
 import { useTimeUnit } from '../../../lib/use-time-unit';
+import { SourceDropdown } from '../../components/source-dropdown';
 
 interface EventItem {
   id: string;
@@ -19,14 +20,10 @@ interface EventsResponse {
   next_cursor: string | null;
 }
 
-type SourceFilter = 'all' | 'manual' | 'github' | 'google_calendar' | 'google_books';
-const FILTERS: { key: SourceFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'manual', label: 'Time entries' },
-  { key: 'github', label: 'GitHub' },
-  { key: 'google_calendar', label: 'Calendar' },
-  { key: 'google_books', label: 'Reading' },
-];
+// Ids only — names and icons come from SOURCE_META, so a source is labelled the same
+// here as it is on the metrics page.
+const SOURCE_FILTERS = ['all', 'manual', 'github', 'google_calendar', 'google_books'] as const;
+type SourceFilter = (typeof SOURCE_FILTERS)[number];
 
 function eventMeta(type: string): { label: string; icon: string; color: string } {
   switch (type) {
@@ -194,20 +191,12 @@ export default function History() {
           <h1 className="text-2xl font-semibold tracking-tight">History</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Everything that&apos;s happened, most recent first</p>
         </div>
-        <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 self-start sm:self-auto">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setSource(f.key)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                source === f.key
-                  ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="self-start sm:self-auto">
+          <SourceDropdown
+            value={source}
+            onChange={(v) => setSource(v as SourceFilter)}
+            sources={[...SOURCE_FILTERS]}
+          />
         </div>
       </div>
 

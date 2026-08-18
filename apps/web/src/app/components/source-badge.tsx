@@ -38,6 +38,12 @@ export const SOURCE_META: Record<string, { label: string; icon: ReactNode }> = {
     label: 'Baseline',
     icon: <Logo className="w-3.5 h-3.5" />,
   },
+  // Time entries you logged yourself — a real value in events.source, so it needs an
+  // entry to be nameable in filters.
+  manual: {
+    label: 'Time entries',
+    icon: <Logo className="w-3.5 h-3.5" />,
+  },
   github: {
     label: 'GitHub',
     icon: (
@@ -51,7 +57,7 @@ export const SOURCE_META: Record<string, { label: string; icon: ReactNode }> = {
     icon: <GoogleCalendarIcon className="w-3.5 h-3.5" />,
   },
   google_books: {
-    label: 'Google Play Books',
+    label: 'Play Books',
     icon: <GooglePlayBooksIcon className="w-3.5 h-3.5" />,
   },
 };
