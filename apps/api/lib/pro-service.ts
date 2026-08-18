@@ -32,24 +32,25 @@ export class ProUnavailableError extends Error {
   readonly code = 'PRO_UNAVAILABLE';
 }
 
-/** POST to the Pro service on behalf of an already-entitled user. */
+/** Call the Pro service on behalf of an already-entitled user. */
 export async function callProService<T>(
   path: string,
   userId: string,
   features: Feature[],
-  body: unknown,
+  body?: unknown,
 ): Promise<T> {
   const base = proServiceUrl();
   const secret = process.env.PRO_SERVICE_SECRET;
   if (!base || !secret) throw new ProUnavailableError('Pro service not configured');
 
+  // No body means a read: send it as a GET rather than an empty POST.
   const res = await fetch(`${base}${path}`, {
-    method: 'POST',
+    method: body === undefined ? 'GET' : 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${signAssertion(userId, features, secret)}`,
     },
-    body: JSON.stringify(body),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
   if (!res.ok) {
