@@ -19,6 +19,9 @@ export async function proxyToPro(
   path: string,
   /** Omit for a read. Called only after the gates pass. */
   readBody?: () => Promise<unknown>,
+  /** Runs after a successful call, before responding. Failures here are logged,
+   *  never surfaced: a bookkeeping problem must not lose the user their answer. */
+  onSuccess?: (result: unknown, userId: string, body: unknown) => Promise<void>,
 ): Promise<NextResponse> {
   const userId = await getCurrentUserId();
 
@@ -44,7 +47,15 @@ export async function proxyToPro(
   }
 
   try {
-    return NextResponse.json(await callProService(path, userId, [...features], body));
+    const result = await callProService(path, userId, [...features], body);
+    if (onSuccess) {
+      try {
+        await onSuccess(result, userId, body);
+      } catch (err) {
+        console.error(`post-call hook failed on ${path}:`, err instanceof Error ? err.message : err);
+      }
+    }
+    return NextResponse.json(result);
   } catch (err) {
     if (err instanceof ProUnavailableError) {
       // The message can carry the upstream body, so it is logged and not returned.

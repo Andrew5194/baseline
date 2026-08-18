@@ -7,6 +7,7 @@ import {
   integer,
   boolean,
   jsonb,
+  bigserial,
   uniqueIndex,
   index,
   primaryKey,
@@ -337,4 +338,33 @@ export const rateLimits = pgTable(
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   },
   (table) => [index('rate_limits_expires_idx').on(table.expiresAt)],
+);
+
+// ── Assistant messages ───────────────────────────────────────────────────────
+// The Max conversation, so it survives a refresh and follows the user between
+// devices. Stored here rather than in the Pro service: this is the user's data,
+// it belongs with the rest of it, and it stays theirs — exportable, and readable
+// after a plan lapses — while the Pro service stays stateless.
+
+export const assistantMessages = pgTable(
+  'assistant_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Insertion order. A question and its reply are written together and share a
+     *  created_at to the microsecond, so a timestamp cannot order them and the
+     *  reply surfaces above the question. */
+    seq: bigserial('seq', { mode: 'number' }).notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    /** 'user' or 'assistant'. */
+    role: text('role').notNull(),
+    content: text('content').notNull(),
+    /** Goal suggestions offered alongside an assistant reply, so the accept
+     *  buttons are still there after a reload. Null for user messages. */
+    suggestions: jsonb('suggestions'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  // Every read is "this user's messages, in order", so the index carries both.
+  (table) => [index('assistant_messages_user_seq_idx').on(table.userId, table.seq)],
 );

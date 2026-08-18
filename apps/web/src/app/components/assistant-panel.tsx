@@ -69,9 +69,39 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
   const endRef = useRef<HTMLDivElement>(null);
   const [upgrade, setUpgrade] = useState(false);
 
+  // Restore the stored conversation. The greeting is only the starting point for an
+  // empty history, so a returning user picks up where they left off rather than
+  // being welcomed again above their own transcript.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/v1/assistant/messages`, { credentials: 'include' });
+        if (!res.ok) return;
+        const { data } = (await res.json()) as {
+          data: Array<{ role: 'user' | 'assistant'; text: string; suggestions?: Suggestion[] }>;
+        };
+        if (cancelled || !data?.length) return;
+        setMessages(data.map((m) => ({ id: idRef.current++, role: m.role, text: m.text, suggestions: m.suggestions })));
+      } catch {
+        // An unreachable history is not worth an error state; the greeting stands.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, typing]);
+
+  async function clearHistory() {
+    setMessages(SEED);
+    setCreated({});
+    setUpgrade(false);
+    await fetch(`${API_URL}/v1/assistant/messages`, { method: 'DELETE', credentials: 'include' }).catch(() => {});
+  }
 
   async function send(text: string) {
     const trimmed = text.trim();

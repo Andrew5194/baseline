@@ -183,6 +183,13 @@
       "when": 1786500000000,
       "tag": "0025_user_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786500000001,
+      "tag": "0026_assistant_messages",
+      "breakpoints": true
     }
   ]
 }
