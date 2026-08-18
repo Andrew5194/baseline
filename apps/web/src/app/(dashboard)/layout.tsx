@@ -35,11 +35,19 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   await requireSession();
+
+  // Max is a Pro feature with no self-hosted equivalent, so a deployment without a
+  // Pro service has nothing to offer behind this button — showing it would be an ad
+  // for something that installation cannot provide. Hosted deployments set
+  // PRO_SERVICE_URL and free-plan users get the dock plus an upgrade path.
+  // Server-side check, so the dock never reaches the browser when it is off.
+  const proAvailable = Boolean(process.env.PRO_SERVICE_URL);
+
   return (
     <>
       <Sidebar />
       <main className="md:ml-60 min-h-dvh pt-14 md:pt-0">{children}</main>
-      <AssistantDock />
+      {proAvailable && <AssistantDock />}
       <SessionToast />
     </>
   );
