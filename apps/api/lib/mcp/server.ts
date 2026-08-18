@@ -139,6 +139,9 @@ export async function handleMessage(
         return ok(id, {
           content: [{ type: 'text', text: body }],
           isError: !res.ok,
+          // _meta is the protocol's extension point. Only on a write that worked —
+          // a client should not invalidate anything because a call failed.
+          ...(res.ok && tool.changes?.length ? { _meta: { 'baseline/changed': tool.changes } } : {}),
         });
       } catch (err) {
         return ok(id, {

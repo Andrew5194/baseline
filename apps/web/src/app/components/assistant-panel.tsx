@@ -131,11 +131,23 @@ export function AssistantPanel({ onCreateGoal, onClose }: AssistantPanelProps) {
       }
       if (!res.ok) throw new Error(String(res.status));
 
-      const data: { reply?: string } = await res.json();
+      const data: { reply?: string; suggestions?: Suggestion[]; changed?: string[] } = await res.json();
       setMessages((m) => [
         ...m,
-        { id: replyId, role: 'assistant', text: data.reply || "I didn't catch that — try again?" },
+        {
+          id: replyId,
+          role: 'assistant',
+          text: data.reply || "I didn't catch that — try again?",
+          suggestions: data.suggestions?.length ? data.suggestions : undefined,
+        },
       ]);
+
+      // Max writes through the API, so nothing in the browser knows those rows moved.
+      // The collections it changed map onto the refresh events the pages already
+      // listen for, so an open goals or task list updates without a reload.
+      for (const collection of data.changed ?? []) {
+        window.dispatchEvent(new CustomEvent(`baseline:${collection}-changed`));
+      }
     } catch {
       setMessages((m) => [
         ...m,

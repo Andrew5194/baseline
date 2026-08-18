@@ -23,6 +23,12 @@ export interface McpTool {
   inputSchema: Record<string, unknown>;
   /** True when the tool changes data. Drives readOnlyHint and the scope check. */
   write?: boolean;
+  /**
+   * Which collections this tool invalidates, reported back to the caller so a UI
+   * can refresh them. Named for the collection, not the endpoint, because the
+   * client maps them onto its own refresh signals.
+   */
+  changes?: string[];
   run: (args: Record<string, unknown>, origin: string) => Promise<NextResponse>;
 }
 
@@ -109,6 +115,8 @@ export const TOOLS: McpTool[] = [
 TOOLS.push(
   {
     name: 'create_goal',
+    // A new goal can bring a new category with it.
+    changes: ['goals', 'categories'],
     description:
       'Create a goal for the user. Goals are outcomes to work towards, not individual tasks — ' +
       'use create_task for the smaller pieces. Check get_goals first so an existing goal is not ' +
@@ -137,6 +145,8 @@ TOOLS.push(
   },
   {
     name: 'create_task',
+    // Tagged tasks count towards their goal's progress, so both move.
+    changes: ['todos', 'goals'],
     description:
       'Create a task on the user\'s list, optionally tied to a goal and dated. Tasks are the ' +
       'concrete things done on a given day. Only create a task the user has asked for or agreed to.',
