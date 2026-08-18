@@ -148,10 +148,16 @@ export default function Metrics() {
     // Group tiles by source so each source's series load in a single batched request.
     const bySource = new Map<string, typeof METRICS>();
     for (const d of METRICS) bySource.set(d.source, [...(bySource.get(d.source) ?? []), d]);
+    // Overviews are fetched per source off the same grouping as the series below —
+    // a hardcoded list here silently leaves a new integration's tiles empty while
+    // its charts still load, which reads as missing data rather than missing wiring.
+    const sources = [...bySource.keys()];
     Promise.all([
-      apiFetch<OverviewResponse>(overviewUrl('github', period, offset)).catch(() => empty),
-      apiFetch<OverviewResponse>(overviewUrl('google_calendar', period, offset)).catch(() => empty),
-      apiFetch<OverviewResponse>(overviewUrl('baseline', period, offset)).catch(() => empty),
+      Promise.all(
+        sources.map((src) =>
+          apiFetch<OverviewResponse>(overviewUrl(src, period, offset)).catch(() => empty),
+        ),
+      ),
       Promise.all(
         [...bySource.entries()].map(([src, list]) =>
           apiFetch<TimeseriesBatchResponse>(timeseriesBatchUrl(src, list.map((d) => d.metric), period, offset))
@@ -160,8 +166,15 @@ export default function Metrics() {
         ),
       ),
     ])
-      .then(([gh, cal, base, seriesGroups]) => {
-        setOverview({ period: gh.period ?? period, since: base.since, metrics: { ...gh.metrics, ...cal.metrics, ...base.metrics } });
+      .then(([overviews, seriesGroups]) => {
+        const bySrc = new Map(sources.map((src, i) => [src, overviews[i]]));
+        const metrics = Object.assign({}, ...overviews.map((o) => o.metrics));
+        setOverview({
+          period: bySrc.get('github')?.period ?? period,
+          // `since` is the account-creation day behind the Baseline averages.
+          since: bySrc.get('baseline')?.since,
+          metrics,
+        });
         setSeriesMap(Object.fromEntries(seriesGroups.flat()));
       })
       .catch(console.error)
