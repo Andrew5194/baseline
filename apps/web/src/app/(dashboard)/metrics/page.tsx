@@ -56,7 +56,6 @@ const METRICS: Array<{
   { key: 'avg_length', metric: 'avg_length', label: 'Avg Length', unit: 'min', source: 'google_calendar', suffix: 'm' },
   { key: 'busy_days', metric: 'busy_days', label: 'Busy Days', unit: 'days', source: 'google_calendar', sub: 'elapsed', days: true },
   { key: 'pages_advanced', metric: 'pages_advanced', label: 'Pages Advanced', unit: 'pages', source: 'google_books' },
-  { key: 'progress_gained', metric: 'progress_gained', label: 'Progress Gained', unit: '%', source: 'google_books', suffix: '%' },
   { key: 'books_read', metric: 'books_read', label: 'Books Read', unit: 'books', source: 'google_books' },
   { key: 'reading_days', metric: 'reading_days', label: 'Reading Days', unit: 'days', source: 'google_books', sub: 'elapsed', days: true },
   { key: 'tasks_completed', metric: 'tasks_completed', label: 'Tasks Completed', unit: 'tasks', source: 'baseline' },

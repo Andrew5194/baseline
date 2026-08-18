@@ -4,10 +4,8 @@ import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
 import { periodBounds, isPeriod, offsetNow, parseOffset } from '../../../../../lib/period';
 import { loadProgressSteps, loadBookmarkEvents, type ProgressStep } from '../../../../../lib/book-progress';
 
-const round1 = (n: number) => Math.round(n * 10) / 10;
 const within = (s: ProgressStep[], from: Date, to: Date) => s.filter((v) => v.at >= from && v.at < to);
 const pages = (s: ProgressStep[]) => s.reduce((a, v) => a + v.pages, 0);
-const percent = (s: ProgressStep[]) => s.reduce((a, v) => a + v.percent, 0);
 
 // GET /v1/metrics/books/overview?period=week|month|year — reading metrics derived
 // from bookmark positions, with a delta vs the same elapsed slice of the prior period.
@@ -46,7 +44,6 @@ export async function GET(request: NextRequest) {
     period: periodParam,
     metrics: {
       pages_advanced: mk(pages(currSteps), pages(prevSteps), 'pages'),
-      progress_gained: mk(round1(percent(currSteps)), round1(percent(prevSteps)), '%'),
       books_read: mk(booksRead(currMarks), booksRead(prevMarks), 'books'),
       reading_days: mk(readingDays(currMarks), readingDays(prevMarks), 'days'),
     },

@@ -4,8 +4,7 @@ import { getCurrentUserId, getUserTimezone } from '../../../../../lib/user';
 import { periodBounds, periodBuckets, isPeriod, offsetNow, parseOffset } from '../../../../../lib/period';
 import { loadProgressSteps, loadBookmarkEvents } from '../../../../../lib/book-progress';
 
-const METRICS = ['pages_advanced', 'progress_gained', 'books_read', 'reading_days'];
-const round1 = (n: number) => Math.round(n * 10) / 10;
+const METRICS = ['pages_advanced', 'books_read', 'reading_days'];
 
 // GET /v1/metrics/books/timeseries?metric=&period= — the metric per natural bucket
 // across the period, for the bar chart.
@@ -41,8 +40,6 @@ export async function GET(request: NextRequest) {
     switch (mk) {
       case 'pages_advanced':
         return s.reduce((a, v) => a + v.pages, 0);
-      case 'progress_gained':
-        return round1(s.reduce((a, v) => a + v.percent, 0));
       case 'books_read':
         return new Set(m.map((v) => v.volumeId)).size;
       case 'reading_days':

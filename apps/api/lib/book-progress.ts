@@ -9,8 +9,6 @@ export interface ProgressStep {
   volumeId: string;
   /** Pages advanced since the previous bookmark in this book. */
   pages: number;
-  /** Percentage points gained since the previous bookmark in this book. */
-  percent: number;
 }
 
 interface Bookmark {
@@ -18,7 +16,6 @@ interface Bookmark {
   volumeId: string;
   kind: string;
   number: number | null;
-  percent: number | null;
 }
 
 /**
@@ -55,13 +52,13 @@ export function stepsFromBookmarks(bookmarks: Bookmark[]): ProgressStep[] {
       const curr = list[i];
       if (prev.kind !== curr.kind) continue;
 
+      // A percentage would just be this over the book's page count — the same
+      // number scaled — so pages are the only thing worth carrying.
       const pages =
         prev.number !== null && curr.number !== null ? Math.max(0, curr.number - prev.number) : 0;
-      const percent =
-        prev.percent !== null && curr.percent !== null ? Math.max(0, curr.percent - prev.percent) : 0;
-      if (pages === 0 && percent === 0) continue;
+      if (pages === 0) continue;
 
-      steps.push({ at: curr.at, volumeId, pages, percent: Math.round(percent * 10) / 10 });
+      steps.push({ at: curr.at, volumeId, pages });
     }
   }
 
@@ -91,7 +88,6 @@ export async function loadProgressSteps(userId: string, end: Date): Promise<Prog
       volumeId,
       kind: (p.page_kind as string) ?? 'unknown',
       number: (p.page_number ?? null) as number | null,
-      percent: (p.percent ?? null) as number | null,
     });
   }
 
